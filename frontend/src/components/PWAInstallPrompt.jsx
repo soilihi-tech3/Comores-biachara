@@ -1,12 +1,65 @@
 import React, { useState, useEffect } from "react";
 import { Download, X, Share, Smartphone, Monitor } from "lucide-react";
+import { useAuth } from "../context/AuthContext.jsx";
 
 export default function PWAInstallPrompt() {
+  const { boutique } = useAuth();
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
+
+  const storeName = boutique?.nom || "Boutique en ligne";
+  const storeLogo = boutique?.logoUrl || "https://images.unsplash.com/photo-1543083477-4f785aeafaa9?auto=format&fit=crop&w=192&h=192&q=80";
+
+  // Inject Dynamic Manifest and Page Title / Icons based on Settings
+  useEffect(() => {
+    if (!boutique) return;
+
+    if (boutique.nom) {
+      document.title = `${boutique.nom} - Boutique & Vente Directe`;
+    }
+
+    const manifestData = {
+      short_name: storeName,
+      name: `${storeName} - Boutique & Vente Directe`,
+      icons: [
+        { src: storeLogo, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+        { src: storeLogo, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+      ],
+      start_url: "/",
+      background_color: "#163424",
+      theme_color: "#163424",
+      display: "standalone",
+      orientation: "portrait-primary",
+      description: `Application officielle de ${storeName}.`
+    };
+
+    const stringManifest = JSON.stringify(manifestData);
+    const blob = new Blob([stringManifest], { type: "application/json" });
+    const manifestUrl = URL.createObjectURL(blob);
+
+    let linkTag = document.querySelector('link[rel="manifest"]');
+    if (!linkTag) {
+      linkTag = document.createElement("link");
+      linkTag.rel = "manifest";
+      document.head.appendChild(linkTag);
+    }
+    linkTag.href = manifestUrl;
+
+    let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+    if (!appleIcon) {
+      appleIcon = document.createElement("link");
+      appleIcon.rel = "apple-touch-icon";
+      document.head.appendChild(appleIcon);
+    }
+    appleIcon.href = storeLogo;
+
+    return () => {
+      URL.revokeObjectURL(manifestUrl);
+    };
+  }, [boutique, storeName, storeLogo]);
 
   useEffect(() => {
     // Check if already running in standalone mode (already installed as PWA)
@@ -95,13 +148,21 @@ export default function PWAInstallPrompt() {
           animation: "slideUpToast 0.35s ease"
         }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ background: "rgba(255,255,255,0.15)", padding: 8, borderRadius: 10 }}>
-                {isIOS ? <Smartphone size={20} color="#fff" /> : <Download size={20} color="#fff" />}
-              </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {storeLogo ? (
+                <img
+                  src={storeLogo}
+                  alt={storeName}
+                  style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover", border: "1px solid rgba(255,255,255,0.2)", flexShrink: 0 }}
+                />
+              ) : (
+                <div style={{ background: "rgba(255,255,255,0.15)", padding: 8, borderRadius: 10 }}>
+                  {isIOS ? <Smartphone size={20} color="#fff" /> : <Download size={20} color="#fff" />}
+                </div>
+              )}
               <div>
                 <div style={{ fontWeight: 800, fontSize: 14, color: "#ffffff" }}>
-                  {isIOS ? "Installer sur iPhone / iPad" : "Installer Marché Vert"}
+                  {isIOS ? `Installer ${storeName}` : `Installer ${storeName}`}
                 </div>
                 <div style={{ fontSize: 12, color: "#DDE8DF", marginTop: 2 }}>
                   Accédez à la boutique en 1-clic comme une application native.

@@ -516,7 +516,7 @@ export default function AdminProduits() {
               />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 14 }}>
+            <div className="bs-form-row-4">
               <div className="bs-input-group">
                 <label>Catégorie *</label>
                 <select
@@ -586,7 +586,6 @@ export default function AdminProduits() {
               </div>
             </div>
 
-
             {/* PROMO & EXPIRATION SECTION */}
             <div style={{ background: "var(--paper)", padding: 16, borderRadius: 12, border: "1px solid var(--line)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
@@ -602,7 +601,7 @@ export default function AdminProduits() {
                 </label>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+              <div className="bs-form-row-3">
                 <div className="bs-input-group">
                   <label>Prix Normal (€) *</label>
                   <input
@@ -632,7 +631,8 @@ export default function AdminProduits() {
                 <div className="bs-input-group">
                   <label>Réduction calculée</label>
                   <div style={{
-                    padding: "10px 14px", background: "#E0F2FE", borderRadius: 8,
+                    height: 44, boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center",
+                    padding: "0 14px", background: "#E0F2FE", borderRadius: 8, border: "1.5px solid #BAE6FD",
                     fontWeight: 800, color: "#0369A1", fontSize: 13.5, textAlign: "center"
                   }}>
                     {form.enPromo && form.prixPromo && Number(form.prix) > 0 ? (
@@ -645,7 +645,7 @@ export default function AdminProduits() {
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+            <div className="bs-form-row-3">
               <div className="bs-input-group">
                 <label>Date d'expiration (Péremption)</label>
                 <input

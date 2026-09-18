@@ -27,6 +27,28 @@ router.get("/:slug/realtime/events", (req, res) => {
   });
 });
 
+// GET /api/store/:slug/manifest.json -> Dynamic PWA Manifest with custom store name and logo
+router.get("/:slug/manifest.json", loadBoutique, (req, res) => {
+  const b = req.boutique;
+  const name = b.nom || "Marché Vert";
+  const logo = b.logoUrl || "https://images.unsplash.com/photo-1543083477-4f785aeafaa9?auto=format&fit=crop&w=512&h=512&q=80";
+
+  res.json({
+    short_name: name,
+    name: `${name} - Boutique & Vente Directe`,
+    icons: [
+      { src: logo, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+      { src: logo, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+    ],
+    start_url: "/",
+    background_color: "#163424",
+    theme_color: "#163424",
+    display: "standalone",
+    orientation: "portrait-primary",
+    description: `Application e-commerce et caisse POS pour ${name}.`
+  });
+});
+
 // GET /api/store/:slug  -> infos publiques de la boutique (cached 5 min)
 router.get("/:slug", loadBoutique, cacheMiddleware(300), (req, res) => {
   const b = req.boutique;

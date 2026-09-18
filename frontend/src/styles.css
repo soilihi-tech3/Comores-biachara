@@ -773,17 +773,22 @@ a { text-decoration: none; color: inherit; }
 
 .bs-input, .bs-select {
   width: 100%;
-  padding: 11px 14px;
+  box-sizing: border-box;
+  height: 44px;
+  padding: 10px 14px;
   border: 1.5px solid var(--line);
   border-radius: var(--radius-sm);
   font-size: 14px;
   font-family: inherit;
   outline: none;
+  background: #fff;
+  color: var(--ink);
   transition: border-color 0.2s ease;
 }
 
 .bs-input:focus, .bs-select:focus {
   border-color: var(--forest);
+  box-shadow: 0 0 0 3px rgba(34, 75, 53, 0.08);
 }
 
 .bs-btn-primary {
@@ -1040,12 +1045,58 @@ a { text-decoration: none; color: inherit; }
   gap: 18px;
 }
 
+.bs-input-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .bs-input-group label {
   display: block;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
   margin-bottom: 6px;
+  line-height: 1.2;
+}
+
+.bs-form-row-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.bs-form-row-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.bs-form-row-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .bs-form-row-3, .bs-form-row-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .bs-form-row-2, .bs-form-row-3, .bs-form-row-4 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 12px;
+  }
 }
 
 .bs-input-wrapper {
