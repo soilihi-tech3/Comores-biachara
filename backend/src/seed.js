@@ -175,14 +175,21 @@ async function runSeed() {
     }
   ];
 
+  const { clearCachePattern } = require("./config/cache");
+
   const produits = {};
   for (const p of produitsData) {
     const { cat, ...rest } = p;
     const catObj = cats[cat];
-    const [prodObj] = await Product.findOrCreate({
-      where: { nom: p.nom, boutiqueId: boutique.id },
-      defaults: { ...rest, boutiqueId: boutique.id, categoryId: catObj ? catObj.id : null }
-    });
+    let prodObj = await Product.findOne({ where: { nom: p.nom, boutiqueId: boutique.id } });
+    if (!prodObj) {
+      prodObj = await Product.create({ ...rest, boutiqueId: boutique.id, categoryId: catObj ? catObj.id : null });
+    } else {
+      if (catObj && prodObj.categoryId !== catObj.id) prodObj.categoryId = catObj.id;
+      if (p.imageUrl && !prodObj.imageUrl) prodObj.imageUrl = p.imageUrl;
+      if (p.imageUrl2 && !prodObj.imageUrl2) prodObj.imageUrl2 = p.imageUrl2;
+      await prodObj.save();
+    }
     produits[p.nom] = prodObj;
   }
 
@@ -216,6 +223,9 @@ async function runSeed() {
       prixUnitaire: 900
     });
   }
+
+  // Purge du cache d'API pour forcer l'affichage immédiat des nouveaux produits
+  await clearCachePattern("cache:/api/store").catch(() => {});
 
   console.log("Seed exécuté avec succès : comptes et produits insérés dans la base de données !");
 }
