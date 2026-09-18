@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import api, { SLUG } from "../../api";
 import ProductCard from "../../components/ProductCard.jsx";
+import { subscribeRealtime } from "../../utils/realtime.js";
 
 const DEFAULT_SLIDES = [
   {
@@ -141,7 +142,7 @@ export default function Home() {
   const [activeSlide, setActiveSlide] = useState(0);
   const navigate = useNavigate();
 
-  useEffect(() => {
+  function loadData() {
     api.get(`/store/${SLUG}`).then((res) => {
       setBoutique(res.data);
       try {
@@ -158,6 +159,20 @@ export default function Home() {
     api.get(`/store/${SLUG}/products`).then((res) => {
       if (Array.isArray(res.data)) setProducts(res.data);
     }).catch(() => {});
+  }
+
+  useEffect(() => {
+    loadData();
+    const unsub = subscribeRealtime((detail) => {
+      if (
+        detail.type === "product_updated" ||
+        detail.type === "category_updated" ||
+        detail.type === "boutique_updated"
+      ) {
+        loadData();
+      }
+    });
+    return unsub;
   }, []);
 
   const slides = parseSlides(boutique?.bannerSlides);

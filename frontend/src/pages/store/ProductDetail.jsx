@@ -6,6 +6,7 @@ import Stars from "../../components/Stars.jsx";
 import ProductCard from "../../components/ProductCard.jsx";
 import { useCart } from "../../context/CartContext.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { subscribeRealtime } from "../../utils/realtime.js";
 
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 
@@ -65,7 +66,15 @@ export default function ProductDetail() {
       }
     });
   }
-  useEffect(load, [id]);
+  useEffect(() => {
+    load();
+    const unsub = subscribeRealtime((detail) => {
+      if (detail.type === "product_updated") {
+        load();
+      }
+    });
+    return unsub;
+  }, [id]);
 
   async function submitReview() {
     setErreur("");

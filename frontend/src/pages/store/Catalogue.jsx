@@ -5,6 +5,7 @@ import api, { SLUG } from "../../api";
 import ProductCard from "../../components/ProductCard.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useCart } from "../../context/CartContext.jsx";
+import { subscribeRealtime } from "../../utils/realtime.js";
 
 export default function Catalogue() {
   const [params, setParams] = useSearchParams();
@@ -37,11 +38,11 @@ export default function Catalogue() {
     return () => window.removeEventListener("favorites_updated", updateFavs);
   }, [user?.id]);
 
-  useEffect(() => {
+  function loadCategories() {
     api.get(`/store/${SLUG}/categories`).then((res) => setCategories(res.data));
-  }, []);
+  }
 
-  useEffect(() => {
+  function loadProducts() {
     setLoading(true);
     const query = {};
     if (categoryId) query.categoryId = categoryId;
@@ -50,6 +51,25 @@ export default function Catalogue() {
     api.get(`/store/${SLUG}/products`, { params: query })
       .then((res) => setProducts(res.data))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  useEffect(() => {
+    loadProducts();
+  }, [categoryId, famille, search]);
+
+  useEffect(() => {
+    const unsub = subscribeRealtime((detail) => {
+      if (detail.type === "product_updated") {
+        loadProducts();
+      } else if (detail.type === "category_updated") {
+        loadCategories();
+      }
+    });
+    return unsub;
   }, [categoryId, famille, search]);
 
   const stripAccents = (str) => (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();

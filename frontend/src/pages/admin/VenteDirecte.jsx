@@ -4,6 +4,7 @@ import {
 } from "lucide-react";
 import api from "../../api";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { subscribeRealtime } from "../../utils/realtime.js";
 
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 
@@ -28,7 +29,15 @@ export default function VenteDirecte() {
     api.get("/admin/familles").then(res => setFamilles(res.data || []));
   }
 
-  useEffect(load, []);
+  useEffect(() => {
+    load();
+    const unsub = subscribeRealtime((detail) => {
+      if (detail.type === "product_updated" || detail.type === "order_created") {
+        load();
+      }
+    });
+    return unsub;
+  }, []);
 
   const filteredProducts = products.filter(p => {
     const q = search.trim().toLowerCase();

@@ -534,6 +534,7 @@ router.put("/boutique", requireRole("admin"), async (req, res, next) => {
       tiktokUrl, whatsappNumber, modesPaiement, modulesActifs 
     });
     purgeCache();
+    broadcast("boutique_updated", { boutiqueId: req.boutiqueId });
     res.json(boutique);
   } catch (err) { next(err); }
 });
@@ -622,6 +623,9 @@ router.post("/ventes/directe", async (req, res, next) => {
         { model: User, as: "employeAssigne", attributes: ["nom"] }
       ]
     });
+
+    broadcast("order_created", { orderId: order.id, clientId: client.id, boutiqueId: req.boutiqueId });
+    broadcast("product_updated", { boutiqueId: req.boutiqueId });
 
     res.status(201).json(fullOrder);
   } catch (err) { next(err); }

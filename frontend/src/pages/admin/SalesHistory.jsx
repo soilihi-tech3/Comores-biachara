@@ -59,7 +59,15 @@ export default function SalesHistory() {
       .catch(() => setEmployees([]));
   }
 
-  useEffect(loadData, []);
+  useEffect(() => {
+    loadData();
+    const unsub = subscribeRealtime((detail) => {
+      if (detail.type === "order_created" || detail.type === "order_updated") {
+        loadData();
+      }
+    });
+    return unsub;
+  }, []);
 
   // Filter logic
   const filteredOrders = orders.filter((o) => {

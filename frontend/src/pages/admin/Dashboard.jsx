@@ -5,6 +5,7 @@ import { TrendingUp, ShoppingBag, AlertTriangle, Layers, DollarSign, Package, Us
 import api from "../../api";
 import Stars from "../../components/Stars.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { subscribeRealtime } from "../../utils/realtime.js";
 
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 
@@ -13,8 +14,23 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [prodChartTab, setProdChartTab] = useState("top"); // "top" | "flop"
 
+  function loadDashboard() {
+    api.get("/admin/dashboard").then((res) => setData(res.data)).catch(() => {});
+  }
+
   useEffect(() => { 
-    api.get("/admin/dashboard").then((res) => setData(res.data)); 
+    loadDashboard();
+    const unsub = subscribeRealtime((detail) => {
+      if (
+        detail.type === "order_created" ||
+        detail.type === "order_updated" ||
+        detail.type === "product_updated" ||
+        detail.type === "category_updated"
+      ) {
+        loadDashboard();
+      }
+    });
+    return unsub;
   }, []);
 
   if (!data) return <div style={{ padding: 40, color: "var(--muted)" }}>Chargement du tableau de bord...</div>;

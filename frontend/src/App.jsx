@@ -51,7 +51,35 @@ function WideLayout({ children }) {
 }
 
 import PWAInstallPrompt from "./components/PWAInstallPrompt.jsx";
-import { initRealtimeSync } from "./utils/realtime.js";
+import { initRealtimeSync, subscribeRealtime } from "./utils/realtime.js";
+import { useCart } from "./context/CartContext.jsx";
+
+function RealtimeToastNotifier() {
+  const { showToast } = useCart();
+
+  React.useEffect(() => {
+    const unsub = subscribeRealtime((detail) => {
+      if (!detail || !detail.type) return;
+      const type = detail.type;
+
+      if (type === "order_created") {
+        showToast("Nouvelle commande enregistrée en direct !", "info");
+      } else if (type === "order_updated") {
+        showToast("Statut de commande mis à jour !", "info");
+      } else if (type === "product_updated") {
+        showToast("Le catalogue et les stocks ont été mis à jour.", "info");
+      } else if (type === "category_updated") {
+        showToast("Nouvelle mise à jour des catégories.", "info");
+      } else if (type === "boutique_updated") {
+        showToast("Informations de la boutique mises à jour.", "info");
+      }
+    });
+
+    return unsub;
+  }, [showToast]);
+
+  return null;
+}
 
 export default function App() {
   React.useEffect(() => {
@@ -61,6 +89,7 @@ export default function App() {
   return (
     <>
       <PWAInstallPrompt />
+      <RealtimeToastNotifier />
       <Routes>
         {/* --- Boutique (front-office) --- */}
         <Route path="/" element={<StoreLayout><Home /></StoreLayout>} />
