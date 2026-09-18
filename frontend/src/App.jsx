@@ -50,50 +50,55 @@ function WideLayout({ children }) {
   );
 }
 
+import PWAInstallPrompt from "./components/PWAInstallPrompt.jsx";
+
 export default function App() {
   return (
-    <Routes>
-      {/* --- Boutique (front-office) --- */}
-      <Route path="/" element={<StoreLayout><Home /></StoreLayout>} />
-      <Route path="/a-propos" element={<StoreLayout><About /></StoreLayout>} />
-      <Route path="/catalogue" element={<StoreLayout><Catalogue /></StoreLayout>} />
-      <Route path="/produit/:id" element={<StoreLayout><ProductDetail /></StoreLayout>} />
-      <Route path="/connexion" element={<StoreLayout><Login /></StoreLayout>} />
-      <Route path="/inscription" element={<StoreLayout><Register /></StoreLayout>} />
-      <Route path="/commander" element={
-        <ProtectedRoute roles={["client"]}><WideLayout><Checkout /></WideLayout></ProtectedRoute>
-      } />
-      <Route path="/confirmation/:id" element={
-        <ProtectedRoute roles={["client"]}><WideLayout><Confirmation /></WideLayout></ProtectedRoute>
-      } />
-      <Route path="/mes-commandes" element={
-        <ProtectedRoute roles={["client"]}><WideLayout><MyOrders /></WideLayout></ProtectedRoute>
-      } />
+    <>
+      <PWAInstallPrompt />
+      <Routes>
+        {/* --- Boutique (front-office) --- */}
+        <Route path="/" element={<StoreLayout><Home /></StoreLayout>} />
+        <Route path="/a-propos" element={<StoreLayout><About /></StoreLayout>} />
+        <Route path="/catalogue" element={<StoreLayout><Catalogue /></StoreLayout>} />
+        <Route path="/produit/:id" element={<StoreLayout><ProductDetail /></StoreLayout>} />
+        <Route path="/connexion" element={<StoreLayout><Login /></StoreLayout>} />
+        <Route path="/inscription" element={<StoreLayout><Register /></StoreLayout>} />
+        <Route path="/commander" element={
+          <ProtectedRoute roles={["client"]}><WideLayout><Checkout /></WideLayout></ProtectedRoute>
+        } />
+        <Route path="/confirmation/:id" element={
+          <ProtectedRoute roles={["client"]}><WideLayout><Confirmation /></WideLayout></ProtectedRoute>
+        } />
+        <Route path="/mes-commandes" element={
+          <ProtectedRoute roles={["client"]}><WideLayout><MyOrders /></WideLayout></ProtectedRoute>
+        } />
 
-      {/* --- Back-office Admin / Employé --- */}
-      <Route path="/admin" element={
-        <ProtectedRoute roles={["admin", "employe"]}><AdminLayout /></ProtectedRoute>
-      }>
-        <Route index element={<Dashboard />} />
-        <Route path="vente" element={<VenteDirecte />} />
-        <Route path="ventes-historique" element={<SalesHistory />} />
-        <Route path="achats" element={<Achats />} />
-        <Route path="fournisseurs" element={<Fournisseurs />} />
-        <Route path="unites" element={<UnitesVente />} />
-        <Route path="home-banners" element={<AdminSettings defaultTab="home_banners" />} />
-        <Route path="side-banners" element={<AdminSettings defaultTab="side_banners" />} />
-        <Route path="produits" element={<AdminProduits />} />
-        <Route path="categories" element={<AdminCategories />} />
-        <Route path="commandes" element={<AdminOrders />} />
-        <Route path="employes" element={<AdminEmployees />} />
-        <Route path="utilisateurs" element={<AdminEmployees />} />
-        <Route path="parametres" element={<AdminSettings defaultTab="general" />} />
-      </Route>
+        {/* --- Back-office Admin / Employé --- */}
+        <Route path="/admin" element={
+          <ProtectedRoute roles={["admin", "employe"]}><AdminLayout /></ProtectedRoute>
+        }>
+          <Route index element={<Dashboard />} />
+          <Route path="vente" element={<VenteDirecte />} />
+          <Route path="ventes-historique" element={<SalesHistory />} />
+          <Route path="achats" element={<Achats />} />
+          <Route path="fournisseurs" element={<Fournisseurs />} />
+          <Route path="unites" element={<UnitesVente />} />
+          <Route path="home-banners" element={<AdminSettings defaultTab="home_banners" />} />
+          <Route path="side-banners" element={<AdminSettings defaultTab="side_banners" />} />
+          <Route path="produits" element={<AdminProduits />} />
+          <Route path="categories" element={<AdminCategories />} />
+          <Route path="commandes" element={<AdminOrders />} />
+          <Route path="employes" element={<AdminEmployees />} />
+          <Route path="utilisateurs" element={<AdminEmployees />} />
+          <Route path="parametres" element={<AdminSettings defaultTab="general" />} />
+        </Route>
 
-      {/* --- Console Super Admin --- */}
-      <Route path="/super-admin" element={
-        <ProtectedRoute roles={["super_admin"]}><SuperAdmin /></ProtectedRoute>
-      } />
-    </Routes>
+        {/* --- Console Super Admin --- */}
+        <Route path="/super-admin" element={
+          <ProtectedRoute roles={["super_admin"]}><SuperAdmin /></ProtectedRoute>
+        } />
+      </Routes>
+    </>
   );
 }

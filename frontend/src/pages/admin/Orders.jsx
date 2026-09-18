@@ -46,7 +46,10 @@ const MOIS = [
   { value: "11", label: "Décembre" }
 ];
 
+import { useCart } from "../../context/CartContext.jsx";
+
 export default function AdminOrders() {
+  const { showToast } = useCart();
   const [orders, setOrders] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [search, setSearch] = useState("");
@@ -80,6 +83,11 @@ export default function AdminOrders() {
   async function changeStatus(id, statut) {
     await api.patch(`/admin/orders/${id}/status`, { statut });
     load();
+    const cmdNum = formatOrderNum(id);
+    const label = STATUT_LABEL[statut] || statut;
+    if (showToast) {
+      showToast(`La commande #${cmdNum} a été mise à jour : ${label}.`, "success", "Commande validée !");
+    }
     if (selectedOrder && selectedOrder.id === id) {
       setSelectedOrder(prev => ({ ...prev, statut }));
     }
@@ -89,8 +97,13 @@ export default function AdminOrders() {
     const empId = employeId || null;
     await api.patch(`/admin/orders/${id}/assign`, { employeId: empId });
     load();
+    const cmdNum = formatOrderNum(id);
+    const emp = employees.find(e => e.id === Number(empId));
+    const empName = emp ? emp.nom : "aucun agent";
+    if (showToast) {
+      showToast(`La commande #${cmdNum} a été attribuée à ${empName}.`, "info", "Assignation mise à jour");
+    }
     if (selectedOrder && selectedOrder.id === id) {
-      const emp = employees.find(e => e.id === Number(empId));
       setSelectedOrder(prev => ({ ...prev, employeAssigneId: empId, employeAssigne: emp }));
     }
   }
@@ -329,8 +342,8 @@ export default function AdminOrders() {
       </div>
 
       {/* ── ORDERS TABLE (SEPARATE COLUMNS FOR CMD, MODE LIVRAISON, DATE/TIME, CLIENT, TEL) ── */}
-      <div className="bs-panel" style={{ padding: 0, overflow: "hidden" }}>
-        <table className="bs-table">
+      <div className="bs-panel" style={{ padding: 0, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+        <table className="bs-table" style={{ minWidth: 950 }}>
           <thead>
             <tr>
               <th>N° CMD</th>

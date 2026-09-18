@@ -41,6 +41,13 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
     }, 120);
   }
 
+  function closeMobileSearch() {
+    setMobileSearchOpen(false);
+    setQuery("");
+    setResults([]);
+    setShowDropdown(false);
+  }
+
   useEffect(() => {
     if (!boutiqueContext) {
       api.get(`/store/${SLUG}`).then((res) => setBoutiqueLocal(res.data)).catch(() => { });
@@ -519,7 +526,7 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
           className="bs-mobile-search-overlay"
           onClick={(e) => {
             if (e.target.classList.contains("bs-mobile-search-overlay")) {
-              setMobileSearchOpen(false);
+              closeMobileSearch();
             }
           }}
         >
@@ -538,7 +545,7 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
                 <X size={18} />
               </button>
             ) : null}
-            <button type="button" onClick={() => setMobileSearchOpen(false)} className="bs-mobile-search-close">
+            <button type="button" onClick={closeMobileSearch} className="bs-mobile-search-close">
               Annuler
             </button>
           </form>
@@ -555,7 +562,7 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
                   {results.map(p => (
                     <div
                       key={p.id}
-                      onClick={() => { setMobileSearchOpen(false); goToProduct(p.id); }}
+                      onClick={() => { closeMobileSearch(); goToProduct(p.id); }}
                       className="bs-mobile-search-item"
                     >
                       <img src={p.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=60&q=80"} alt={p.nom} />
@@ -568,8 +575,7 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
                   ))}
                   <div
                     onClick={() => {
-                      setMobileSearchOpen(false);
-                      setShowDropdown(false);
+                      closeMobileSearch();
                       navigate(`/catalogue?search=${encodeURIComponent(query.trim())}`);
                     }}
                     className="bs-mobile-search-see-all"

@@ -1282,7 +1282,8 @@ a { text-decoration: none; color: inherit; }
   .bs-auth-form { gap: 12px !important; }
 
   /* Tables — horizontal scroll */
-  .bs-table-wrapper, .bs-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .bs-table-wrapper, .bs-table-container, .bs-panel { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+  .bs-table { display: table !important; min-width: 850px !important; }
 
   /* Cart drawer */
   .bs-cart-drawer { width: 100vw !important; }

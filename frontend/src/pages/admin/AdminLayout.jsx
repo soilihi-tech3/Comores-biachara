@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Link, Outlet } from "react-router-dom";
 import { 
   LayoutDashboard, Package, ShoppingCart, Users, Store, LogOut, Layers, 
   PanelLeftClose, PanelLeftOpen, User, Image, LayoutGrid, CreditCard, 
-  ShoppingBag, Truck, Scale, History, Menu, X 
+  ShoppingBag, Truck, Scale, History, Menu, X, ExternalLink, ArrowLeft
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useCart } from "../../context/CartContext.jsx";
@@ -58,7 +58,29 @@ export default function AdminLayout() {
           {mobileOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
         <div className="bs-admin-mobile-brand">{storeName}</div>
-        <NotificationMenu />
+        
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Link
+            to="/"
+            title="Retour au site public"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              fontSize: 12,
+              fontWeight: 700,
+              color: "var(--forest-dark)",
+              background: "var(--paper)",
+              padding: "5px 10px",
+              borderRadius: 14,
+              border: "1px solid var(--line)",
+              textDecoration: "none"
+            }}
+          >
+            <ArrowLeft size={14} /> Site
+          </Link>
+          <NotificationMenu />
+        </div>
       </div>
 
       {/* OVERLAY BACKDROP FOR MOBILE */}
@@ -68,7 +90,7 @@ export default function AdminLayout() {
 
       {/* SIDEBAR CONTAINER */}
       <aside className={`bs-sidebar ${mobileOpen ? "open" : ""}`}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "space-between", marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "space-between", marginBottom: 20 }}>
           <div className="brand bs-side-label" style={{ margin: 0, padding: 0, border: "none", fontSize: 18 }}>{storeName}</div>
           
           {/* Collapse button on desktop */}
@@ -88,6 +110,25 @@ export default function AdminLayout() {
             <X size={20} />
           </button>
         </div>
+
+        {/* DIRECT RETURN TO SITE LINK IN SIDEBAR */}
+        <Link 
+          to="/" 
+          className="bs-side-btn"
+          title="Retourner sur le site e-commerce"
+          style={{ 
+            background: "rgba(22, 52, 36, 0.07)", 
+            color: "var(--forest-dark)", 
+            fontWeight: 700, 
+            marginBottom: 14,
+            borderRadius: 10,
+            border: "1px solid rgba(22, 52, 36, 0.15)"
+          }}
+          onClick={() => setMobileOpen(false)}
+        >
+          <ExternalLink size={18} className="bs-side-icon" color="var(--forest)" /> 
+          <span className="bs-side-label">Voir la boutique</span>
+        </Link>
 
         <div className="bs-sidebar-nav">
           {links.map(({ to, label, icon: Icon, exact }) => (
@@ -124,10 +165,36 @@ export default function AdminLayout() {
       <div className="bs-main">
         {/* ADMIN TOPBAR */}
         <div className="bs-admin-topbar">
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <span style={{ fontSize: 13.5, color: "var(--muted)", fontWeight: 500 }}>
               Espace {user?.role === "admin" ? "Administrateur" : user?.role === "employe" ? "Employé" : "Super Admin"}
             </span>
+
+            {/* QUICK LINK BACK TO PUBLIC SITE */}
+            <Link
+              to="/"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 14px",
+                background: "var(--paper)",
+                border: "1px solid var(--line)",
+                borderRadius: 20,
+                color: "var(--forest-dark)",
+                fontSize: 13,
+                fontWeight: 700,
+                textDecoration: "none",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+                transition: "all 0.2s ease"
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--forest-light)"; e.currentTarget.style.borderColor = "var(--forest)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "var(--paper)"; e.currentTarget.style.borderColor = "var(--line)"; }}
+              title="Retourner sur le site boutique"
+            >
+              <ArrowLeft size={15} color="var(--forest)" />
+              <span>Voir la boutique</span>
+            </Link>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
