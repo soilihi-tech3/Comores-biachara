@@ -50,7 +50,17 @@ app.use("/uploads", express.static(uploadsPath, {
   }
 }));
 
+// Root Endpoint Health Check
+app.get("/", (req, res) => res.json({ message: "API Boutique SaaS Comores Biachara en ligne.", status: "ok" }));
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+
+// Fallback Middleware: If frontend requests /store, /auth, /admin without /api prefix, auto-rewrite to /api
+app.use((req, res, next) => {
+  if (!req.url.startsWith("/api") && !req.url.startsWith("/uploads") && req.url !== "/") {
+    req.url = "/api" + (req.url.startsWith("/") ? "" : "/") + req.url;
+  }
+  next();
+});
 
 app.use("/api/auth", authRoutes);
 app.use("/api/store", storeRoutes);

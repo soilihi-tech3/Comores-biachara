@@ -2,11 +2,16 @@ import axios from "axios";
 import { saveCache, getCache, enqueueAction } from "./utils/offlineStorage";
 
 const getBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+  let url = import.meta.env.VITE_API_URL;
+  if (!url) {
+    const host = typeof window !== "undefined" && window.location.hostname ? window.location.hostname : "localhost";
+    url = `http://${host}:4000/api`;
   }
-  const host = typeof window !== "undefined" && window.location.hostname ? window.location.hostname : "localhost";
-  return `http://${host}:4000/api`;
+  url = url.trim().replace(/\/+$/, "");
+  if (!url.endsWith("/api")) {
+    url += "/api";
+  }
+  return url;
 };
 
 export const SLUG = import.meta.env.VITE_BOUTIQUE_SLUG || "marche-vert";
