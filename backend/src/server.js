@@ -87,7 +87,9 @@ async function ensureColumns() {
       { name: "facebook_url", type: 'VARCHAR(255) DEFAULT ""' },
       { name: "instagram_url", type: 'VARCHAR(255) DEFAULT ""' },
       { name: "tiktok_url", type: 'VARCHAR(255) DEFAULT ""' },
-      { name: "whatsapp_number", type: 'VARCHAR(50) DEFAULT ""' }
+      { name: "whatsapp_number", type: 'VARCHAR(50) DEFAULT ""' },
+      { name: "modules_actifs", type: 'JSON' },
+      { name: "modes_paiement", type: 'JSON' }
     ];
 
     for (const col of columnsToAddBoutique) {

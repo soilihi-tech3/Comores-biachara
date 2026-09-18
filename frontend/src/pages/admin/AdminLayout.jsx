@@ -1,18 +1,32 @@
 import React, { useState } from "react";
-import { NavLink, Link, Outlet } from "react-router-dom";
+import { NavLink, Link, Outlet, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, Package, ShoppingCart, Users, Store, LogOut, Layers, 
   PanelLeftClose, PanelLeftOpen, User, Image, LayoutGrid, CreditCard, 
-  ShoppingBag, Truck, Scale, History, Menu, X, ExternalLink, ArrowLeft
+  ShoppingBag, Truck, Scale, History, Menu, X, ExternalLink, ArrowLeft, Clock, Lock
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useCart } from "../../context/CartContext.jsx";
 import NotificationMenu from "../../components/NotificationMenu.jsx";
 import ProfileModal from "../../components/ProfileModal.jsx";
 
+const ROUTE_MODULE_MAP = {
+  "/admin/vente": { key: "vente", label: "Vente Directe (POS)" },
+  "/admin/ventes-historique": { key: "ventesHistorique", label: "Historique Ventes" },
+  "/admin/achats": { key: "achats", label: "Achats & Stocks" },
+  "/admin/fournisseurs": { key: "fournisseurs", label: "Fournisseurs" },
+  "/admin/unites": { key: "unites", label: "Unités de vente" },
+  "/admin/home-banners": { key: "homeBanners", label: "Home Banners" },
+  "/admin/side-banners": { key: "sideBanners", label: "Home Side Banners" },
+  "/admin/categories": { key: "categories", label: "Catégories" },
+  "/admin/produits": { key: "produits", label: "Produits" },
+  "/admin/commandes": { key: "commandes", label: "Commandes" },
+};
+
 export default function AdminLayout() {
   const { user, boutique, logout } = useAuth();
   const { showToast } = useCart();
+  const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -22,16 +36,16 @@ export default function AdminLayout() {
 
   const allLinks = [
     { to: "/admin", label: "Tableau de bord", icon: LayoutDashboard, exact: true, permKey: "voir_dashboard" },
-    { to: "/admin/vente", label: "Vente Directe (POS)", icon: CreditCard, permKey: ["gerer_commandes", "voir_dashboard"] },
-    { to: "/admin/ventes-historique", label: "Historique Ventes", icon: History, permKey: ["gerer_commandes", "voir_dashboard"] },
-    { to: "/admin/achats", label: "Achats & Stocks", icon: ShoppingBag, permKey: ["gerer_produits", "gerer_parametres"] },
-    { to: "/admin/fournisseurs", label: "Fournisseurs", icon: Truck, permKey: ["gerer_produits", "gerer_parametres"] },
-    { to: "/admin/unites", label: "Unités de vente", icon: Scale, permKey: ["gerer_produits", "gerer_categories"] },
-    { to: "/admin/home-banners", label: "Home Banners", icon: Image, permKey: ["gerer_banners", "gerer_parametres"] },
-    { to: "/admin/side-banners", label: "Home Side Banners", icon: LayoutGrid, permKey: ["gerer_banners", "gerer_parametres"] },
-    { to: "/admin/categories", label: "Catégories", icon: Layers, permKey: "gerer_categories" },
-    { to: "/admin/produits", label: "Produits", icon: Package, permKey: ["ajouter_produit", "modifier_produit", "supprimer_produit", "gerer_produits"] },
-    { to: "/admin/commandes", label: "Commandes", icon: ShoppingCart, permKey: ["valider_commande", "changer_statut_commande", "assigner_commande", "gerer_commandes"] },
+    { to: "/admin/vente", label: "Vente Directe (POS)", icon: CreditCard, permKey: ["gerer_commandes", "voir_dashboard"], moduleKey: "vente" },
+    { to: "/admin/ventes-historique", label: "Historique Ventes", icon: History, permKey: ["gerer_commandes", "voir_dashboard"], moduleKey: "ventesHistorique" },
+    { to: "/admin/achats", label: "Achats & Stocks", icon: ShoppingBag, permKey: ["gerer_produits", "gerer_parametres"], moduleKey: "achats" },
+    { to: "/admin/fournisseurs", label: "Fournisseurs", icon: Truck, permKey: ["gerer_produits", "gerer_parametres"], moduleKey: "fournisseurs" },
+    { to: "/admin/unites", label: "Unités de vente", icon: Scale, permKey: ["gerer_produits", "gerer_categories"], moduleKey: "unites" },
+    { to: "/admin/home-banners", label: "Home Banners", icon: Image, permKey: ["gerer_banners", "gerer_parametres"], moduleKey: "homeBanners" },
+    { to: "/admin/side-banners", label: "Home Side Banners", icon: LayoutGrid, permKey: ["gerer_banners", "gerer_parametres"], moduleKey: "sideBanners" },
+    { to: "/admin/categories", label: "Catégories", icon: Layers, permKey: "gerer_categories", moduleKey: "categories" },
+    { to: "/admin/produits", label: "Produits", icon: Package, permKey: ["ajouter_produit", "modifier_produit", "supprimer_produit", "gerer_produits"], moduleKey: "produits" },
+    { to: "/admin/commandes", label: "Commandes", icon: ShoppingCart, permKey: ["valider_commande", "changer_statut_commande", "assigner_commande", "gerer_commandes"], moduleKey: "commandes" },
     { to: "/admin/employes", label: "Utilisateurs", icon: Users, adminOnly: true },
     { to: "/admin/parametres", label: "Paramètres Boutique", icon: Store, permKey: "gerer_parametres" },
   ];
@@ -45,6 +59,9 @@ export default function AdminLayout() {
     }
     return perms.includes(item.permKey);
   });
+
+  const currentModule = ROUTE_MODULE_MAP[location.pathname];
+  const isModuleDisabled = currentModule && boutique?.modulesActifs && boutique.modulesActifs[currentModule.key] === false;
 
   return (
     <div className={`bs-admin ${collapsed ? "is-collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
@@ -131,19 +148,36 @@ export default function AdminLayout() {
         </Link>
 
         <div className="bs-sidebar-nav">
-          {links.map(({ to, label, icon: Icon, exact }) => (
-            <NavLink 
-              key={to} 
-              to={to} 
-              end={!!exact}
-              title={label}
-              className={({ isActive }) => "bs-side-btn" + (isActive ? " active" : "")}
-              onClick={() => setMobileOpen(false)}
-            >
-              <Icon size={18} className="bs-side-icon" /> 
-              <span className="bs-side-label">{label}</span>
-            </NavLink>
-          ))}
+          {links.map(({ to, label, icon: Icon, exact, moduleKey }) => {
+            const isDisabled = moduleKey && boutique?.modulesActifs && boutique.modulesActifs[moduleKey] === false;
+            return (
+              <NavLink 
+                key={to} 
+                to={to} 
+                end={!!exact}
+                title={label}
+                className={({ isActive }) => "bs-side-btn" + (isActive ? " active" : "") + (isDisabled ? " disabled-link" : "")}
+                onClick={(e) => {
+                  setMobileOpen(false);
+                  if (isDisabled) {
+                    showToast("Cette fonctionnalité sera disponible dans pas longtemps, veuillez patienter !", "info", "Feature Bientôt Disponible");
+                  }
+                }}
+                style={isDisabled ? { opacity: 0.75 } : {}}
+              >
+                <Icon size={18} className="bs-side-icon" /> 
+                <span className="bs-side-label">{label}</span>
+                {isDisabled && !collapsed && (
+                  <span style={{
+                    marginLeft: "auto", fontSize: 10, fontWeight: 700,
+                    background: "#FEF3C7", color: "#D97706", padding: "2px 6px", borderRadius: 8
+                  }}>
+                    Bientôt
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
         </div>
 
         <button 
@@ -241,7 +275,36 @@ export default function AdminLayout() {
           </div>
         </div>
 
-        <Outlet />
+        {isModuleDisabled ? (
+          <div style={{
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            minHeight: "65vh", textAlign: "center", padding: "40px 20px"
+          }}>
+            <div style={{
+              width: 80, height: 80, borderRadius: "50%", background: "#FEF3C7", color: "#D97706",
+              display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24,
+              boxShadow: "0 10px 30px rgba(217,119,6,0.15)"
+            }}>
+              <Clock size={40} />
+            </div>
+            <h2 style={{ fontSize: 26, fontWeight: 800, color: "var(--forest-dark)", margin: "0 0 12px" }}>
+              Fonctionnalité en cours de déploiement
+            </h2>
+            <div style={{
+              background: "#fff", border: "1px solid var(--line)", borderRadius: 16,
+              padding: "22px 32px", maxWidth: 540, margin: "0 0 28px", boxShadow: "0 4px 20px rgba(0,0,0,0.04)"
+            }}>
+              <p style={{ fontSize: 16, color: "var(--ink)", margin: 0, fontWeight: 600, lineHeight: 1.6 }}>
+                Cette fonctionnalité sera disponible dans pas longtemps, veuillez patienter !
+              </p>
+            </div>
+            <Link to="/admin" className="bs-btn-primary" style={{ textDecoration: "none", padding: "12px 28px", fontSize: 14 }}>
+              Retour au tableau de bord
+            </Link>
+          </div>
+        ) : (
+          <Outlet />
+        )}
       </div>
 
       {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}

@@ -26,6 +26,28 @@ const Boutique = sequelize.define("Boutique", {
   whatsappNumber: { type: DataTypes.STRING(50), defaultValue: "" },
   bannerSlides: { type: DataTypes.JSON, defaultValue: [] },
   sideBanners: { type: DataTypes.JSON, defaultValue: [] },
+  modulesActifs: {
+    type: DataTypes.JSON,
+    defaultValue: {
+      vente: true,
+      ventesHistorique: true,
+      achats: true,
+      fournisseurs: true,
+      unites: true,
+      homeBanners: true,
+      sideBanners: true,
+      commandes: true
+    }
+  },
+  modesPaiement: {
+    type: DataTypes.JSON,
+    defaultValue: {
+      especes: true,
+      mvola: true,
+      holam: true,
+      carte: false
+    }
+  },
 }, { tableName: "boutiques" });
 
 module.exports = Boutique;

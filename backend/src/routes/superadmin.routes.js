@@ -52,7 +52,7 @@ router.put("/boutiques/:id", async (req, res, next) => {
     const boutique = await Boutique.findByPk(req.params.id);
     if (!boutique) return res.status(404).json({ message: "Boutique introuvable." });
     
-    const { nom, slug, formuleAbonnement, motDePasseAdmin } = req.body;
+    const { nom, slug, formuleAbonnement, motDePasseAdmin, modulesActifs } = req.body;
     
     if (nom) boutique.nom = nom;
     if (slug && slug !== boutique.slug) {
@@ -61,6 +61,7 @@ router.put("/boutiques/:id", async (req, res, next) => {
       boutique.slug = slug;
     }
     if (formuleAbonnement) boutique.formuleAbonnement = formuleAbonnement;
+    if (modulesActifs) boutique.modulesActifs = modulesActifs;
     await boutique.save();
 
     // Mettre à jour le mot de passe admin si fourni
@@ -73,6 +74,20 @@ router.put("/boutiques/:id", async (req, res, next) => {
     }
 
     res.json({ message: "Boutique mise à jour avec succès", boutique });
+  } catch (err) { next(err); }
+});
+
+// PUT /api/superadmin/boutiques/:id/modules -> Activer / Désactiver des modules pour une boutique
+router.put("/boutiques/:id/modules", async (req, res, next) => {
+  try {
+    const boutique = await Boutique.findByPk(req.params.id);
+    if (!boutique) return res.status(404).json({ message: "Boutique introuvable." });
+    const { modulesActifs } = req.body;
+    if (modulesActifs) {
+      boutique.modulesActifs = modulesActifs;
+      await boutique.save();
+    }
+    res.json({ message: "Modules de la boutique mis à jour avec succès", boutique });
   } catch (err) { next(err); }
 });
 

@@ -37,9 +37,15 @@ router.post(
   upload.single("image"),
   (req, res) => {
     if (!req.file) return res.status(400).json({ message: "Aucun fichier reçu." });
-    const host = req.protocol + "://" + req.get("host");
-    const url = `${host}/uploads/${req.file.filename}`;
-    res.json({ url });
+    try {
+      const mimeType = req.file.mimetype || "image/jpeg";
+      const fileBuffer = fs.readFileSync(req.file.path);
+      const base64DataUrl = `data:${mimeType};base64,${fileBuffer.toString("base64")}`;
+      res.json({ url: base64DataUrl });
+    } catch (err) {
+      const host = req.protocol + "://" + req.get("host");
+      res.json({ url: `${host}/uploads/${req.file.filename}` });
+    }
   }
 );
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, Image, Layers, LayoutGrid, Store, Phone, MapPin, Mail, Info, Save } from "lucide-react";
+import { Plus, Trash2, Image, Layers, LayoutGrid, Store, Phone, MapPin, Mail, Info, Save, CreditCard, ToggleLeft, ToggleRight, Banknote, Smartphone } from "lucide-react";
 import api from "../../api";
 import ImageUploader from "../../components/ImageUploader.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -28,6 +28,10 @@ export default function AdminSettings({ defaultTab = "general" }) {
       }
       if (!Array.isArray(data.sideBanners)) data.sideBanners = [];
 
+      if (!data.modesPaiement) {
+        data.modesPaiement = { especes: true, mvola: true, holam: true, carte: false };
+      }
+
       setBoutique(data);
     }); 
 
@@ -45,6 +49,14 @@ export default function AdminSettings({ defaultTab = "general" }) {
   const set = (k, v) => setBoutique((b) => ({ ...b, [k]: v }));
   const slidesList = Array.isArray(boutique.bannerSlides) ? boutique.bannerSlides : [];
   const sideList = Array.isArray(boutique.sideBanners) ? boutique.sideBanners : [];
+  const modesPaiement = boutique.modesPaiement || { especes: true, mvola: true, holam: true, carte: false };
+
+  function togglePaymentMode(key) {
+    set("modesPaiement", {
+      ...modesPaiement,
+      [key]: !modesPaiement[key]
+    });
+  }
 
   // Home Slides Actions
   function addSlide() {
@@ -151,6 +163,19 @@ export default function AdminSettings({ defaultTab = "general" }) {
           }}
         >
           <LayoutGrid size={17} /> Home Side Banners
+        </button>
+
+        <button
+          onClick={() => setActiveTab("payment_modes")}
+          style={{
+            padding: "10px 18px", border: "none", background: "none", cursor: "pointer",
+            fontWeight: 700, fontSize: 13.5,
+            color: activeTab === "payment_modes" ? "var(--forest)" : "var(--muted)",
+            borderBottom: activeTab === "payment_modes" ? "3px solid var(--forest)" : "3px solid transparent",
+            marginBottom: -2, display: "flex", alignItems: "center", gap: 8
+          }}
+        >
+          <CreditCard size={17} /> Modes de Paiement
         </button>
       </div>
 
@@ -417,6 +442,74 @@ export default function AdminSettings({ defaultTab = "general" }) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* TAB 4: MODES DE PAIEMENT */}
+      {activeTab === "payment_modes" && (
+        <div className="bs-panel">
+          <div style={{ marginBottom: 20 }}>
+            <h3 style={{ margin: "0 0 6px", fontSize: 18, color: "var(--forest-dark)", display: "flex", alignItems: "center", gap: 8 }}>
+              <CreditCard size={20} /> Configuration des Modes de Paiement
+            </h3>
+            <div style={{ fontSize: 13.5, color: "var(--muted)" }}>
+              Choisissez les moyens de paiement autorisés et affichés aux clients lors de la validation du panier.
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            {[
+              { key: "especes", label: "Espèces (Cash)", sub: "Paiement à la livraison / réception au comptoir", Icon: Banknote },
+              { key: "mvola", label: "Mvola", sub: "Paiement mobile Money Mvola", Icon: Smartphone },
+              { key: "holam", label: "Holam", sub: "Paiement mobile Money Holam", Icon: Smartphone },
+              { key: "carte", label: "Carte Bancaire", sub: "Paiement en ligne Visa / Mastercard", Icon: CreditCard },
+            ].map((item) => {
+              const isEnabled = !!modesPaiement[item.key];
+              return (
+                <div
+                  key={item.key}
+                  onClick={() => togglePaymentMode(item.key)}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "20px", borderRadius: 16,
+                    border: `2px solid ${isEnabled ? "var(--forest)" : "var(--line)"}`,
+                    background: isEnabled ? "var(--forest-light)" : "#FAFAFA",
+                    cursor: "pointer", transition: "all 0.2s ease"
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{
+                      width: 44, height: 44, borderRadius: 12,
+                      background: isEnabled ? "var(--forest)" : "var(--paper)",
+                      color: isEnabled ? "#fff" : "var(--muted)",
+                      display: "flex", alignItems: "center", justifyContent: "center"
+                    }}>
+                      <item.Icon size={22} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: isEnabled ? "var(--forest-dark)" : "var(--ink)" }}>
+                        {item.label}
+                      </div>
+                      <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>
+                        {item.sub}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, color: isEnabled ? "var(--forest)" : "var(--muted)" }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 700 }}>
+                      {isEnabled ? "Disponible" : "Indisponible"}
+                    </span>
+                    {isEnabled ? (
+                      <ToggleRight size={34} color="var(--forest)" />
+                    ) : (
+                      <ToggleLeft size={34} color="#A0AEC0" />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

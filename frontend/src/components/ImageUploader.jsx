@@ -4,35 +4,85 @@ import api from "../api";
 
 /**
  * ImageUploader — lets the user pick a file from disk OR paste a URL.
+ * Converts local files into lightweight compressed Base64 Data URLs so they work everywhere.
+ *
  * Props:
- *   value    {string}   current image URL
+ *   value    {string}   current image URL or Base64 string
  *   onChange {fn}       called with the new URL string
  *   label    {string}   field label
  */
 export default function ImageUploader({ value, onChange, label = "Image" }) {
   const inputRef = useRef(null);
-  const [mode, setMode] = useState("url"); // "url" | "file"
+  const [mode, setMode] = useState("file"); // "file" | "url"
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleFileChange(e) {
+  function handleFileChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+
     setError("");
     setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("image", file);
-      const res = await api.post("/admin/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
-      onChange(res.data.url);
-    } catch (err) {
-      setError("Erreur lors de l'envoi. Réessayez ou utilisez une URL.");
-    } finally {
+
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      const img = new Image();
+
+      img.onload = () => {
+        try {
+          // Compress image using HTML5 Canvas for optimal size & resolution
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round((width * MAX_HEIGHT) / height);
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Lightweight JPEG Data URL saved directly in database
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          onChange(compressedDataUrl);
+        } catch (err) {
+          // Fallback to raw base64 if canvas compression encounters issues
+          onChange(event.target.result);
+        } finally {
+          setUploading(false);
+          if (inputRef.current) inputRef.current.value = "";
+        }
+      };
+
+      img.onerror = () => {
+        // Direct base64 fallback
+        onChange(event.target.result);
+        setUploading(false);
+        if (inputRef.current) inputRef.current.value = "";
+      };
+
+      img.src = event.target.result;
+    };
+
+    reader.onerror = () => {
+      setError("Impossible de lire la photo sélectionnée.");
       setUploading(false);
-      if (inputRef.current) inputRef.current.value = "";
-    }
+    };
+
+    reader.readAsDataURL(file);
   }
 
   return (
@@ -87,13 +137,13 @@ export default function ImageUploader({ value, onChange, label = "Image" }) {
           {uploading ? (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: "var(--forest)" }}>
               <Loader size={18} style={{ animation: "spin 0.8s linear infinite" }} />
-              <span style={{ fontSize: 13, fontWeight: 600 }}>Envoi en cours...</span>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Optimisation & Traitement...</span>
             </div>
           ) : (
             <>
               <Upload size={24} color="var(--sage)" style={{ marginBottom: 8 }} />
-              <div style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600 }}>Cliquez pour choisir une image</div>
-              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>JPG, PNG, WEBP — max 8 Mo</div>
+              <div style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600 }}>Cliquez pour choisir une photo sur votre appareil</div>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>JPEG, PNG, WEBP — conversion universelle automatique</div>
             </>
           )}
         </div>
@@ -106,19 +156,25 @@ export default function ImageUploader({ value, onChange, label = "Image" }) {
         <div style={{ position: "relative", display: "inline-block", marginTop: 10 }}>
           <img
             src={value}
-            alt="Aperçu"
+            alt="Aperçu photo"
             style={{ width: 120, height: 80, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300&q=80";
+            }}
           />
           <button
             type="button"
             onClick={() => onChange("")}
+            title="Supprimer cette photo"
             style={{
-              position: "absolute", top: -6, right: -6, width: 20, height: 20,
+              position: "absolute", top: -6, right: -6, width: 22, height: 22,
               borderRadius: "50%", border: "none", background: "#B4483A", color: "#fff",
-              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0
+              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
+              boxShadow: "0 2px 6px rgba(0,0,0,0.2)"
             }}
           >
-            <X size={11} />
+            <X size={12} />
           </button>
         </div>
       )}

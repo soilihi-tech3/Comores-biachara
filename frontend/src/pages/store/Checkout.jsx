@@ -1,24 +1,39 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Truck, Store, CreditCard, Banknote, Smartphone, ArrowLeft, Minus, Plus, Trash2, CheckCircle, MapPin, ShoppingBag, ArrowRight, Lock, AlertCircle } from "lucide-react";
 import api, { SLUG } from "../../api";
 import { useCart } from "../../context/CartContext.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 
-const PAYMENT_OPTIONS = [
-  { id: "cash",  label: "Espèces (Cash)",  sub: "Paiement à la livraison / réception", Icon: Banknote,   available: true },
-  { id: "mvola", label: "Mvola",           sub: "Paiement mobile",                     Icon: Smartphone, available: false },
-  { id: "holam", label: "Holam",           sub: "Paiement mobile",                     Icon: Smartphone, available: false },
-  { id: "carte", label: "Carte bancaire",  sub: "Visa / Mastercard",                   Icon: CreditCard, available: false },
-];
-
 export default function Checkout() {
   const { cart, subtotal, updateQuantite, removeFromCart, clearCart, showToast } = useCart();
+  const { boutique } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ modeLivraison: "domicile", adresseLivraison: "", moyenPaiement: "cash" });
   const [erreur, setErreur] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const modesPaiement = boutique?.modesPaiement || { especes: true, mvola: true, holam: true, carte: false };
+
+  const PAYMENT_OPTIONS = [
+    { id: "cash", key: "especes", label: "Espèces (Cash)", sub: "Paiement à la livraison / réception", Icon: Banknote, available: !!modesPaiement.especes },
+    { id: "mvola", key: "mvola", label: "Mvola", sub: "Paiement mobile", Icon: Smartphone, available: !!modesPaiement.mvola },
+    { id: "holam", key: "holam", label: "Holam", sub: "Paiement mobile", Icon: Smartphone, available: !!modesPaiement.holam },
+    { id: "carte", key: "carte", label: "Carte bancaire", sub: "Visa / Mastercard", Icon: CreditCard, available: !!modesPaiement.carte },
+  ];
+
+  // Auto-select first available payment option if current choice is disabled
+  useEffect(() => {
+    const currentOpt = PAYMENT_OPTIONS.find(o => o.id === form.moyenPaiement);
+    if (!currentOpt || !currentOpt.available) {
+      const firstAvailable = PAYMENT_OPTIONS.find(o => o.available);
+      if (firstAvailable) {
+        setForm(f => ({ ...f, moyenPaiement: firstAvailable.id }));
+      }
+    }
+  }, [boutique]);
 
   const fraisLivraison = form.modeLivraison === "domicile" ? 1000 : 0;
   const total = subtotal + fraisLivraison;
@@ -26,11 +41,14 @@ export default function Checkout() {
 
   function handleSelectPayment(m) {
     if (!m.available) {
+      const availableOne = PAYMENT_OPTIONS.find(o => o.available);
       showToast(
-        `Le paiement par ${m.label} sera disponible très bientôt. Pour le moment, seul le paiement en Espèces (Cash) est disponible.`,
+        `Le paiement par ${m.label} n'est pas activé sur cette boutique pour le moment.`,
         "info"
       );
-      setForm((f) => ({ ...f, moyenPaiement: "cash" }));
+      if (availableOne) {
+        setForm((f) => ({ ...f, moyenPaiement: availableOne.id }));
+      }
       return;
     }
     setForm((f) => ({ ...f, moyenPaiement: m.id }));

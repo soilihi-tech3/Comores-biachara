@@ -2,12 +2,38 @@ import React, { useEffect, useState } from "react";
 import { 
   Shield, Building2, PauseCircle, PlayCircle, LogOut, PlusCircle, 
   Pencil, Trash2, Search, TrendingUp, DollarSign, Store, KeyRound, 
-  CheckCircle2, XCircle, X, RefreshCw
+  CheckCircle2, XCircle, X, RefreshCw, Sliders, ToggleLeft, ToggleRight
 } from "lucide-react";
 import api from "../../api";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
+
+const DEFAULT_MODULES = {
+  vente: true,
+  ventesHistorique: true,
+  achats: true,
+  fournisseurs: true,
+  unites: true,
+  homeBanners: true,
+  sideBanners: true,
+  commandes: true,
+  categories: true,
+  produits: true
+};
+
+const MODULE_LABELS = [
+  { key: "vente", label: "Vente Directe (POS Caisse)", desc: "Gestion des ventes comptoir et encaissement direct" },
+  { key: "ventesHistorique", label: "Historique des Ventes", desc: "Consultation du journal des ventes et reçus" },
+  { key: "achats", label: "Achats & Stocks", desc: "Approvisionnements, entrées de stock et coût d'achat" },
+  { key: "fournisseurs", label: "Fournisseurs", desc: "Gestion des partenaires et fiches fournisseurs" },
+  { key: "unites", label: "Unités de vente", desc: "Configuration des unités (Kg, Litre, Pièce, Carton...)" },
+  { key: "homeBanners", label: "Home Banners (Slider)", desc: "Bannières principales défilantes de la page d'accueil" },
+  { key: "sideBanners", label: "Home Side Banners", desc: "Bannières promotionnelles secondaires" },
+  { key: "commandes", label: "Gestion des Commandes", desc: "Suivi, validation et attribution des commandes en ligne" },
+  { key: "categories", label: "Catégories", desc: "Gestion des rayons et catégories de produits" },
+  { key: "produits", label: "Catalogue Produits", desc: "Gestion des fiches produits, prix et stocks" }
+];
 
 export default function SuperAdmin() {
   const { user, logout } = useAuth();
@@ -19,6 +45,7 @@ export default function SuperAdmin() {
   // Modals state
   const [createForm, setCreateForm] = useState(null);
   const [editForm, setEditForm] = useState(null);
+  const [modulesForm, setModulesForm] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [erreur, setErreur] = useState("");
   const [succes, setSucces] = useState("");
@@ -78,6 +105,22 @@ export default function SuperAdmin() {
       load();
     } catch (err) {
       setErreur(err.response?.data?.message || "Impossible de modifier la boutique.");
+    }
+  }
+
+  async function submitModules() {
+    if (!modulesForm) return;
+    setErreur("");
+    try {
+      await api.put(`/superadmin/boutiques/${modulesForm.id}/modules`, {
+        modulesActifs: modulesForm.modulesActifs
+      });
+      setModulesForm(null);
+      setSucces(`Modules de la boutique « ${modulesForm.nom} » mis à jour !`);
+      setTimeout(() => setSucces(""), 3000);
+      load();
+    } catch (err) {
+      setErreur(err.response?.data?.message || "Impossible de modifier les modules.");
     }
   }
 
@@ -460,6 +503,24 @@ export default function SuperAdmin() {
                           <span>{b.statut === "active" ? "Désactiver" : "Activer"}</span>
                         </button>
 
+                        {/* MODULES & ACCÈS BUTTON */}
+                        <button
+                          onClick={() => setModulesForm({
+                            id: b.id,
+                            nom: b.nom,
+                            modulesActifs: { ...DEFAULT_MODULES, ...(b.modulesActifs || {}) }
+                          })}
+                          title="Gérer les fonctionnalités et accès aux modules"
+                          style={{
+                            background: "var(--forest-light)", color: "var(--forest-dark)", border: "1px solid rgba(34,75,53,0.15)",
+                            borderRadius: 8, padding: "7px 10px", cursor: "pointer",
+                            display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 700
+                          }}
+                        >
+                          <Sliders size={14} />
+                          <span>Modules & Accès</span>
+                        </button>
+
                         {/* EDIT BUTTON */}
                         <button
                           onClick={() => setEditForm({ id: b.id, nom: b.nom, slug: b.slug, formuleAbonnement: b.formuleAbonnement, motDePasseAdmin: "" })}
@@ -734,6 +795,100 @@ export default function SuperAdmin() {
                 style={{ flex: 1, padding: "12px", borderRadius: 30, border: "none", background: "#B4483A", color: "#fff", fontWeight: 700, cursor: "pointer" }}
               >
                 Supprimer la boutique
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: GESTION DES MODULES & ACCÈS ── */}
+      {modulesForm && (
+        <div className="bs-modal-bg" onClick={() => setModulesForm(null)} style={{
+          position: "fixed", inset: 0, background: "rgba(22,52,36,0.5)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000
+        }}>
+          <div className="bs-modal" onClick={(e) => e.stopPropagation()} style={{
+            background: "#fff", borderRadius: 24, padding: 32, maxWidth: 640, width: "92%",
+            maxHeight: "90vh", overflowY: "auto", boxShadow: "0 16px 50px rgba(0,0,0,0.2)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 20, color: "var(--forest-dark)" }}>Gestion des Modules & Fonctionnalités</h2>
+                <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>
+                  Boutique : <strong>{modulesForm.nom}</strong>
+                </div>
+              </div>
+              <button onClick={() => setModulesForm(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}>
+                <X size={22} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: 13.5, color: "var(--muted)", background: "var(--paper)", padding: 12, borderRadius: 12, marginBottom: 20 }}>
+              Activez ou désactivez les fonctionnalités accessibles par le gérant et les employés de cette boutique. Un module désactivé affichera une alerte d'indisponibilité temporaire lors de l'accès.
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
+              {MODULE_LABELS.map((mod) => {
+                const isChecked = !!modulesForm.modulesActifs[mod.key];
+                return (
+                  <div
+                    key={mod.key}
+                    onClick={() => {
+                      setModulesForm(f => ({
+                        ...f,
+                        modulesActifs: {
+                          ...f.modulesActifs,
+                          [mod.key]: !isChecked
+                        }
+                      }));
+                    }}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "14px 18px", borderRadius: 14,
+                      border: `1.5px solid ${isChecked ? "var(--forest)" : "var(--line)"}`,
+                      background: isChecked ? "var(--forest-light)" : "#FAFAFA",
+                      cursor: "pointer", transition: "all 0.2s ease"
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: isChecked ? "var(--forest-dark)" : "var(--ink)" }}>
+                        {mod.label}
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
+                        {mod.desc}
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, color: isChecked ? "var(--forest)" : "var(--muted)" }}>
+                      <span style={{ fontSize: 12, fontWeight: 700 }}>
+                        {isChecked ? "Activé" : "Désactivé"}
+                      </span>
+                      {isChecked ? (
+                        <ToggleRight size={32} color="var(--forest)" />
+                      ) : (
+                        <ToggleLeft size={32} color="#A0AEC0" />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display: "flex", gap: 12, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
+              <button
+                type="button"
+                onClick={() => setModulesForm(null)}
+                style={{ flex: 1, padding: "12px", borderRadius: 30, border: "1px solid var(--line)", background: "#fff", fontWeight: 600, cursor: "pointer" }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="bs-btn-primary"
+                style={{ flex: 1 }}
+                onClick={submitModules}
+              >
+                Enregistrer les modules
               </button>
             </div>
           </div>

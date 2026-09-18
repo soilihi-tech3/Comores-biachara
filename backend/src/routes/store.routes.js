@@ -67,7 +67,9 @@ router.get("/:slug", loadBoutique, cacheMiddleware(300), (req, res) => {
     facebookUrl: b.facebookUrl || "",
     instagramUrl: b.instagramUrl || "",
     tiktokUrl: b.tiktokUrl || "",
-    whatsappNumber: b.whatsappNumber || ""
+    whatsappNumber: b.whatsappNumber || "",
+    modulesActifs: b.modulesActifs || { vente: true, ventesHistorique: true, achats: true, fournisseurs: true, unites: true, homeBanners: true, sideBanners: true, commandes: true },
+    modesPaiement: b.modesPaiement || { especes: true, mvola: true, holam: true, carte: false }
   });
 });
 
