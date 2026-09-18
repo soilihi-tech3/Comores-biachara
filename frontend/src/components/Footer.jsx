@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, Phone, Mail, Store, Facebook, Instagram, MessageCircle, Info, Package, Grid, Home as HomeIcon } from "lucide-react";
+import { MapPin, Phone, Mail, Store, Facebook, Instagram, MessageCircle, Info, Package, Grid, Home as HomeIcon, Clock } from "lucide-react";
 import api, { SLUG } from "../api";
 
 import { useAuth } from "../context/AuthContext.jsx";
@@ -18,6 +18,14 @@ export default function Footer() {
     }
     api.get(`/store/${SLUG}/categories`).then(res => setCategories(res.data || [])).catch(() => {});
   }, [boutiqueContext]);
+
+  const rawWaNum = boutique?.whatsappNumber || boutique?.telephone || "";
+  const cleanWaNum = rawWaNum.replace(/[^0-9]/g, "");
+  const whatsappUrl = cleanWaNum ? `https://wa.me/${cleanWaNum}?text=${encodeURIComponent("Bonjour ! Je souhaite avoir des informations sur vos produits.")}` : null;
+  const facebookUrl = boutique?.facebookUrl || "https://facebook.com";
+  const instagramUrl = boutique?.instagramUrl || "https://instagram.com";
+  const tiktokUrl = boutique?.tiktokUrl || "https://tiktok.com";
+  const horaires = boutique?.horairesOuverture || "Tous les jours de 08h30 à 23h00";
 
   return (
     <footer style={{ background: "var(--forest-dark)", color: "#F0F3EC", padding: "60px 24px 24px", marginTop: "auto" }}>
@@ -38,17 +46,46 @@ export default function Footer() {
           </p>
 
           {/* RÉSEAUX SOCIAUX */}
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <a href="https://facebook.com" target="_blank" rel="noreferrer" title="Facebook" style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "var(--forest)"} onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}>
+            <a href={facebookUrl} target="_blank" rel="noreferrer" title="Facebook" style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#1877F2"} onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}>
               <Facebook size={18} />
             </a>
-            <a href="https://instagram.com" target="_blank" rel="noreferrer" title="Instagram" style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "var(--forest)"} onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}>
+            <a href={instagramUrl} target="_blank" rel="noreferrer" title="Instagram" style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#E4405F"} onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}>
               <Instagram size={18} />
             </a>
-            <a href="https://wa.me/33123456789" target="_blank" rel="noreferrer" title="WhatsApp" style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#25D366"} onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}>
-              <MessageCircle size={18} />
+            <a href={tiktokUrl} target="_blank" rel="noreferrer" title="TikTok" style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#000000"} onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 1 1-5.2-1.74 2.89 2.89 0 0 1 2.31-1.42V8.9a6.34 6.34 0 0 0-5.46 6.31 6.34 6.34 0 1 0 11.8-3.41V9.5a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.0-0.93z"/>
+              </svg>
             </a>
           </div>
+
+          {/* BOUTON WHATSAPP */}
+          {whatsappUrl && (
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                background: "#25D366",
+                color: "#ffffff",
+                padding: "10px 18px",
+                borderRadius: 25,
+                fontWeight: 700,
+                fontSize: 13.5,
+                textDecoration: "none",
+                boxShadow: "0 4px 14px rgba(37, 211, 102, 0.35)",
+                transition: "transform 0.15s, background 0.15s"
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.03)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "scale(1.0)"; }}
+            >
+              <MessageCircle size={18} fill="#ffffff" color="#25D366" /> Nous contacter sur WhatsApp
+            </a>
+          )}
         </div>
 
         {/* COLONNE 2: NAVIGATION */}
@@ -62,10 +99,18 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* COLONNE 3: NOS BOUTIQUES (ADRESSES) */}
+        {/* COLONNE 3: NOS BOUTIQUES & HORAIRES */}
         <div>
-          <h4 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: 1, marginBottom: 18, color: "#fff", fontWeight: 800 }}>Nos Boutiques & Adresses</h4>
+          <h4 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: 1, marginBottom: 18, color: "#fff", fontWeight: 800 }}>Boutiques & Horaires</h4>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 10, color: "#A8BEB1", fontSize: 13.5 }}>
+              <Clock size={18} style={{ color: "#A7F3D0", flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <div style={{ fontWeight: 700, color: "#fff", fontSize: 13 }}>Horaires d'ouverture :</div>
+                <div>{horaires}</div>
+              </div>
+            </div>
+
             <div style={{ display: "flex", alignItems: "flex-start", gap: 10, color: "#A8BEB1", fontSize: 13.5 }}>
               <MapPin size={18} style={{ color: "#A7F3D0", flexShrink: 0, marginTop: 2 }} />
               <div>

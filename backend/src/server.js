@@ -77,6 +77,30 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 4000;
 
+async function ensureColumns() {
+  try {
+    const queryInterface = sequelize.getQueryInterface();
+    const table = await queryInterface.describeTable("boutiques");
+
+    const columnsToAdd = [
+      { name: "horaires_ouverture", type: 'VARCHAR(255) DEFAULT "Tous les jours de 08h30 à 23h00"' },
+      { name: "facebook_url", type: 'VARCHAR(255) DEFAULT ""' },
+      { name: "instagram_url", type: 'VARCHAR(255) DEFAULT ""' },
+      { name: "tiktok_url", type: 'VARCHAR(255) DEFAULT ""' },
+      { name: "whatsapp_number", type: 'VARCHAR(50) DEFAULT ""' }
+    ];
+
+    for (const col of columnsToAdd) {
+      if (!table[col.name]) {
+        console.log("[MIGRATION] Ajout colonne manquante sur boutiques:", col.name);
+        await sequelize.query(`ALTER TABLE boutiques ADD COLUMN ${col.name} ${col.type};`);
+      }
+    }
+  } catch (err) {
+    console.warn("[MIGRATION WARNING]:", err.message);
+  }
+}
+
 async function start() {
   let connected = false;
   for (let i = 0; i < 15 && !connected; i++) {
@@ -93,6 +117,7 @@ async function start() {
     process.exit(1);
   }
 
+  await ensureColumns();
   await sequelize.sync(); // crée les tables si elles n'existent pas (compatibilité TiDB Cloud)
   await runSeed();        // insère les données de démonstration et utilisateurs si la base est vide
 

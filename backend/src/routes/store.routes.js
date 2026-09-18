@@ -62,7 +62,12 @@ router.get("/:slug", loadBoutique, cacheMiddleware(300), (req, res) => {
     adresse: b.adresse,
     adresse2: b.adresse2,
     emailContact: b.emailContact,
-    aProposText: b.aProposText
+    aProposText: b.aProposText,
+    horairesOuverture: b.horairesOuverture || "Tous les jours de 08h30 à 23h00",
+    facebookUrl: b.facebookUrl || "",
+    instagramUrl: b.instagramUrl || "",
+    tiktokUrl: b.tiktokUrl || "",
+    whatsappNumber: b.whatsappNumber || ""
   });
 });
 
@@ -97,13 +102,20 @@ router.get("/:slug/products", loadBoutique, cacheMiddleware(120), async (req, re
     const where = { boutiqueId: req.boutique.id };
     if (req.query.categoryId) where.categoryId = req.query.categoryId;
 
+    const stripAccents = (str) => (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
     if (req.query.famille) {
-      const fam = req.query.famille.trim();
+      const famRaw = req.query.famille.trim();
+      const famClean = stripAccents(famRaw);
       const searchConditions = [
-        { famille: { [Op.like]: `%${fam}%` } },
-        { '$Category.famille$': { [Op.like]: `%${fam}%` } },
-        { '$Category.nom$': { [Op.like]: `%${fam}%` } },
-        { nom: { [Op.like]: `%${fam}%` } }
+        { famille: { [Op.like]: `%${famRaw}%` } },
+        { famille: { [Op.like]: `%${famClean}%` } },
+        { '$Category.famille$': { [Op.like]: `%${famRaw}%` } },
+        { '$Category.famille$': { [Op.like]: `%${famClean}%` } },
+        { '$Category.nom$': { [Op.like]: `%${famRaw}%` } },
+        { '$Category.nom$': { [Op.like]: `%${famClean}%` } },
+        { nom: { [Op.like]: `%${famRaw}%` } },
+        { nom: { [Op.like]: `%${famClean}%` } }
       ];
       if (where[Op.or]) {
         where[Op.and] = [{ [Op.or]: searchConditions }];
@@ -113,12 +125,17 @@ router.get("/:slug/products", loadBoutique, cacheMiddleware(120), async (req, re
     }
 
     if (req.query.search) {
-      const q = `%${req.query.search.trim()}%`;
+      const qRaw = req.query.search.trim();
+      const qClean = stripAccents(qRaw);
       const searchConditions = [
-        { nom: { [Op.like]: q } },
-        { famille: { [Op.like]: q } },
-        { '$Category.nom$': { [Op.like]: q } },
-        { '$Category.famille$': { [Op.like]: q } }
+        { nom: { [Op.like]: `%${qRaw}%` } },
+        { nom: { [Op.like]: `%${qClean}%` } },
+        { famille: { [Op.like]: `%${qRaw}%` } },
+        { famille: { [Op.like]: `%${qClean}%` } },
+        { '$Category.nom$': { [Op.like]: `%${qRaw}%` } },
+        { '$Category.nom$': { [Op.like]: `%${qClean}%` } },
+        { '$Category.famille$': { [Op.like]: `%${qRaw}%` } },
+        { '$Category.famille$': { [Op.like]: `%${qClean}%` } }
       ];
       if (where[Op.or]) {
         where[Op.and] = [{ [Op.or]: searchConditions }];
@@ -247,6 +264,31 @@ router.get("/:slug/orders/mine", loadBoutique, authenticate, requireRole("client
     });
     res.json(orders);
   } catch (err) { next(err); }
+});
+
+// PATCH /api/store/:slug/orders/:id/cancel (client connecté — annuler uniquement si en attente)
+router.patch("/:slug/orders/:id/cancel", loadBoutique, authenticate, requireRole("client"), async (req, res, next) => {
+  try {
+    const order = await Order.findOne({
+      where: { id: req.params.id, clientId: req.user.id, boutiqueId: req.boutique.id }
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: "Commande introuvable." });
+    }
+
+    if (order.statut !== "en_attente") {
+      return res.status(400).json({
+        message: "Impossible d'annuler cette commande car elle a déjà été confirmée ou prise en charge."
+      });
+    }
+
+    await order.update({ statut: "annulee" });
+    broadcast("order_updated", { orderId: order.id, statut: "annulee" });
+    res.json({ message: "Votre commande a été annulée avec succès.", order });
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;

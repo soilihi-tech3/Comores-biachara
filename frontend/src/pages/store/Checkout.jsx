@@ -85,10 +85,10 @@ export default function Checkout() {
       </div>
 
       {/* MAIN */}
-      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 440px", minHeight: 0 }}>
+      <div className="bs-checkout-layout">
 
         {/* ── LEFT: FORM AREA ── */}
-        <div style={{ overflowY: "auto", padding: "32px 40px 60px", borderRight: "1px solid var(--line)" }}>
+        <div className="bs-checkout-left">
           <h1 style={{ fontFamily: "var(--font-heading)", fontSize: 30, color: "var(--forest-dark)", margin: "0 0 4px" }}>Finaliser la commande</h1>
           <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 32 }}>Vérifiez votre panier et choisissez vos options de livraison.</p>
 
@@ -99,18 +99,18 @@ export default function Checkout() {
           )}
 
           {/* ── SECTION: PANIER ── */}
-          <div style={{ marginBottom: 32 }}>
+          <div style={{ marginBottom: 32, width: "100%", boxSizing: "border-box" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
               <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--forest)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14 }}>1</div>
               <h2 style={{ margin: 0, fontSize: 18, color: "var(--ink)" }}>Vos articles</h2>
             </div>
-            <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden" }}>
+            <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", width: "100%", boxSizing: "border-box" }}>
               {cart.map((l, idx) => {
                 const prix = l.product.prixPromo || l.product.prix;
                 return (
-                  <div key={l.product.id} style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", borderBottom: idx < cart.length - 1 ? "1px solid var(--line)" : "none" }}>
+                  <div key={l.product.id} style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", borderBottom: idx < cart.length - 1 ? "1px solid var(--line)" : "none", flexWrap: "wrap" }}>
                     <img src={l.product.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=80&q=80"} alt={l.product.nom} style={{ width: 68, height: 68, borderRadius: 12, objectFit: "cover", border: "1px solid var(--line)", flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ flex: "1 1 180px", minWidth: 0 }}>
                       <div style={{ fontWeight: 700, fontSize: 15, color: "var(--ink)", marginBottom: 2 }}>{l.product.nom}</div>
                       <div style={{ fontSize: 13, color: "var(--muted)" }}>{fcfa(prix)} / {l.product.unite}</div>
                       {l.product.prixPromo && (
@@ -119,7 +119,7 @@ export default function Checkout() {
                         </div>
                       )}
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, width: "100%", maxWidth: 220, marginLeft: "auto" }}>
                       <div style={{ fontWeight: 800, fontSize: 16, color: "var(--forest-dark)" }}>{fcfa(prix * l.quantite)}</div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <div style={{ display: "flex", alignItems: "center", border: "1.5px solid var(--line)", borderRadius: 24, overflow: "hidden", background: "var(--paper)" }}>
@@ -192,7 +192,7 @@ export default function Checkout() {
               <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--forest)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14 }}>3</div>
               <h2 style={{ margin: 0, fontSize: 18, color: "var(--ink)" }}>Moyen de paiement</h2>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="bs-payment-grid">
               {PAYMENT_OPTIONS.map((m) => {
                 const isSelected = form.moyenPaiement === m.id;
                 return (

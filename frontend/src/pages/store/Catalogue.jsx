@@ -52,16 +52,18 @@ export default function Catalogue() {
       .finally(() => setLoading(false));
   }, [categoryId, famille, search]);
 
+  const stripAccents = (str) => (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
   let displayedProducts = products;
   if (onlyFavoris) {
     displayedProducts = displayedProducts.filter(p => favIds.includes(p.id));
   } else if (famille) {
-    const fLow = famille.toLowerCase().trim();
+    const fClean = stripAccents(famille);
     displayedProducts = displayedProducts.filter(p => {
-      const pFam = (p.Category?.famille || p.famille || "").toLowerCase();
-      const pCatNom = (p.Category?.nom || "").toLowerCase();
-      const pNom = (p.nom || "").toLowerCase();
-      return pFam.includes(fLow) || fLow.includes(pFam) || pCatNom.includes(fLow) || fLow.includes(pCatNom) || pNom.includes(fLow);
+      const pFam = stripAccents(p.Category?.famille || p.famille);
+      const pCatNom = stripAccents(p.Category?.nom);
+      const pNom = stripAccents(p.nom);
+      return pFam.includes(fClean) || fClean.includes(pFam) || pCatNom.includes(fClean) || fClean.includes(pCatNom) || pNom.includes(fClean);
     });
   }
 

@@ -19,6 +19,24 @@ export default function PWAInstallPrompt() {
 
     if (boutique.nom) {
       document.title = `${boutique.nom} - Boutique & Vente Directe`;
+
+      // Update Apple PWA App Title
+      let appleTitleMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+      if (!appleTitleMeta) {
+        appleTitleMeta = document.createElement("meta");
+        appleTitleMeta.name = "apple-mobile-web-app-title";
+        document.head.appendChild(appleTitleMeta);
+      }
+      appleTitleMeta.content = boutique.nom;
+
+      // Update Standard Web Application Name
+      let appNameMeta = document.querySelector('meta[name="application-name"]');
+      if (!appNameMeta) {
+        appNameMeta = document.createElement("meta");
+        appNameMeta.name = "application-name";
+        document.head.appendChild(appNameMeta);
+      }
+      appNameMeta.content = boutique.nom;
     }
 
     const manifestData = {

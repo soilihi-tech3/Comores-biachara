@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { LogIn, Lock, Mail, AlertCircle, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { LogIn, Lock, Mail, AlertCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function Login() {
@@ -27,11 +27,6 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
-  }
-
-  function fillDemo(email, pw) {
-    setForm({ email, motDePasse: pw });
-    setErreur("");
   }
 
   return (
@@ -89,36 +84,6 @@ export default function Login() {
         <div className="bs-auth-footer">
           <span>Pas encore de compte client ?</span>{" "}
           <Link to="/inscription">Créer un compte</Link>
-        </div>
-
-        {/* DEMO ACCOUNTS QUICK LOGIN */}
-        <div className="bs-demo-box">
-          <div className="bs-demo-title">
-            <ShieldCheck size={16} /> Comptes de démonstration (clic rapide) :
-          </div>
-          <div className="bs-demo-chips">
-            <button
-              type="button"
-              className="bs-demo-chip"
-              onClick={() => fillDemo("admin@marche-vert.com", "Admin123!")}
-            >
-              <CheckCircle2 size={13} /> Admin (admin@marche-vert.com)
-            </button>
-            <button
-              type="button"
-              className="bs-demo-chip"
-              onClick={() => fillDemo("client@example.com", "Client123!")}
-            >
-              <CheckCircle2 size={13} /> Client (client@example.com)
-            </button>
-            <button
-              type="button"
-              className="bs-demo-chip"
-              onClick={() => fillDemo("superadmin@boutique-saas.com", "SuperAdmin123!")}
-            >
-              <CheckCircle2 size={13} /> Super Admin
-            </button>
-          </div>
         </div>
       </div>
     </div>

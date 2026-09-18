@@ -380,11 +380,13 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
                 </div>
               </>
             ) : (
-              <Link to="/connexion" style={{ textDecoration: "none" }}>
-                <button style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontWeight: 700, fontSize: 13.5, color: "var(--muted)" }}>
-                  <User size={16} /> <span>Connexion</span>
-                </button>
-              </Link>
+              <div className="bs-desktop-auth-btn">
+                <Link to="/connexion" style={{ textDecoration: "none" }}>
+                  <button style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontWeight: 700, fontSize: 13.5, color: "var(--muted)" }}>
+                    <User size={16} /> <span>Connexion</span>
+                  </button>
+                </Link>
+              </div>
             )}
 
             <button className="bs-cart-btn" onClick={() => setCartOpen(true)}>
@@ -531,20 +533,22 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
           }}
         >
           <form onSubmit={onSearch} className="bs-mobile-search-form" onClick={(e) => e.stopPropagation()}>
-            <Search size={18} color="var(--forest)" style={{ flexShrink: 0 }} />
-            <input
-              ref={mobileSearchInputRef}
-              placeholder="Rechercher un produit, fruit..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              autoComplete="off"
-              className="bs-mobile-search-input"
-            />
-            {query ? (
-              <button type="button" onClick={clearSearch} className="bs-mobile-search-clear">
-                <X size={18} />
-              </button>
-            ) : null}
+            <div className="bs-mobile-search-pill">
+              <Search size={18} color="var(--forest)" style={{ flexShrink: 0 }} />
+              <input
+                ref={mobileSearchInputRef}
+                placeholder="Rechercher un produit, fruit..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                autoComplete="off"
+                className="bs-mobile-search-input"
+              />
+              {query ? (
+                <button type="button" onClick={clearSearch} className="bs-mobile-search-clear">
+                  <X size={18} />
+                </button>
+              ) : null}
+            </div>
             <button type="button" onClick={closeMobileSearch} className="bs-mobile-search-close">
               Annuler
             </button>

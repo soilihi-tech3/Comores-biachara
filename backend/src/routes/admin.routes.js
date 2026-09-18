@@ -513,12 +513,14 @@ router.put("/boutique", requireRole("admin"), async (req, res, next) => {
     const { 
       nom, logoUrl, couleurPrincipale, fraisLivraison, zonesLivraison, 
       bannerSlides, sideBanners, telephone, telephone2, adresse, adresse2, 
-      emailContact, aProposText 
+      emailContact, aProposText, horairesOuverture, facebookUrl, instagramUrl, 
+      tiktokUrl, whatsappNumber 
     } = req.body;
     await boutique.update({ 
       nom, logoUrl, couleurPrincipale, fraisLivraison, zonesLivraison, 
       bannerSlides, sideBanners, telephone, telephone2, adresse, adresse2, 
-      emailContact, aProposText 
+      emailContact, aProposText, horairesOuverture, facebookUrl, instagramUrl, 
+      tiktokUrl, whatsappNumber 
     });
     purgeCache();
     res.json(boutique);

@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { X, User, Phone, MapPin, KeyRound, CheckCircle2, AlertCircle } from "lucide-react";
+import { X, User, Phone, MapPin, KeyRound, CheckCircle2, AlertCircle, LogOut } from "lucide-react";
 import api from "../api";
 import { useAuth } from "../context/AuthContext.jsx";
 
 export default function ProfileModal({ onClose }) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [form, setForm] = useState({
     nom: user?.nom || "",
     telephone: user?.telephone || "",
@@ -31,7 +31,6 @@ export default function ProfileModal({ onClose }) {
       localStorage.setItem("user", JSON.stringify(updatedUser));
       setTimeout(() => {
         onClose();
-        window.location.reload();
       }, 1200);
     } catch (err) {
       setErreur(err.response?.data?.message || "Impossible de mettre à jour le profil.");
@@ -46,31 +45,32 @@ export default function ProfileModal({ onClose }) {
       style={{
         position: "fixed", inset: 0, zIndex: 1100,
         background: "rgba(22,52,36,0.5)", backdropFilter: "blur(4px)",
-        display: "flex", alignItems: "center", justifyContent: "center"
+        display: "flex", alignItems: "center", justifyContent: "center", padding: 16
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "#fff", borderRadius: 20, padding: 32,
-          maxWidth: 480, width: "90%", boxShadow: "0 12px 40px rgba(0,0,0,0.2)"
+          background: "#fff", borderRadius: 20, padding: "28px 28px 24px",
+          maxWidth: 480, width: "100%", boxShadow: "0 12px 40px rgba(0,0,0,0.2)",
+          maxHeight: "90vh", overflowY: "auto", boxSizing: "border-box"
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{
-              width: 42, height: 42, borderRadius: "50%", background: "var(--forest-light)",
-              color: "var(--forest)", display: "flex", alignItems: "center", justifyContent: "center",
-              fontWeight: 800, fontSize: 16
+              width: 44, height: 44, borderRadius: "50%", background: "var(--forest)",
+              color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
+              fontWeight: 800, fontSize: 18, boxShadow: "0 4px 12px rgba(34,75,53,0.25)"
             }}>
-              {user?.nom?.charAt(0).toUpperCase()}
+              {user?.nom?.charAt(0).toUpperCase() || "U"}
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: 18, color: "var(--forest-dark)" }}>Mon Profil Client</h3>
-              <div style={{ fontSize: 12, color: "var(--muted)" }}>{user?.email}</div>
+              <h3 style={{ margin: 0, fontSize: 18, color: "var(--forest-dark)" }}>Mon Profil</h3>
+              <div style={{ fontSize: 12.5, color: "var(--muted)" }}>{user?.email}</div>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 4 }}>
             <X size={20} />
           </button>
         </div>
@@ -160,6 +160,24 @@ export default function ProfileModal({ onClose }) {
             </button>
           </div>
         </form>
+
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              logout();
+            }}
+            style={{
+              width: "100%", padding: "12px", borderRadius: 30,
+              background: "#FDF2F0", color: "#B4483A", border: "1px solid #F8D7D2",
+              fontWeight: 700, fontSize: 13.5, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8
+            }}
+          >
+            <LogOut size={16} /> Se déconnecter de mon compte
+          </button>
+        </div>
       </div>
     </div>
   );

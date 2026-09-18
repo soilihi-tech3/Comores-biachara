@@ -202,6 +202,59 @@ export default function AdminSettings({ defaultTab = "general" }) {
             </div>
           </div>
 
+          <h3 style={{ marginTop: 28, fontSize: 16, color: "var(--forest-dark)" }}>Horaires d'Ouverture & WhatsApp Contact</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div className="bs-field">
+              <label>Horaires d'ouverture (Affiché dans le footer)</label>
+              <input
+                className="bs-input"
+                value={boutique.horairesOuverture || "Tous les jours de 08h30 à 23h00"}
+                onChange={(e) => set("horairesOuverture", e.target.value)}
+                placeholder="Ex: Tous les jours de 08h30 à 23h00"
+              />
+            </div>
+            <div className="bs-field">
+              <label>Numéro WhatsApp Contact Direct (Ex: 2693300000 ou 33600000000)</label>
+              <input
+                className="bs-input"
+                value={boutique.whatsappNumber || ""}
+                onChange={(e) => set("whatsappNumber", e.target.value)}
+                placeholder="Ex: 2693300000 (sans + ni espaces)"
+              />
+            </div>
+          </div>
+
+          <h3 style={{ marginTop: 28, fontSize: 16, color: "var(--forest-dark)" }}>Réseaux Sociaux (Liens Footer)</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+            <div className="bs-field">
+              <label>Lien Facebook</label>
+              <input
+                className="bs-input"
+                value={boutique.facebookUrl || ""}
+                onChange={(e) => set("facebookUrl", e.target.value)}
+                placeholder="https://facebook.com/votrepage"
+              />
+            </div>
+            <div className="bs-field">
+              <label>Lien Instagram</label>
+              <input
+                className="bs-input"
+                value={boutique.instagramUrl || ""}
+                onChange={(e) => set("instagramUrl", e.target.value)}
+                placeholder="https://instagram.com/votrecompte"
+              />
+            </div>
+            <div className="bs-field">
+              <label>Lien TikTok</label>
+              <input
+                className="bs-input"
+                value={boutique.tiktokUrl || ""}
+                onChange={(e) => set("tiktokUrl", e.target.value)}
+                placeholder="https://tiktok.com/@votrecompte"
+              />
+            </div>
+          </div>
+
           <h3 style={{ marginTop: 28, fontSize: 16, color: "var(--forest-dark)" }}>Section « À propos de nous »</h3>
           <div className="bs-field">
             <label>Description & Présentation de l'entreprise</label>

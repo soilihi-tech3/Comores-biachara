@@ -112,6 +112,21 @@ export default function MyOrders() {
     montant: orders.filter(o => o.statut !== "annulee").reduce((s, o) => s + (o.total || 0), 0),
   };
 
+  async function cancelOrder(id) {
+    if (!window.confirm(`Voulez-vous vraiment annuler votre commande #${id} ?`)) return;
+    try {
+      await api.patch(`/store/${SLUG}/orders/${id}/cancel`);
+      setOrders((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, statut: "annulee" } : o))
+      );
+      if (selected && selected.id === id) {
+        setSelected((prev) => ({ ...prev, statut: "annulee" }));
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Impossible d'annuler cette commande.");
+    }
+  }
+
   // ─── DETAIL VIEW ───────────────────────────────────────────────────────────
   if (selected) {
     const o = selected;
@@ -134,9 +149,23 @@ export default function MyOrders() {
               <h1 style={{ fontFamily: "var(--font-heading)", fontSize: 26, color: "var(--forest-dark)", margin: "0 0 6px" }}>Commande #{o.id}</h1>
               <p style={{ color: "var(--muted)", fontSize: 13, margin: 0 }}>Passée le {new Date(o.createdAt).toLocaleDateString("fr-FR", { dateStyle: "long" })}</p>
             </div>
-            <span style={{ background: cfg.bg, color: cfg.color, padding: "8px 18px", borderRadius: 20, fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
-              {cfg.label}
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {o.statut === "en_attente" && (
+                <button
+                  onClick={() => cancelOrder(o.id)}
+                  style={{
+                    background: "#FDF2F0", color: "#B4483A", border: "1px solid #F8D7D2",
+                    padding: "8px 16px", borderRadius: 20, fontWeight: 700, fontSize: 13,
+                    cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6
+                  }}
+                >
+                  <XCircle size={15} /> Annuler ma commande
+                </button>
+              )}
+              <span style={{ background: cfg.bg, color: cfg.color, padding: "8px 18px", borderRadius: 20, fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+                {cfg.label}
+              </span>
+            </div>
           </div>
 
           {/* SUIVI TIMELINE */}
