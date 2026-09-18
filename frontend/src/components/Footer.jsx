@@ -39,7 +39,7 @@ export default function Footer() {
             ) : (
               <Store size={26} color="#A8BEB1" />
             )}
-            <span style={{ fontSize: 22, fontWeight: 800, color: "#fff" }}>{boutique?.nom || "Marché Vert"}</span>
+            <span style={{ fontSize: 22, fontWeight: 800, color: "#fff" }}>{boutique?.nom || ""}</span>
           </div>
           <p style={{ color: "#A8BEB1", lineHeight: 1.6, fontSize: 13.5, margin: "0 0 20px 0" }}>
             {boutique?.aProposText || "Bienvenue dans notre boutique en ligne. Découvrez des produits frais, bio et naturels sélectionnés avec soin pour votre santé et votre bien-être."}

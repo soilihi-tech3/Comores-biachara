@@ -54,8 +54,43 @@ app.use("/uploads", express.static(uploadsPath, {
 app.get("/", (req, res) => res.json({ message: "API Boutique SaaS Comores Biachara en ligne.", status: "ok" }));
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
+// Dynamic PWA Manifest Route fetching custom Boutique Name & Logo directly from DB
+app.get(["/manifest.json", "/api/manifest.json"], async (req, res) => {
+  try {
+    const { Boutique } = require("./models");
+    const boutique = await Boutique.findOne({ order: [["createdAt", "ASC"]] });
+    const name = boutique?.nom || "Boutique SaaS";
+    const logo = boutique?.logoUrl || "https://images.unsplash.com/photo-1543083477-4f785aeafaa9?auto=format&fit=crop&w=512&h=512&q=80";
+
+    res.setHeader("Content-Type", "application/manifest+json; charset=utf-8");
+    res.json({
+      short_name: name,
+      name: name,
+      icons: [
+        { src: logo, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+        { src: logo, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+      ],
+      start_url: "/",
+      background_color: "#163424",
+      theme_color: "#163424",
+      display: "standalone",
+      orientation: "portrait-primary",
+      description: `Application officielle de ${name}.`
+    });
+  } catch (err) {
+    res.setHeader("Content-Type", "application/manifest+json; charset=utf-8");
+    res.json({
+      short_name: "Boutique",
+      name: "Boutique",
+      start_url: "/",
+      display: "standalone"
+    });
+  }
+});
+
 // Fallback Middleware: If frontend requests /store, /auth, /admin without /api prefix, auto-rewrite to /api
 app.use((req, res, next) => {
+  if (req.url === "/manifest.json" || req.url === "/api/manifest.json") return next();
   if (!req.url.startsWith("/api") && !req.url.startsWith("/uploads") && req.url !== "/") {
     req.url = "/api" + (req.url.startsWith("/") ? "" : "/") + req.url;
   }

@@ -122,7 +122,7 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
               <Store size={26} color="var(--forest)" />
             )}
             <span style={{ fontSize: 19, fontWeight: 900, color: "var(--forest-dark)", letterSpacing: "-0.5px" }}>
-              {boutique?.nom || "Marché Vert"}
+              {boutique?.nom || ""}
             </span>
           </Link>
 

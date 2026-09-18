@@ -10,7 +10,7 @@ export default function PWAInstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
 
-  const storeName = boutique?.nom || "Marché Vert";
+  const storeName = boutique?.nom || "Boutique";
   const storeLogo = boutique?.logoUrl || "https://images.unsplash.com/photo-1543083477-4f785aeafaa9?auto=format&fit=crop&w=192&h=192&q=80";
 
   // Inject Dynamic Manifest and Page Title / Icons based on Settings
@@ -18,50 +18,36 @@ export default function PWAInstallPrompt() {
     const currentName = boutique?.nom || storeName;
     const currentLogo = boutique?.logoUrl || storeLogo;
 
-    document.title = currentName;
+    if (currentName) {
+      document.title = currentName;
 
-    // Update Apple PWA App Title
-    let appleTitleMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
-    if (!appleTitleMeta) {
-      appleTitleMeta = document.createElement("meta");
-      appleTitleMeta.name = "apple-mobile-web-app-title";
-      document.head.appendChild(appleTitleMeta);
+      // Update Apple PWA App Title
+      let appleTitleMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+      if (!appleTitleMeta) {
+        appleTitleMeta = document.createElement("meta");
+        appleTitleMeta.name = "apple-mobile-web-app-title";
+        document.head.appendChild(appleTitleMeta);
+      }
+      appleTitleMeta.content = currentName;
+
+      // Update Standard Web Application Name
+      let appNameMeta = document.querySelector('meta[name="application-name"]');
+      if (!appNameMeta) {
+        appNameMeta = document.createElement("meta");
+        appNameMeta.name = "application-name";
+        document.head.appendChild(appNameMeta);
+      }
+      appNameMeta.content = currentName;
     }
-    appleTitleMeta.content = currentName;
 
-    // Update Standard Web Application Name
-    let appNameMeta = document.querySelector('meta[name="application-name"]');
-    if (!appNameMeta) {
-      appNameMeta = document.createElement("meta");
-      appNameMeta.name = "application-name";
-      document.head.appendChild(appNameMeta);
-    }
-    appNameMeta.content = currentName;
-
-    const manifestData = {
-      short_name: currentName,
-      name: currentName,
-      icons: [
-        { src: currentLogo, sizes: "192x192", type: "image/png", purpose: "any maskable" },
-        { src: currentLogo, sizes: "512x512", type: "image/png", purpose: "any maskable" }
-      ],
-      start_url: "/",
-      background_color: "#163424",
-      theme_color: "#163424",
-      display: "standalone",
-      orientation: "portrait-primary",
-      description: `Application officielle de ${currentName}.`
-    };
-
-    const manifestDataUri = "data:application/manifest+json;charset=utf-8," + encodeURIComponent(JSON.stringify(manifestData));
-
+    // Connect to dynamic backend manifest route
     let linkTag = document.querySelector('link[rel="manifest"]');
     if (!linkTag) {
       linkTag = document.createElement("link");
       linkTag.rel = "manifest";
       document.head.appendChild(linkTag);
     }
-    linkTag.href = manifestDataUri;
+    linkTag.href = `/manifest.json?t=${Date.now()}`;
 
     let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
     if (!appleIcon) {

@@ -32,7 +32,7 @@ export default function AdminLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
 
   const perms = Array.isArray(user?.permissions) ? user.permissions : [];
-  const storeName = boutique?.nom || "Marché Vert";
+  const storeName = boutique?.nom || "Boutique";
 
   const allLinks = [
     { to: "/admin", label: "Tableau de bord", icon: LayoutDashboard, exact: true, permKey: "voir_dashboard" },
