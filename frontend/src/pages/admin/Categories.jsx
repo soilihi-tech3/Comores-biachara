@@ -3,6 +3,7 @@ import { PlusCircle, List, Pencil, Trash2, CheckCircle, Image as ImageIcon, Laye
 import api from "../../api";
 import ImageUploader from "../../components/ImageUploader.jsx";
 import TablePagination from "../../components/TablePagination.jsx";
+import { subscribeRealtime } from "../../utils/realtime.js";
 
 export default function AdminCategories() {
   const [activeTab, setActiveTab] = useState("liste"); // "liste" | "ajout" | "familles"
@@ -28,6 +29,16 @@ export default function AdminCategories() {
   };
   const [familleForm, setFamilleForm] = useState(initialFamilleForm);
 
+  function silentSyncCategories() {
+    Promise.all([
+      api.get("/admin/categories"),
+      api.get("/admin/familles")
+    ]).then(([resCats, resFams]) => {
+      setCategories(resCats.data || []);
+      setFamilles(resFams.data || []);
+    }).catch(() => {});
+  }
+
   function load() {
     setLoading(true);
     Promise.all([
@@ -41,7 +52,16 @@ export default function AdminCategories() {
       }
     }).finally(() => setLoading(false));
   }
-  useEffect(load, []);
+
+  useEffect(() => {
+    load();
+    const unsub = subscribeRealtime((detail) => {
+      if (detail.type === "category_updated") {
+        silentSyncCategories();
+      }
+    });
+    return () => unsub();
+  }, []);
 
   function showToast(msg) {
     setToast(msg);
@@ -71,16 +91,27 @@ export default function AdminCategories() {
 
     try {
       if (editingId) {
-        await api.put(`/admin/categories/${editingId}`, categoryForm);
+        const res = await api.put(`/admin/categories/${editingId}`, categoryForm);
+        const updatedCat = res.data;
+        setCategories((prev) =>
+          prev.map((c) =>
+            c.id === editingId
+              ? (updatedCat && updatedCat.id ? updatedCat : { ...c, ...categoryForm })
+              : c
+          )
+        );
         showToast("Catégorie modifiée avec succès !");
       } else {
-        await api.post("/admin/categories", categoryForm);
+        const res = await api.post("/admin/categories", categoryForm);
+        const newCat = res.data;
+        const newCatItem = newCat && newCat.id ? newCat : { ...categoryForm, id: Date.now() };
+        setCategories((prev) => [newCatItem, ...prev]);
         showToast("Nouvelle catégorie ajoutée !");
       }
       setEditingId(null);
       setCategoryForm(initialCategoryForm);
       setActiveTab("liste");
-      load();
+      silentSyncCategories();
     } catch (err) {
       const msg = err.response?.data?.message || err.message || "Erreur inconnue.";
       showToast("Erreur : " + msg);
@@ -89,9 +120,14 @@ export default function AdminCategories() {
 
   async function deleteCategory(id) {
     if (!confirm("Voulez-vous vraiment supprimer cette catégorie ?")) return;
-    await api.delete(`/admin/categories/${id}`);
+    setCategories((prev) => prev.filter((c) => c.id !== id));
     showToast("Catégorie supprimée.");
-    load();
+    try {
+      await api.delete(`/admin/categories/${id}`);
+      silentSyncCategories();
+    } catch (err) {
+      load(); // Revert on failure
+    }
   }
 
   // --- FAMILLE ACTIONS ---
@@ -115,15 +151,26 @@ export default function AdminCategories() {
 
     try {
       if (editingFamilleId) {
-        await api.put(`/admin/familles/${editingFamilleId}`, familleForm);
+        const res = await api.put(`/admin/familles/${editingFamilleId}`, familleForm);
+        const updatedFam = res.data;
+        setFamilles((prev) =>
+          prev.map((f) =>
+            f.id === editingFamilleId
+              ? (updatedFam && updatedFam.id ? updatedFam : { ...f, ...familleForm })
+              : f
+          )
+        );
         showToast("Famille de produit modifiée !");
       } else {
-        await api.post("/admin/familles", familleForm);
+        const res = await api.post("/admin/familles", familleForm);
+        const newFam = res.data;
+        const newFamItem = newFam && newFam.id ? newFam : { ...familleForm, id: Date.now() };
+        setFamilles((prev) => [...prev, newFamItem]);
         showToast("Nouvelle famille de produit créée !");
       }
       setEditingFamilleId(null);
       setFamilleForm(initialFamilleForm);
-      load();
+      silentSyncCategories();
     } catch (err) {
       const msg = err.response?.data?.message || err.message || "Erreur inconnue.";
       showToast("Erreur : " + msg);
@@ -132,9 +179,14 @@ export default function AdminCategories() {
 
   async function deleteFamille(id) {
     if (!confirm("Voulez-vous vraiment supprimer cette famille de produit ?")) return;
-    await api.delete(`/admin/familles/${id}`);
+    setFamilles((prev) => prev.filter((f) => f.id !== id));
     showToast("Famille de produit supprimée.");
-    load();
+    try {
+      await api.delete(`/admin/familles/${id}`);
+      silentSyncCategories();
+    } catch (err) {
+      load();
+    }
   }
 
   // Pagination for categories

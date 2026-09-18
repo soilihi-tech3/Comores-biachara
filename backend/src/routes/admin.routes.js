@@ -4,6 +4,7 @@ const { Op } = require("sequelize");
 const { sequelize, Product, Category, Order, OrderItem, User, Boutique, Notification, Review, Famille, Fournisseur, UniteVente, Achat } = require("../models");
 const { authenticate, requireRole, requireOwnBoutique } = require("../middleware/auth");
 const { clearCachePattern } = require("../config/cache");
+const { broadcast } = require("../utils/broadcaster");
 
 const router = express.Router();
 
@@ -227,6 +228,8 @@ router.get("/categories", async (req, res, next) => {
 router.post("/categories", async (req, res, next) => {
   try {
     const cat = await Category.create({ ...req.body, boutiqueId: req.boutiqueId });
+    purgeCache();
+    broadcast("category_updated", { boutiqueId: req.boutiqueId });
     res.status(201).json(cat);
   } catch (err) { next(err); }
 });
@@ -236,6 +239,8 @@ router.put("/categories/:id", async (req, res, next) => {
     const cat = await Category.findOne({ where: { id: req.params.id, boutiqueId: req.boutiqueId } });
     if (!cat) return res.status(404).json({ message: "Catégorie introuvable." });
     await cat.update(req.body);
+    purgeCache();
+    broadcast("category_updated", { categoryId: cat.id, boutiqueId: req.boutiqueId });
     res.json(cat);
   } catch (err) { next(err); }
 });
@@ -245,6 +250,8 @@ router.delete("/categories/:id", async (req, res, next) => {
     const cat = await Category.findOne({ where: { id: req.params.id, boutiqueId: req.boutiqueId } });
     if (!cat) return res.status(404).json({ message: "Catégorie introuvable." });
     await cat.destroy();
+    purgeCache();
+    broadcast("category_updated", { boutiqueId: req.boutiqueId });
     res.json({ message: "Catégorie supprimée." });
   } catch (err) { next(err); }
 });
@@ -286,6 +293,7 @@ router.post("/products", async (req, res, next) => {
     });
 
     purgeCache();
+    broadcast("product_updated", { productId: product.id, boutiqueId: req.boutiqueId });
     res.status(201).json(fullProduct);
   } catch (err) { next(err); }
 });
@@ -302,6 +310,7 @@ router.put("/products/:id", async (req, res, next) => {
     });
 
     purgeCache();
+    broadcast("product_updated", { productId: product.id, boutiqueId: req.boutiqueId });
     res.json(fullProduct);
   } catch (err) { next(err); }
 });
@@ -312,6 +321,7 @@ router.delete("/products/:id", async (req, res, next) => {
     if (!product) return res.status(404).json({ message: "Produit introuvable." });
     await product.destroy();
     purgeCache();
+    broadcast("product_updated", { productId: req.params.id, boutiqueId: req.boutiqueId });
     res.json({ message: "Produit supprimé." });
   } catch (err) { next(err); }
 });
@@ -353,6 +363,7 @@ router.patch("/orders/:id/status", async (req, res, next) => {
       type: "status"
     }).catch(() => {});
 
+    broadcast("order_updated", { orderId: order.id, statut: req.body.statut, clientId: order.clientId, boutiqueId: order.boutiqueId });
     res.json(order);
   } catch (err) { next(err); }
 });
@@ -374,6 +385,7 @@ router.patch("/orders/:id/assign", async (req, res, next) => {
       }).catch(() => {});
     }
 
+    broadcast("order_updated", { orderId: order.id, employeId: empId, boutiqueId: order.boutiqueId });
     res.json(order);
   } catch (err) { next(err); }
 });

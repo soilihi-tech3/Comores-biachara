@@ -2,9 +2,30 @@ const express = require("express");
 const { Op } = require("sequelize");
 const { sequelize, Product, Category, Order, OrderItem, Review, User, Notification, Famille } = require("../models");
 const { authenticate, requireRole, loadBoutique } = require("../middleware/auth");
-const { cacheMiddleware } = require("../config/cache");
+const { cacheMiddleware, clearCachePattern } = require("../config/cache");
+const { addClient, removeClient, broadcast } = require("../utils/broadcaster");
 
 const router = express.Router({ mergeParams: true });
+
+// GET /api/store/:slug/realtime/events - SSE Stream for real-time app updates
+router.get("/:slug/realtime/events", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+
+  const keepAlive = setInterval(() => {
+    res.write(":\n\n");
+  }, 15000);
+
+  addClient(res);
+
+  req.on("close", () => {
+    clearInterval(keepAlive);
+    removeClient(res);
+  });
+});
 
 // GET /api/store/:slug  -> infos publiques de la boutique (cached 5 min)
 router.get("/:slug", loadBoutique, cacheMiddleware(300), (req, res) => {
@@ -56,10 +77,17 @@ router.get("/:slug/products", loadBoutique, cacheMiddleware(120), async (req, re
 
     if (req.query.famille) {
       const fam = req.query.famille.trim();
-      where[Op.or] = [
+      const searchConditions = [
         { famille: { [Op.like]: `%${fam}%` } },
-        { '$Category.famille$': { [Op.like]: `%${fam}%` } }
+        { '$Category.famille$': { [Op.like]: `%${fam}%` } },
+        { '$Category.nom$': { [Op.like]: `%${fam}%` } },
+        { nom: { [Op.like]: `%${fam}%` } }
       ];
+      if (where[Op.or]) {
+        where[Op.and] = [{ [Op.or]: searchConditions }];
+      } else {
+        where[Op.or] = searchConditions;
+      }
     }
 
     if (req.query.search) {
@@ -113,6 +141,7 @@ router.post("/:slug/products/:id/reviews", loadBoutique, authenticate, requireRo
     if (!product) return res.status(404).json({ message: "Produit introuvable." });
 
     const review = await Review.create({ productId: product.id, userId: req.user.id, note, commentaire });
+    broadcast("product_updated", { productId: product.id });
     res.status(201).json(review);
   } catch (err) { next(err); }
 });
@@ -174,6 +203,10 @@ router.post("/:slug/orders", loadBoutique, authenticate, requireRole("client"), 
       message: `Nouvelle commande #${cmdNum} reçue de ${req.user.nom} (${sousTotal + fraisLivraison} F CFA).`,
       type: "order"
     }).catch(() => {});
+
+    clearCachePattern("cache:/api/store").catch(() => {});
+    broadcast("order_created", { orderId: order.id, clientId: req.user.id, boutiqueId: req.boutique.id });
+    broadcast("product_updated", { boutiqueId: req.boutique.id });
 
     res.status(201).json(complete);
   } catch (err) {

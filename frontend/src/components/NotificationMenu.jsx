@@ -4,6 +4,8 @@ import { Bell, Check, ShoppingBag, CheckCircle, Clock, AlertCircle } from "lucid
 import api from "../api";
 import { useAuth } from "../context/AuthContext.jsx";
 
+import { subscribeRealtime } from "../utils/realtime.js";
+
 export default function NotificationMenu() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
@@ -20,8 +22,28 @@ export default function NotificationMenu() {
 
   useEffect(() => {
     load();
-    const interval = setInterval(load, 8000); // Polling toutes les 8s pour actualiser les notifications
-    return () => clearInterval(interval);
+
+    // 1. Realtime SSE push listener
+    const unsubscribe = subscribeRealtime((detail) => {
+      if (detail.type === "order_updated" || detail.type === "order_created") {
+        load();
+      }
+    });
+
+    // 2. 4s Polling
+    const interval = setInterval(load, 4000);
+
+    // 3. Window focus refresh
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
   }, [user]);
 
   // Click outside to close

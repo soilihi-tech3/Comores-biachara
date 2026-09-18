@@ -51,8 +51,13 @@ function WideLayout({ children }) {
 }
 
 import PWAInstallPrompt from "./components/PWAInstallPrompt.jsx";
+import { initRealtimeSync } from "./utils/realtime.js";
 
 export default function App() {
+  React.useEffect(() => {
+    initRealtimeSync();
+  }, []);
+
   return (
     <>
       <PWAInstallPrompt />

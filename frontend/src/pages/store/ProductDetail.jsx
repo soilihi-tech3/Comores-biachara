@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Tag, Star, ShoppingBag, CheckCircle, Heart, Minus, Plus, Search, AlertTriangle } from "lucide-react";
 import api, { SLUG } from "../../api";
 import Stars from "../../components/Stars.jsx";
@@ -296,7 +296,7 @@ export default function ProductDetail() {
               </div>
             ) : (
               <p style={{ fontSize: 14, color: "var(--muted)", marginTop: 16 }}>
-                <a href="/connexion" style={{ color: "var(--forest)", fontWeight: 700 }}>Connectez-vous</a> pour évaluer ce produit.
+                <Link to="/connexion" style={{ color: "var(--forest)", fontWeight: 700 }}>Connectez-vous</Link> pour évaluer ce produit.
               </p>
             )}
           </div>

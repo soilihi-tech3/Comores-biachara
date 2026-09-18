@@ -48,6 +48,8 @@ const MOIS = [
 
 import { useCart } from "../../context/CartContext.jsx";
 
+import { subscribeRealtime } from "../../utils/realtime.js";
+
 export default function AdminOrders() {
   const { showToast } = useCart();
   const [orders, setOrders] = useState([]);
@@ -65,10 +67,44 @@ export default function AdminOrders() {
   function load() {
     api.get("/admin/orders", { 
       params: statusFilter !== "tous" ? { statut: statusFilter } : {} 
-    }).then((res) => setOrders(res.data || []));
+    }).then((res) => {
+      const freshOrders = res.data || [];
+      setOrders(freshOrders);
+
+      // Auto update selected order if modal is open
+      setSelectedOrder(prev => {
+        if (!prev) return null;
+        const found = freshOrders.find(o => o.id === prev.id);
+        return found || prev;
+      });
+    });
   }
 
-  useEffect(load, [statusFilter]);
+  useEffect(() => {
+    load();
+
+    // 1. Realtime SSE push listener
+    const unsubscribe = subscribeRealtime((detail) => {
+      if (detail.type === "order_updated" || detail.type === "order_created") {
+        load();
+      }
+    });
+
+    // 2. Smart 4s polling interval
+    const interval = setInterval(load, 4000);
+
+    // 3. Window focus refresh
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [statusFilter]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -81,30 +117,49 @@ export default function AdminOrders() {
   }, []);
 
   async function changeStatus(id, statut) {
-    await api.patch(`/admin/orders/${id}/status`, { statut });
-    load();
-    const cmdNum = formatOrderNum(id);
-    const label = STATUT_LABEL[statut] || statut;
-    if (showToast) {
-      showToast(`La commande #${cmdNum} a été mise à jour : ${label}.`, "success", "Commande validée !");
-    }
+    // 0ms Optimistic local update
+    setOrders((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, statut } : o))
+    );
     if (selectedOrder && selectedOrder.id === id) {
-      setSelectedOrder(prev => ({ ...prev, statut }));
+      setSelectedOrder((prev) => ({ ...prev, statut }));
+    }
+
+    try {
+      await api.patch(`/admin/orders/${id}/status`, { statut });
+      const cmdNum = formatOrderNum(id);
+      const label = STATUT_LABEL[statut] || statut;
+      if (showToast) {
+        showToast(`La commande #${cmdNum} a été mise à jour : ${label}.`, "success", "Commande validée !");
+      }
+    } catch (err) {
+      load(); // Revert to server state on error
     }
   }
 
   async function assign(id, employeId) {
     const empId = employeId || null;
-    await api.patch(`/admin/orders/${id}/assign`, { employeId: empId });
-    load();
-    const cmdNum = formatOrderNum(id);
-    const emp = employees.find(e => e.id === Number(empId));
-    const empName = emp ? emp.nom : "aucun agent";
-    if (showToast) {
-      showToast(`La commande #${cmdNum} a été attribuée à ${empName}.`, "info", "Assignation mise à jour");
-    }
+    const emp = employees.find((e) => e.id === Number(empId));
+
+    // 0ms Optimistic local update
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === id ? { ...o, employeAssigneId: empId, employeAssigne: emp } : o
+      )
+    );
     if (selectedOrder && selectedOrder.id === id) {
-      setSelectedOrder(prev => ({ ...prev, employeAssigneId: empId, employeAssigne: emp }));
+      setSelectedOrder((prev) => ({ ...prev, employeAssigneId: empId, employeAssigne: emp }));
+    }
+
+    try {
+      await api.patch(`/admin/orders/${id}/assign`, { employeId: empId });
+      const cmdNum = formatOrderNum(id);
+      const empName = emp ? emp.nom : "aucun agent";
+      if (showToast) {
+        showToast(`La commande #${cmdNum} a été attribuée à ${empName}.`, "info", "Assignation mise à jour");
+      }
+    } catch (err) {
+      load(); // Revert to server state on error
     }
   }
 

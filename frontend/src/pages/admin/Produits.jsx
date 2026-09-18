@@ -4,6 +4,8 @@ import api from "../../api";
 import ImageUploader from "../../components/ImageUploader.jsx";
 import TablePagination from "../../components/TablePagination.jsx";
 
+import { subscribeRealtime } from "../../utils/realtime.js";
+
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 
 function getExpirationStatus(dateExpiration) {
@@ -62,6 +64,14 @@ export default function AdminProduits() {
   };
   const [form, setForm] = useState(initialForm);
 
+  function silentSyncProducts() {
+    api.get("/admin/products").then((res) => setProducts(res.data)).catch(() => {});
+    api.get("/admin/categories").then((res) => setCategories(res.data)).catch(() => {});
+    api.get("/admin/familles").then((res) => setFamilles(res.data || [])).catch(() => {});
+    api.get("/admin/unites").then((res) => setUnites(res.data || [])).catch(() => {});
+    api.get("/admin/fournisseurs").then((res) => setFournisseurs(res.data || [])).catch(() => {});
+  }
+
   function load() {
     setLoading(true);
     api.get("/admin/products").then((res) => setProducts(res.data)).finally(() => setLoading(false));
@@ -70,7 +80,16 @@ export default function AdminProduits() {
     api.get("/admin/unites").then((res) => setUnites(res.data || [])).catch(() => {});
     api.get("/admin/fournisseurs").then((res) => setFournisseurs(res.data || [])).catch(() => {});
   }
-  useEffect(load, []);
+
+  useEffect(() => {
+    load();
+    const unsub = subscribeRealtime((detail) => {
+      if (detail.type === "product_updated" || detail.type === "category_updated") {
+        silentSyncProducts();
+      }
+    });
+    return () => unsub();
+  }, []);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -128,28 +147,45 @@ export default function AdminProduits() {
 
     try {
       if (editingId) {
-        await api.put(`/admin/products/${editingId}`, payload);
+        const res = await api.put(`/admin/products/${editingId}`, payload);
+        const updated = res.data;
+        const matchingCat = categories.find(c => String(c.id) === String(payload.categoryId));
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === editingId
+              ? { ...p, ...payload, Category: matchingCat || p.Category, id: editingId }
+              : p
+          )
+        );
         showToast("Produit modifié avec succès !");
       } else {
-        await api.post("/admin/products", payload);
+        const res = await api.post("/admin/products", payload);
+        const created = res.data;
+        const matchingCat = categories.find(c => String(c.id) === String(payload.categoryId));
+        const newProductItem = created && created.id ? { ...created, Category: matchingCat } : { ...payload, id: Date.now(), Category: matchingCat };
+        setProducts((prev) => [newProductItem, ...prev]);
         showToast("Nouveau produit ajouté et achat initial enregistré !");
       }
       setEditingId(null);
       setForm(initialForm);
       setActiveTab("liste");
-      load();
+      silentSyncProducts();
     } catch (err) {
       const msg = err.response?.data?.message || err.message || "Erreur inconnue.";
       showToast("Erreur : " + msg);
     }
   }
 
-
   async function deleteProduct(id) {
     if (!confirm("Voulez-vous vraiment supprimer ce produit ?")) return;
-    await api.delete(`/admin/products/${id}`);
+    setProducts((prev) => prev.filter((p) => p.id !== id));
     showToast("Produit supprimé.");
-    load();
+    try {
+      await api.delete(`/admin/products/${id}`);
+      silentSyncProducts();
+    } catch (err) {
+      load(); // Revert on failure
+    }
   }
 
   function openRestockModal(product) {
@@ -175,8 +211,15 @@ export default function AdminProduits() {
         notes: restockForm.notes || `Approvisionnement direct pour ${restockProduct.nom}`
       });
       showToast(`Approvisionnement réussi ! (+${restockForm.quantite} en stock pour ${restockProduct.nom})`);
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === restockProduct.id
+            ? { ...p, stock: Number(p.stock) + Number(restockForm.quantite) }
+            : p
+        )
+      );
       setRestockProduct(null);
-      load();
+      silentSyncProducts();
     } catch (err) {
       const msg = err.response?.data?.message || err.message || "Erreur lors de l'approvisionnement.";
       showToast("Erreur : " + msg);

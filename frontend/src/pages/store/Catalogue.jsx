@@ -20,6 +20,11 @@ export default function Catalogue() {
   const search = params.get("search") || "";
   const onlyFavoris = params.get("favoris") === "1";
 
+  // Scroll to top on filter change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [categoryId, famille, search, onlyFavoris]);
+
   // User-scoped favorites sync
   useEffect(() => {
     function updateFavs() {
@@ -54,7 +59,9 @@ export default function Catalogue() {
     const fLow = famille.toLowerCase().trim();
     displayedProducts = displayedProducts.filter(p => {
       const pFam = (p.Category?.famille || p.famille || "").toLowerCase();
-      return pFam.includes(fLow) || fLow.includes(pFam);
+      const pCatNom = (p.Category?.nom || "").toLowerCase();
+      const pNom = (p.nom || "").toLowerCase();
+      return pFam.includes(fLow) || fLow.includes(pFam) || pCatNom.includes(fLow) || fLow.includes(pCatNom) || pNom.includes(fLow);
     });
   }
 
@@ -67,7 +74,7 @@ export default function Catalogue() {
   }
 
   return (
-    <>
+    <div style={{ minHeight: "65vh" }}>
       <div className="bs-cats">
         <div 
           className={"bs-cat-card" + (!categoryId && !famille && !onlyFavoris ? " on" : "")} 
@@ -134,26 +141,36 @@ export default function Catalogue() {
         )}
       </div>
 
-      {!loading && onlyFavoris && displayedProducts.length === 0 && (
-        <div style={{ padding: 60, textAlign: "center", color: "var(--muted)", background: "#fff", borderRadius: 16 }}>
-          <Heart size={44} color="#B4483A" style={{ marginBottom: 12, opacity: 0.8 }} />
-          <h3 style={{ margin: "0 0 8px", color: "var(--forest-dark)" }}>Aucun produit dans vos favoris</h3>
-          <p style={{ margin: 0, fontSize: 14 }}>
-            Parcourez le catalogue et cliquez sur l'icône cœur d'un produit pour l'ajouter à vos favoris personnels !
-          </p>
+      {loading ? (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 20, padding: "20px 0" }}>
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} style={{ background: "#fff", height: 280, borderRadius: 16, border: "1px solid var(--line)", animation: "pulse 1.2s infinite ease-in-out" }} />
+          ))}
         </div>
-      )}
+      ) : (
+        <>
+          {onlyFavoris && displayedProducts.length === 0 && (
+            <div style={{ padding: 60, textAlign: "center", color: "var(--muted)", background: "#fff", borderRadius: 16 }}>
+              <Heart size={44} color="#B4483A" style={{ marginBottom: 12, opacity: 0.8 }} />
+              <h3 style={{ margin: "0 0 8px", color: "var(--forest-dark)" }}>Aucun produit dans vos favoris</h3>
+              <p style={{ margin: 0, fontSize: 14 }}>
+                Parcourez le catalogue et cliquez sur l'icône cœur d'un produit pour l'ajouter à vos favoris personnels !
+              </p>
+            </div>
+          )}
 
-      {!loading && !onlyFavoris && displayedProducts.length === 0 && (
-        <div style={{ padding: 60, textAlign: "center", color: "var(--muted)", background: "#fff", borderRadius: 16 }}>
-          Aucun produit ne correspond à vos critères de recherche.
-        </div>
-      )}
+          {!onlyFavoris && displayedProducts.length === 0 && (
+            <div style={{ padding: 60, textAlign: "center", color: "var(--muted)", background: "#fff", borderRadius: 16 }}>
+              Aucun produit ne correspond à vos critères de recherche.
+            </div>
+          )}
 
-      <div className="bs-grid">
-        {displayedProducts.map((p) => <ProductCard key={p.id} product={p} isFavorisPage={onlyFavoris} />)}
-      </div>
-    </>
+          <div className="bs-grid">
+            {displayedProducts.map((p) => <ProductCard key={p.id} product={p} isFavorisPage={onlyFavoris} />)}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

@@ -45,6 +45,8 @@ const FILTERS = [
   { key: "annulee",       label: "Annulées",              icon: XCircle },
 ];
 
+import { subscribeRealtime } from "../../utils/realtime.js";
+
 export default function MyOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,10 +54,46 @@ export default function MyOrders() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
 
-  useEffect(() => {
+  const fetchOrders = () => {
     api.get(`/store/${SLUG}/orders/mine`)
-      .then(res => setOrders(res.data))
+      .then(res => {
+        const freshOrders = res.data || [];
+        setOrders(freshOrders);
+
+        // Auto-update selected order if currently open
+        setSelected(prev => {
+          if (!prev) return null;
+          const found = freshOrders.find(o => o.id === prev.id);
+          return found || prev;
+        });
+      })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchOrders();
+
+    // 1. Realtime SSE push listener
+    const unsubscribe = subscribeRealtime((detail) => {
+      if (detail.type === "order_updated" || detail.type === "order_created") {
+        fetchOrders();
+      }
+    });
+
+    // 2. Smart 4s polling interval
+    const interval = setInterval(fetchOrders, 4000);
+
+    // 3. Window focus / tab active refresh
+    const onFocus = () => fetchOrders();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
   }, []);
 
   const filtered = orders.filter(o => {
@@ -83,17 +121,17 @@ export default function MyOrders() {
     const currentStep = cfg.step;
 
     return (
-      <div style={{ minHeight: "calc(100vh - 70px)", display: "grid", gridTemplateColumns: "1fr 380px", background: "var(--paper)" }}>
+      <div className="bs-my-orders-detail-layout">
 
         {/* ── MAIN DETAIL ── */}
-        <div style={{ overflowY: "auto", padding: "32px 40px 60px", borderRight: "1px solid var(--line)" }}>
-          <button onClick={() => setSelected(null)} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 13, fontWeight: 600, padding: "0 0 24px", marginBottom: 8 }}>
+        <div className="bs-my-orders-detail-main">
+          <button onClick={() => setSelected(null)} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 13, fontWeight: 600, padding: "0 0 20px", marginBottom: 8 }}>
             <ArrowLeft size={15} /> Retour à mes commandes
           </button>
 
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 32 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
             <div>
-              <h1 style={{ fontFamily: "var(--font-heading)", fontSize: 28, color: "var(--forest-dark)", margin: "0 0 6px" }}>Commande #{o.id}</h1>
+              <h1 style={{ fontFamily: "var(--font-heading)", fontSize: 26, color: "var(--forest-dark)", margin: "0 0 6px" }}>Commande #{o.id}</h1>
               <p style={{ color: "var(--muted)", fontSize: 13, margin: 0 }}>Passée le {new Date(o.createdAt).toLocaleDateString("fr-FR", { dateStyle: "long" })}</p>
             </div>
             <span style={{ background: cfg.bg, color: cfg.color, padding: "8px 18px", borderRadius: 20, fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
@@ -103,39 +141,39 @@ export default function MyOrders() {
 
           {/* SUIVI TIMELINE */}
           {o.statut !== "annulee" && (
-            <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 20, padding: "28px 32px", marginBottom: 24, boxShadow: "0 2px 12px rgba(34,75,53,0.05)" }}>
-              <h3 style={{ margin: "0 0 28px", fontSize: 16, color: "var(--forest-dark)", fontWeight: 700 }}>
+            <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 20, padding: "20px 24px", marginBottom: 24, boxShadow: "0 2px 12px rgba(34,75,53,0.05)" }}>
+              <h3 style={{ margin: "0 0 20px", fontSize: 15, color: "var(--forest-dark)", fontWeight: 700 }}>
                 {isDelivery ? "Suivi de votre livraison" : "Suivi — Retrait en boutique"}
               </h3>
-              <div style={{ display: "flex", alignItems: "flex-start" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", overflowX: "auto", paddingBottom: 8 }}>
                 {steps.map((step, i) => {
                   const done = i <= currentStep;
                   const active = i === currentStep;
                   return (
-                    <div key={step.key} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
-                      {i > 0 && <div style={{ position: "absolute", left: 0, top: 21, width: "50%", height: 3, background: i <= currentStep ? "var(--forest)" : "var(--line)" }} />}
-                      {i < steps.length - 1 && <div style={{ position: "absolute", right: 0, top: 21, width: "50%", height: 3, background: i < currentStep ? "var(--forest)" : "var(--line)" }} />}
+                    <div key={step.key} style={{ flex: 1, minWidth: 70, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+                      {i > 0 && <div style={{ position: "absolute", left: 0, top: 18, width: "50%", height: 3, background: i <= currentStep ? "var(--forest)" : "var(--line)" }} />}
+                      {i < steps.length - 1 && <div style={{ position: "absolute", right: 0, top: 18, width: "50%", height: 3, background: i < currentStep ? "var(--forest)" : "var(--line)" }} />}
                       <div style={{
-                        width: 44, height: 44, borderRadius: "50%", zIndex: 1,
+                        width: 38, height: 38, borderRadius: "50%", zIndex: 1,
                         background: done ? "var(--forest)" : "#fff",
                         border: `3px solid ${done ? "var(--forest)" : "var(--line)"}`,
                         display: "flex", alignItems: "center", justifyContent: "center",
                         boxShadow: active ? "0 0 0 6px rgba(34,75,53,0.1)" : "none",
                         transition: "all 0.3s"
                       }}>
-                        <step.icon size={18} color={done ? "#fff" : "#ccc"} />
+                        <step.icon size={16} color={done ? "#fff" : "#ccc"} />
                       </div>
-                      <div style={{ textAlign: "center", marginTop: 12, padding: "0 4px" }}>
-                        <div style={{ fontSize: 12, fontWeight: done ? 700 : 500, color: done ? "var(--forest-dark)" : "var(--muted)" }}>{step.label}</div>
+                      <div style={{ textAlign: "center", marginTop: 8, padding: "0 2px" }}>
+                        <div style={{ fontSize: 11, fontWeight: done ? 700 : 500, color: done ? "var(--forest-dark)" : "var(--muted)", whiteSpace: "nowrap" }}>{step.label}</div>
                       </div>
                     </div>
                   );
                 })}
               </div>
 
-              <div style={{ marginTop: 28, background: "var(--forest-light)", borderRadius: 12, padding: "14px 18px", display: "flex", alignItems: "center", gap: 10 }}>
-                <cfg.Icon size={18} color="var(--forest)" />
-                <span style={{ fontWeight: 600, fontSize: 14, color: "var(--forest-dark)" }}>
+              <div style={{ marginTop: 20, background: "var(--forest-light)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+                <cfg.Icon size={18} color="var(--forest)" style={{ flexShrink: 0 }} />
+                <span style={{ fontWeight: 600, fontSize: 13, color: "var(--forest-dark)" }}>
                   {o.statut === "livree" && "Votre commande a été livrée avec succès !"}
                   {o.statut === "en_livraison" && "Votre livreur est en route ! Préparez-vous à le recevoir."}
                   {o.statut === "en_preparation" && "Votre commande est en cours de préparation."}
@@ -148,17 +186,17 @@ export default function MyOrders() {
           )}
 
           {o.statut === "annulee" && (
-            <div style={{ background: "#FDF2F0", border: "1px solid #F8D7D2", borderRadius: 16, padding: "20px 24px", marginBottom: 24, display: "flex", gap: 14 }}>
-              <XCircle size={28} color="#B4483A" style={{ flexShrink: 0 }} />
+            <div style={{ background: "#FDF2F0", border: "1px solid #F8D7D2", borderRadius: 16, padding: "16px 20px", marginBottom: 24, display: "flex", gap: 14 }}>
+              <XCircle size={24} color="#B4483A" style={{ flexShrink: 0 }} />
               <div>
-                <div style={{ fontWeight: 700, color: "#B4483A", fontSize: 15, marginBottom: 4 }}>Commande annulée</div>
-                <div style={{ fontSize: 13, color: "#B4483A", opacity: 0.8 }}>Cette commande a été annulée et ne sera pas traitée.</div>
+                <div style={{ fontWeight: 700, color: "#B4483A", fontSize: 14, marginBottom: 4 }}>Commande annulée</div>
+                <div style={{ fontSize: 12.5, color: "#B4483A", opacity: 0.8 }}>Cette commande a été annulée et ne sera pas traitée.</div>
               </div>
             </div>
           )}
 
           {/* INFOS LIVRAISON + PAIEMENT */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 24 }}>
             {[
               {
                 label: "Mode de livraison",
@@ -173,14 +211,14 @@ export default function MyOrders() {
                 Icon: CreditCard,
               },
             ].map((info, i) => (
-              <div key={i} style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>{info.label}</div>
+              <div key={i} style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 16, padding: "16px 18px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{info.label}</div>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--forest-light)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <info.Icon size={18} color="var(--forest)" />
+                  <div style={{ width: 34, height: 34, borderRadius: 10, background: "var(--forest-light)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <info.Icon size={16} color="var(--forest)" />
                   </div>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>{info.content}</div>
+                    <div style={{ fontWeight: 700, fontSize: 13.5, color: "var(--ink)" }}>{info.content}</div>
                     {info.sub && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 3, display: "flex", gap: 4 }}><MapPin size={12} style={{ flexShrink: 0, marginTop: 1 }} />{info.sub}</div>}
                   </div>
                 </div>
@@ -190,35 +228,35 @@ export default function MyOrders() {
 
           {/* ARTICLES */}
           <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 20, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <div style={{ padding: "16px 22px", borderBottom: "1px solid var(--line)", background: "var(--paper)" }}>
-              <span style={{ fontWeight: 700, fontSize: 14, color: "var(--forest-dark)" }}>Articles commandés</span>
+            <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--line)", background: "var(--paper)" }}>
+              <span style={{ fontWeight: 700, fontSize: 13.5, color: "var(--forest-dark)" }}>Articles commandés</span>
             </div>
             {o.items?.map((it, idx) => (
-              <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 22px", borderBottom: idx < o.items.length - 1 ? "1px solid var(--line)" : "none" }}>
-                <img src={it.product?.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=80&q=80"} alt="" style={{ width: 56, height: 56, borderRadius: 10, objectFit: "cover", border: "1px solid var(--line)", flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>{it.product?.nom}</div>
-                  <div style={{ fontSize: 12, color: "var(--muted)" }}>{fcfa(it.prixUnitaire)} / unité · ×{it.quantite}</div>
+              <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 18px", borderBottom: idx < o.items.length - 1 ? "1px solid var(--line)" : "none" }}>
+                <img src={it.product?.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=80&q=80"} alt="" style={{ width: 48, height: 48, borderRadius: 10, objectFit: "cover", border: "1px solid var(--line)", flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.product?.nom}</div>
+                  <div style={{ fontSize: 12, color: "var(--muted)" }}>{fcfa(it.prixUnitaire)} · ×{it.quantite}</div>
                 </div>
-                <div style={{ fontWeight: 800, fontSize: 15, color: "var(--forest-dark)" }}>{fcfa(it.prixUnitaire * it.quantite)}</div>
+                <div style={{ fontWeight: 800, fontSize: 14, color: "var(--forest-dark)", flexShrink: 0 }}>{fcfa(it.prixUnitaire * it.quantite)}</div>
               </div>
             ))}
           </div>
         </div>
 
         {/* ── RIGHT: FINANCIAL SUMMARY ── */}
-        <div style={{ background: "#fff", display: "flex", flexDirection: "column", padding: "32px 28px", borderLeft: "1px solid var(--line)" }}>
-          <h2 style={{ fontFamily: "var(--font-heading)", fontSize: 20, color: "var(--forest-dark)", margin: "0 0 24px" }}>Résumé financier</h2>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, fontSize: 14 }}>
+        <div className="bs-my-orders-detail-summary">
+          <h2 style={{ fontFamily: "var(--font-heading)", fontSize: 18, color: "var(--forest-dark)", margin: "0 0 20px" }}>Résumé financier</h2>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, fontSize: 13.5 }}>
             <span style={{ color: "var(--muted)" }}>Sous-total</span><span style={{ fontWeight: 600 }}>{fcfa(o.sousTotal)}</span>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, fontSize: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 18, fontSize: 13.5 }}>
             <span style={{ color: "var(--muted)" }}>Frais de livraison</span>
             <span style={{ fontWeight: 600, color: o.fraisLivraison === 0 ? "#2D8653" : "var(--ink)" }}>{o.fraisLivraison === 0 ? "Gratuits" : fcfa(o.fraisLivraison)}</span>
           </div>
-          <div style={{ background: "var(--forest-dark)", borderRadius: 16, padding: "20px 22px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: "#DDE8DF", fontWeight: 600 }}>Total payé</span>
-            <span style={{ color: "#fff", fontWeight: 900, fontSize: 22 }}>{fcfa(o.total)}</span>
+          <div style={{ background: "var(--forest-dark)", borderRadius: 16, padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ color: "#DDE8DF", fontWeight: 600, fontSize: 14 }}>Total payé</span>
+            <span style={{ color: "#fff", fontWeight: 900, fontSize: 20 }}>{fcfa(o.total)}</span>
           </div>
         </div>
       </div>
@@ -234,11 +272,11 @@ export default function MyOrders() {
   );
 
   return (
-    <div style={{ minHeight: "calc(100vh - 70px)", display: "grid", gridTemplateColumns: "260px 1fr", background: "var(--paper)" }}>
+    <div className="bs-my-orders-layout">
 
       {/* ── SIDEBAR ── */}
-      <div style={{ background: "#fff", borderRight: "1px solid var(--line)", padding: "28px 16px", display: "flex", flexDirection: "column", gap: 4 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", padding: "0 10px", marginBottom: 12 }}>
+      <div className="bs-my-orders-sidebar">
+        <div className="filter-title" style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", padding: "0 10px", marginBottom: 12 }}>
           Filtrer par statut
         </div>
         {FILTERS.map(f => {
@@ -246,66 +284,66 @@ export default function MyOrders() {
           const active = filter === f.key;
           return (
             <button key={f.key} onClick={() => setFilter(f.key)} style={{
-              display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10,
-              background: active ? "var(--forest-light)" : "transparent",
-              border: active ? "1.5px solid rgba(34,75,53,0.2)" : "1.5px solid transparent",
-              color: active ? "var(--forest-dark)" : "var(--muted)",
-              fontWeight: active ? 700 : 500, fontSize: 14, cursor: "pointer", width: "100%", textAlign: "left",
-              transition: "all 0.15s"
+              display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 20,
+              background: active ? "var(--forest-dark)" : "#fff",
+              border: active ? "1px solid var(--forest-dark)" : "1px solid var(--line)",
+              color: active ? "#fff" : "var(--ink)",
+              fontWeight: active ? 800 : 600, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap",
+              transition: "all 0.15s", flexShrink: 0
             }}>
-              <f.icon size={16} />
-              <span style={{ flex: 1 }}>{f.label}</span>
-              <span style={{ background: active ? "var(--forest)" : "var(--line)", color: active ? "#fff" : "var(--muted)", borderRadius: 20, padding: "1px 8px", fontSize: 12, fontWeight: 700 }}>{count}</span>
+              <f.icon size={15} color={active ? "#fff" : "var(--forest)"} />
+              <span>{f.label}</span>
+              <span style={{ background: active ? "rgba(255,255,255,0.2)" : "var(--line)", color: active ? "#fff" : "var(--muted)", borderRadius: 12, padding: "1px 7px", fontSize: 11, fontWeight: 700 }}>{count}</span>
             </button>
           );
         })}
       </div>
 
       {/* ── MAIN CONTENT ── */}
-      <div style={{ overflowY: "auto", padding: "32px 36px 60px" }}>
+      <div className="bs-my-orders-main">
         {/* HEADER */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
           <div>
-            <h1 style={{ fontFamily: "var(--font-heading)", fontSize: 28, color: "var(--forest-dark)", margin: "0 0 6px" }}>Mes commandes</h1>
-            <p style={{ color: "var(--muted)", fontSize: 14, margin: 0 }}>Suivez l'état de toutes vos commandes en temps réel.</p>
+            <h1 style={{ fontFamily: "var(--font-heading)", fontSize: 24, color: "var(--forest-dark)", margin: "0 0 4px" }}>Mes commandes</h1>
+            <p style={{ color: "var(--muted)", fontSize: 13, margin: 0 }}>Suivez l'état de toutes vos commandes en temps réel.</p>
           </div>
         </div>
 
         {/* KPIs */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
+        <div className="bs-my-orders-kpis">
           {[
             { label: "Total",      value: stats.total,    color: "var(--forest)", bg: "var(--forest-light)", Icon: ShoppingBag },
             { label: "En cours",   value: stats.enCours,  color: "#D97724",       bg: "#FDF4EB",             Icon: Clock },
             { label: "Livrées",    value: stats.livrees,  color: "#2B6CB0",       bg: "#EBF4FF",             Icon: CheckCircle },
             { label: "Annulées",   value: stats.annulees, color: "#B4483A",       bg: "#FDF2F0",             Icon: XCircle },
           ].map(kpi => (
-            <div key={kpi.label} style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 16, padding: "18px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: kpi.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <kpi.Icon size={20} color={kpi.color} />
+            <div key={kpi.label} style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: kpi.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <kpi.Icon size={18} color={kpi.color} />
               </div>
               <div>
-                <div style={{ fontSize: 12, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase" }}>{kpi.label}</div>
-                <div style={{ fontSize: 26, fontWeight: 900, color: kpi.color, lineHeight: 1.1 }}>{kpi.value}</div>
+                <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase" }}>{kpi.label}</div>
+                <div style={{ fontSize: 20, fontWeight: 900, color: kpi.color, lineHeight: 1.1 }}>{kpi.value}</div>
               </div>
             </div>
           ))}
         </div>
 
         {/* SEARCH */}
-        <div style={{ position: "relative", marginBottom: 20 }}>
+        <div style={{ position: "relative", marginBottom: 16 }}>
           <Search size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--muted)" }} />
-          <input className="bs-input" style={{ paddingLeft: 42, borderRadius: 12, fontSize: 14, background: "#fff" }}
-            placeholder="Rechercher une commande par numéro ou nom de produit..."
+          <input className="bs-input" style={{ paddingLeft: 42, borderRadius: 12, fontSize: 13.5, background: "#fff" }}
+            placeholder="Rechercher une commande..."
             value={search} onChange={e => setSearch(e.target.value)}
           />
         </div>
 
         {/* LIST */}
         {filtered.length === 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 20px", color: "var(--muted)", textAlign: "center" }}>
-            <PackageOpen size={56} strokeWidth={1.2} style={{ marginBottom: 16, opacity: 0.4 }} />
-            <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 6, color: "var(--ink)" }}>Aucune commande trouvée</div>
-            <div style={{ fontSize: 13 }}>Essayez d'autres critères de recherche ou un autre filtre.</div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 20px", color: "var(--muted)", textAlign: "center", background: "#fff", borderRadius: 16, border: "1px solid var(--line)" }}>
+            <PackageOpen size={48} strokeWidth={1.2} style={{ marginBottom: 12, opacity: 0.4 }} />
+            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4, color: "var(--ink)" }}>Aucune commande trouvée</div>
+            <div style={{ fontSize: 12.5 }}>Essayez d'autres critères de recherche ou un autre filtre.</div>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -313,34 +351,39 @@ export default function MyOrders() {
               const cfg = STATUT_CONFIG[o.statut] || STATUT_CONFIG["en_attente"];
               const isDelivery = o.modeLivraison === "domicile";
               return (
-                <div key={o.id} onClick={() => setSelected(o)}
-                  style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 16, padding: "18px 22px", cursor: "pointer", transition: "all 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", display: "flex", gap: 16, alignItems: "center" }}
-                  onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 4px 16px rgba(34,75,53,0.1)"; e.currentTarget.style.borderColor = "rgba(34,75,53,0.2)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)"; e.currentTarget.style.borderColor = "var(--line)"; }}
-                >
-                  {/* Product thumbnails */}
-                  <div style={{ display: "flex", flexShrink: 0 }}>
-                    {o.items?.slice(0, 3).map((it, idx) => (
-                      <img key={it.id} src={it.product?.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=60&q=80"} alt="" style={{ width: 52, height: 52, borderRadius: 10, objectFit: "cover", border: "2.5px solid #fff", boxShadow: "0 1px 4px rgba(0,0,0,0.08)", marginLeft: idx > 0 ? -14 : 0, zIndex: 3 - idx }} />
-                    ))}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 5 }}>
-                      <span style={{ fontWeight: 800, fontSize: 15, color: "var(--ink)" }}>Commande #{o.id}</span>
-                      <span style={{ background: cfg.bg, color: cfg.color, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{cfg.label}</span>
+                <div key={o.id} onClick={() => setSelected(o)} className="bs-my-orders-card">
+                  {/* Product thumbnails + info row */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ display: "flex", flexShrink: 0 }}>
+                        {o.items?.slice(0, 3).map((it, idx) => (
+                          <img key={it.id} src={it.product?.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=60&q=80"} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: "cover", border: "2px solid #fff", boxShadow: "0 1px 4px rgba(0,0,0,0.08)", marginLeft: idx > 0 ? -12 : 0, zIndex: 3 - idx }} />
+                        ))}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: 14.5, color: "var(--ink)" }}>Commande #{o.id}</div>
+                        <div style={{ fontSize: 11.5, color: "var(--muted)" }}>
+                          {new Date(o.createdAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>
-                      {new Date(o.createdAt).toLocaleDateString("fr-FR", { dateStyle: "long" })} · {isDelivery ? "Livraison à domicile" : "Retrait boutique"}
+
+                    <span style={{ background: cfg.bg, color: cfg.color, padding: "4px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 700, flexShrink: 0 }}>
+                      {cfg.label}
+                    </span>
+                  </div>
+
+                  {/* Articles summary + price row */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", paddingTop: 8, borderTop: "1px solid var(--line)" }}>
+                    <div style={{ fontSize: 12, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, paddingRight: 10 }}>
+                      {isDelivery ? "Livraison domicile" : "Retrait boutique"} · {o.items?.length} article{o.items?.length > 1 ? "s" : ""}
                     </div>
-                    <div style={{ fontSize: 12, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {o.items?.map(it => `${it.product?.nom} ×${it.quantite}`).join(" · ")}
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                      <div style={{ fontWeight: 900, fontSize: 16, color: "var(--forest-dark)" }}>{fcfa(o.total)}</div>
+                      <ChevronRight size={18} color="var(--muted)" />
                     </div>
                   </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontWeight: 900, fontSize: 18, color: "var(--forest-dark)" }}>{fcfa(o.total)}</div>
-                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{o.items?.length} article{o.items?.length > 1 ? "s" : ""}</div>
-                  </div>
-                  <ChevronRight size={20} color="var(--muted)" style={{ flexShrink: 0 }} />
                 </div>
               );
             })}
