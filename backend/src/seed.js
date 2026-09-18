@@ -64,50 +64,38 @@ async function runSeed() {
   });
 
   // --- 4. Comptes Administrateur, Employés & Client ---
-  await User.findOrCreate({
-    where: { email: "admin@marche-vert.com" },
-    defaults: {
-      nom: "Aïssatou Ba (Admin)",
-      email: "admin@marche-vert.com",
-      motDePasseHash: hash("Admin123!"),
-      role: "admin",
-      boutiqueId: boutique.id,
-    }
-  });
+  const usersToSeed = [
+    { email: "superadmin@boutique-saas.com", nom: "Super Admin", role: "super_admin", pw: "SuperAdmin123!" },
+    { email: "admin@marche-vert.com", nom: "Aïssatou Ba (Admin)", role: "admin", boutiqueId: boutique.id, pw: "Admin123!" },
+    { email: "ibrahima@marche-vert.com", nom: "Ibrahima Ndiaye", role: "employe", boutiqueId: boutique.id, pw: "Employe123!", permissions: ["voir_dashboard", "gerer_categories", "gerer_produits", "gerer_commandes"] },
+    { email: "khady@marche-vert.com", nom: "Khady Diop", role: "employe", boutiqueId: boutique.id, pw: "Employe123!", permissions: ["voir_dashboard", "gerer_commandes"] },
+    { email: "client@example.com", nom: "Awa Sarr", role: "client", pw: "Client123!" },
+  ];
 
-  await User.findOrCreate({
-    where: { email: "ibrahima@marche-vert.com" },
-    defaults: {
-      nom: "Ibrahima Ndiaye",
-      email: "ibrahima@marche-vert.com",
-      motDePasseHash: hash("Employe123!"),
-      role: "employe",
-      boutiqueId: boutique.id,
-      permissions: ["voir_dashboard", "gerer_categories", "gerer_produits", "gerer_commandes"],
-    }
-  });
+  let emp2 = null;
+  let clientUser = null;
 
-  const [emp2] = await User.findOrCreate({
-    where: { email: "khady@marche-vert.com" },
-    defaults: {
-      nom: "Khady Diop",
-      email: "khady@marche-vert.com",
-      motDePasseHash: hash("Employe123!"),
-      role: "employe",
-      boutiqueId: boutique.id,
-      permissions: ["voir_dashboard", "gerer_commandes"],
+  for (const u of usersToSeed) {
+    let usr = await User.findOne({ where: { email: u.email } });
+    if (!usr) {
+      usr = await User.create({
+        nom: u.nom,
+        email: u.email,
+        motDePasseHash: hash(u.pw),
+        role: u.role,
+        boutiqueId: u.boutiqueId || null,
+        permissions: u.permissions || null
+      });
+    } else {
+      usr.motDePasseHash = hash(u.pw);
+      usr.role = u.role;
+      if (u.boutiqueId) usr.boutiqueId = u.boutiqueId;
+      if (u.permissions) usr.permissions = u.permissions;
+      await usr.save();
     }
-  });
-
-  const [clientUser] = await User.findOrCreate({
-    where: { email: "client@example.com" },
-    defaults: {
-      nom: "Awa Sarr",
-      email: "client@example.com",
-      motDePasseHash: hash("Client123!"),
-      role: "client",
-    }
-  });
+    if (u.email === "khady@marche-vert.com") emp2 = usr;
+    if (u.email === "client@example.com") clientUser = usr;
+  }
 
   // --- 5. Catégories ---
   const catList = [

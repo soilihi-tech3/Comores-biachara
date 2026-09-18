@@ -2,10 +2,10 @@ import axios from "axios";
 import { saveCache, getCache, enqueueAction } from "./utils/offlineStorage";
 
 const getBaseUrl = () => {
-  const host = typeof window !== "undefined" && window.location.hostname ? window.location.hostname : "localhost";
   if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL.replace("localhost", host).replace("127.0.0.1", host);
+    return import.meta.env.VITE_API_URL;
   }
+  const host = typeof window !== "undefined" && window.location.hostname ? window.location.hostname : "localhost";
   return `http://${host}:4000/api`;
 };
 
