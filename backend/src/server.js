@@ -80,8 +80,8 @@ async function start() {
     process.exit(1);
   }
 
-  await sequelize.sync({ alter: true }); // crée/met à jour les tables
-  await runSeed();        // insère les données de démonstration si la base est vide
+  await sequelize.sync(); // crée les tables si elles n'existent pas (compatibilité TiDB Cloud)
+  await runSeed();        // insère les données de démonstration et utilisateurs si la base est vide
 
   app.listen(PORT, () => console.log(`API Boutique SaaS démarrée sur le port ${PORT}`));
 }
