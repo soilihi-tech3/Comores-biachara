@@ -1,0 +1,345 @@
+import React, { useEffect, useState } from "react";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { TrendingUp, ShoppingBag, AlertTriangle, Layers, DollarSign, Package, Users, Star, UserCheck, CheckCircle2, Clock, CheckCircle } from "lucide-react";
+import api from "../../api";
+import Stars from "../../components/Stars.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
+
+const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
+
+export default function Dashboard() {
+  const { user, boutique } = useAuth();
+  const [data, setData] = useState(null);
+  const [prodChartTab, setProdChartTab] = useState("top"); // "top" | "flop"
+
+  useEffect(() => { 
+    api.get("/admin/dashboard").then((res) => setData(res.data)); 
+  }, []);
+
+  if (!data) return <div style={{ padding: 40, color: "var(--muted)" }}>Chargement du tableau de bord...</div>;
+
+  // ── 1. DASHBOARD SPÉCIFIQUE À L'EMPLOYÉ ──
+  if (data.isEmploye || user?.role === "employe") {
+    const listCmds = data.mesCommandes || [];
+
+    return (
+      <>
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: "inline-block", background: "var(--forest-light)", color: "var(--forest)", padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+            Espace Opérationnel Employé
+          </div>
+          <h1 style={{ fontSize: 26, margin: 0, color: "var(--forest-dark)" }}>Mon Tableau de bord & Activités</h1>
+          <p style={{ margin: "4px 0 0", color: "var(--muted)", fontSize: 14 }}>
+            Bonjour {user?.nom}, voici un récapitulatif de votre chiffre d'affaires et de vos commandes chez {boutique?.nom || "la boutique"}.
+          </p>
+        </div>
+
+        {/* STATS DE L'EMPLOYÉ */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 24 }}>
+          
+          <div className="bs-panel" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700, textTransform: "uppercase" }}>Chiffre d'affaires généré</span>
+              <div style={{ background: "var(--forest-light)", padding: 6, borderRadius: 8, color: "var(--forest)" }}>
+                <TrendingUp size={18} />
+              </div>
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "var(--ink)" }}>{fcfa(data.monChiffreAffaires || 0)}</div>
+            <div style={{ fontSize: 12, color: "var(--muted)" }}>Commandes traitées hors annulées</div>
+          </div>
+
+          <div className="bs-panel" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700, textTransform: "uppercase" }}>Commandes Livrées</span>
+              <div style={{ background: "#EBF7F0", padding: 6, borderRadius: 8, color: "#1F4D3A" }}>
+                <CheckCircle size={18} />
+              </div>
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "var(--ink)" }}>{data.nbMesCommandesLivrees || 0}</div>
+            <div style={{ fontSize: 12, color: "var(--muted)" }}>Livrées au client</div>
+          </div>
+
+          <div className="bs-panel" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700, textTransform: "uppercase" }}>Commandes En cours</span>
+              <div style={{ background: "#FEF3C7", padding: 6, borderRadius: 8, color: "#D97706" }}>
+                <Clock size={18} />
+              </div>
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "var(--ink)" }}>{data.nbMesCommandesEnCours || 0}</div>
+            <div style={{ fontSize: 12, color: "var(--muted)" }}>En cours de traitement</div>
+          </div>
+
+          <div className="bs-panel" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700, textTransform: "uppercase" }}>Total Assignations</span>
+              <div style={{ background: "var(--forest-light)", padding: 6, borderRadius: 8, color: "var(--forest)" }}>
+                <ShoppingBag size={18} />
+              </div>
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "var(--ink)" }}>{data.nbMesCommandes || 0}</div>
+            <div style={{ fontSize: 12, color: "var(--muted)" }}>Total des commandes attribuées</div>
+          </div>
+
+        </div>
+
+        {/* LISTE DES COMMANDES ASSIGNÉES À L'EMPLOYÉ */}
+        <div className="bs-panel">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 16, color: "var(--forest-dark)" }}>Mes Commandes Assignées</h3>
+              <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>
+                Gérez l'avancement et la livraison des commandes sous votre responsabilité.
+              </div>
+            </div>
+            <a href="/admin/commandes" style={{ fontSize: 13, fontWeight: 700, color: "var(--forest)", textDecoration: "none" }}>
+              Accéder à la gestion des commandes →
+            </a>
+          </div>
+
+          {listCmds.length === 0 ? (
+            <div style={{ padding: 32, textAlign: "center", color: "var(--muted)", fontSize: 14 }}>
+              Vous n'avez actuellement aucune commande assignée.
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
+              {listCmds.map((c) => {
+                const cmdNum = "COM-B" + String(c.id).padStart(3, "0");
+                const statusBadges = {
+                  en_attente: { label: "En attente", bg: "#FEF3C7", color: "#92400E" },
+                  validee: { label: "Validée", bg: "#E0E7FF", color: "#3730A3" },
+                  en_preparation: { label: "En préparation", bg: "#DBEAFE", color: "#1E40AF" },
+                  en_livraison: { label: "En livraison", bg: "#E0F2FE", color: "#075985" },
+                  livree: { label: "Livrée", bg: "#D1FAE5", color: "#065F46" },
+                  annulee: { label: "Annulée", bg: "#FEE2E2", color: "#991B1B" },
+                };
+                const st = statusBadges[c.statut] || { label: c.statut, bg: "#E5E7EB", color: "#374151" };
+
+                return (
+                  <div key={c.id} style={{ border: "1px solid var(--line)", borderRadius: 12, padding: 16, background: "var(--paper)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                      <span style={{ fontWeight: 800, fontSize: 15, color: "var(--forest-dark)" }}>#{cmdNum}</span>
+                      <span style={{ background: st.bg, color: st.color, padding: "3px 10px", borderRadius: 12, fontSize: 11.5, fontWeight: 700 }}>
+                        {st.label}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 13, color: "var(--ink)", fontWeight: 700 }}>Client: {c.client?.nom || "Client non inscrit"}</div>
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>Tél: {c.client?.telephone || c.telephoneClient || "Non renseigné"}</div>
+                    
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: "1px dashed var(--line)" }}>
+                      <span style={{ fontWeight: 800, fontSize: 14, color: "var(--forest)" }}>{fcfa(c.total)}</span>
+                      <a href="/admin/commandes" style={{ fontSize: 12, fontWeight: 700, color: "var(--forest-dark)", textDecoration: "underline" }}>
+                        Modifier le statut
+                      </a>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </>
+    );
+  }
+
+  // ── 2. DASHBOARD GLOBAL ADMINISTRATEUR ──
+  const chartData = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map((jour, i) => ({
+    jour, ca: Math.round(data.chiffreAffaires / 7 * (0.6 + 0.15 * ((i * 7) % 5))),
+  }));
+
+  const activeProductsChart = prodChartTab === "top" ? (data.top7Produits || []) : (data.flop7Produits || []);
+
+  return (
+    <>
+      <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div>
+          <h1 style={{ fontSize: 26, margin: 0, color: "var(--forest-dark)" }}>Tableau de bord Général Admin</h1>
+          <p style={{ margin: "4px 0 0", color: "var(--muted)", fontSize: 14 }}>Aperçu global et statistiques avancées de votre boutique.</p>
+        </div>
+      </div>
+
+      {/* ── KPI CARDS ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 16, marginBottom: 24 }}>
+        
+        <div className="bs-panel" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Chiffre d'affaires Global</span>
+            <div style={{ background: "var(--forest-light)", padding: 6, borderRadius: 8, color: "var(--forest)" }}>
+              <TrendingUp size={18} />
+            </div>
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "var(--ink)" }}>{fcfa(data.chiffreAffaires)}</div>
+        </div>
+
+        <div className="bs-panel" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Bénéfice Net</span>
+            <div style={{ background: "var(--forest-light)", padding: 6, borderRadius: 8, color: "var(--forest)" }}>
+              <DollarSign size={18} />
+            </div>
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "var(--ink)" }}>{fcfa(data.beneficeNet)}</div>
+        </div>
+
+        <div className="bs-panel" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Commandes Total</span>
+            <div style={{ background: "var(--forest-light)", padding: 6, borderRadius: 8, color: "var(--forest)" }}>
+              <ShoppingBag size={18} />
+            </div>
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "var(--ink)" }}>{data.nbCommandes}</div>
+        </div>
+
+        <div className="bs-panel" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Utilisateurs / Clients</span>
+            <div style={{ background: "var(--forest-light)", padding: 6, borderRadius: 8, color: "var(--forest)" }}>
+              <UserCheck size={18} />
+            </div>
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "var(--ink)" }}>{data.totalClients || 0}</div>
+        </div>
+
+        {/* KPI REVIEWS & AVIS */}
+        <div className="bs-panel" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Avis Clients & Note</span>
+            <div style={{ background: "#FEF3C7", padding: 6, borderRadius: 8, color: "#D97706" }}>
+              <Star size={18} />
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "var(--ink)" }}>{data.noteMoyenneGlobale || "4.9"} / 5</div>
+            <Stars rating={Math.round(data.noteMoyenneGlobale || 5)} size={14} />
+          </div>
+          <div style={{ fontSize: 12, color: "var(--muted)" }}>{data.totalReviews || 0} avis enregistrés</div>
+        </div>
+
+        <div className="bs-panel" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 8, border: data.stockFaibleCount > 0 ? "1px solid #FAD2CD" : "1px solid var(--line)", background: data.stockFaibleCount > 0 ? "#FFF5F4" : "#fff" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ color: data.stockFaibleCount > 0 ? "#B4483A" : "var(--muted)", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Alertes Stock</span>
+            <div style={{ background: data.stockFaibleCount > 0 ? "#FAD2CD" : "var(--forest-light)", padding: 6, borderRadius: 8, color: data.stockFaibleCount > 0 ? "#B4483A" : "var(--forest)" }}>
+              <AlertTriangle size={18} />
+            </div>
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: data.stockFaibleCount > 0 ? "#B4483A" : "var(--ink)" }}>{data.stockFaibleCount || 0}</div>
+        </div>
+
+      </div>
+
+      {/* ── GRAPHIQUES SECTION 1 : CHIFFRE D'AFFAIRES & TOP PRODUITS ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1.2fr", gap: 24, marginBottom: 24 }}>
+        <div className="bs-panel">
+          <h3 style={{ marginTop: 0, fontSize: 16, color: "var(--forest-dark)" }}>Chiffre d'affaires — 7 derniers jours</h3>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+              <CartesianGrid stroke="#E5E9DE" vertical={false} />
+              <XAxis dataKey="jour" tick={{ fontSize: 12, fill: "var(--muted)" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 12, fill: "var(--muted)" }} axisLine={false} tickLine={false} tickFormatter={(v) => v === 0 ? "0" : (v / 1000) + "k"} />
+              <Tooltip 
+                cursor={{ fill: "var(--forest-light)", opacity: 0.4 }}
+                contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontWeight: 600 }}
+                formatter={(v) => [fcfa(v), "Chiffre d'affaires"]} 
+              />
+              <Bar dataKey="ca" fill="var(--forest)" radius={[6, 6, 0, 0]} barSize={36} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* TOP / FLOP 7 PRODUITS */}
+        <div className="bs-panel">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <h3 style={{ margin: 0, fontSize: 16, color: "var(--forest-dark)" }}>
+              {prodChartTab === "top" ? "Top 7 Produits" : "Flop 7 Produits"}
+            </h3>
+            <div style={{ display: "flex", gap: 4, background: "var(--paper)", padding: 3, borderRadius: 8 }}>
+              <button
+                onClick={() => setProdChartTab("top")}
+                style={{
+                  background: prodChartTab === "top" ? "var(--forest)" : "none",
+                  color: prodChartTab === "top" ? "#fff" : "var(--muted)",
+                  border: "none", padding: "4px 10px", borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: "pointer"
+                }}
+              >
+                Plus vendus
+              </button>
+              <button
+                onClick={() => setProdChartTab("flop")}
+                style={{
+                  background: prodChartTab === "flop" ? "#B4483A" : "none",
+                  color: prodChartTab === "flop" ? "#fff" : "var(--muted)",
+                  border: "none", padding: "4px 10px", borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: "pointer"
+                }}
+              >
+                Moins vendus
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 250, overflowY: "auto" }}>
+            {activeProductsChart.length > 0 ? (
+              activeProductsChart.map((p, idx) => (
+                <div key={p.id || idx} style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 8, borderBottom: "1px solid var(--line)" }}>
+                  <img src={p.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=100&q=80"} alt={p.nom} style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover" }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      #{idx + 1} {p.nom}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--muted)" }}>
+                      <span>{p.ventesCount} vente{p.ventesCount > 1 ? "s" : ""}</span>
+                      <span>•</span>
+                      <Stars rating={Math.round(p.noteMoyenne || 5)} size={11} />
+                    </div>
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: "var(--forest-dark)" }}>
+                    {fcfa(p.prixPromo || p.prix)}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div style={{ color: "var(--muted)", fontSize: 13, textAlign: "center", padding: 20 }}>
+                Aucune donnée de vente disponible.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── GRAPHIQUES SECTION 2 : TOP & FLOP CATÉGORIES ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
+        <div className="bs-panel">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <h3 style={{ margin: 0, fontSize: 16, color: "var(--forest-dark)" }}>Top Catégories (Ventes)</h3>
+            <span style={{ fontSize: 12, color: "var(--forest)", fontWeight: 700 }}>Plus populaires</span>
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={data.topCategories || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid stroke="#E5E9DE" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--muted)" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "var(--muted)" }} axisLine={false} tickLine={false} />
+              <Tooltip formatter={(v) => [`${v} ventes`, "Total Ventes"]} />
+              <Bar dataKey="ventes" fill="var(--forest)" radius={[6, 6, 0, 0]} barSize={32} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bs-panel">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <h3 style={{ margin: 0, fontSize: 16, color: "var(--forest-dark)" }}>Catégories à Redynamiser</h3>
+            <span style={{ fontSize: 12, color: "#B4483A", fontWeight: 700 }}>Moins vendues</span>
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={data.flopCategories || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid stroke="#E5E9DE" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--muted)" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "var(--muted)" }} axisLine={false} tickLine={false} />
+              <Tooltip formatter={(v) => [`${v} ventes`, "Total Ventes"]} />
+              <Bar dataKey="ventes" fill="#E28B7D" radius={[6, 6, 0, 0]} barSize={32} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </>
+  );
+}

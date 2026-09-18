@@ -1,0 +1,736 @@
+const express = require("express");
+const bcrypt = require("bcryptjs");
+const { Op } = require("sequelize");
+const { sequelize, Product, Category, Order, OrderItem, User, Boutique, Notification, Review, Famille, Fournisseur, UniteVente, Achat } = require("../models");
+const { authenticate, requireRole, requireOwnBoutique } = require("../middleware/auth");
+const { clearCachePattern } = require("../config/cache");
+
+const router = express.Router();
+
+function purgeCache() {
+  clearCachePattern("cache:/api/store").catch(() => {});
+}
+
+router.use(authenticate, requireRole("admin", "employe"), requireOwnBoutique);
+
+async function checkExpirationNotification(product, boutiqueId) {
+  if (product.dateExpiration) {
+    const exp = new Date(product.dateExpiration);
+    const now = new Date();
+    const diffDays = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+    if (diffDays <= 30) {
+      const admins = await User.findAll({ where: { boutiqueId, role: "admin" } });
+      for (const adm of admins) {
+        await Notification.create({
+          userId: adm.id,
+          boutiqueId,
+          title: "Alerte Expiration Produit",
+          message: diffDays < 0 
+            ? `Le produit "${product.nom}" est déjà expiré depuis le ${product.dateExpiration}.`
+            : `Le produit "${product.nom}" va expirer dans ${diffDays} jour(s) (${product.dateExpiration}).`,
+          type: "expiration"
+        }).catch(() => {});
+      }
+    }
+  }
+}
+
+/* ---------------------- TABLEAU DE BORD ---------------------- */
+
+router.get("/dashboard", async (req, res, next) => {
+  try {
+    const boutiqueId = req.boutiqueId;
+    const isEmploye = req.user.role === "employe";
+
+    // Mes commandes assignées à cet employé / utilisateur
+    const mesCommandes = await Order.findAll({
+      where: { boutiqueId, employeAssigneId: req.user.id },
+      include: [
+        { model: OrderItem, as: "items", include: [{ model: Product, as: "product" }] },
+        { model: User, as: "client", attributes: ["nom", "telephone"] }
+      ],
+      order: [["createdAt", "DESC"]]
+    });
+
+    const mesCommandesLivrees = mesCommandes.filter(c => c.statut === "livree");
+    const monChiffreAffaires = mesCommandes.filter(c => c.statut !== "annulee").reduce((sum, c) => sum + Number(c.total), 0);
+    const mesCommandesEnCours = mesCommandes.filter(c => ["en_attente", "validee", "en_preparation", "en_livraison"].includes(c.statut));
+
+    // Si c'est un employé, on lui retourne son tableau de bord d'activités personnel uniquement !
+    if (isEmploye) {
+      return res.json({
+        isEmploye: true,
+        monChiffreAffaires,
+        nbMesCommandes: mesCommandes.length,
+        nbMesCommandesLivrees: mesCommandesLivrees.length,
+        nbMesCommandesEnCours: mesCommandesEnCours.length,
+        mesCommandes
+      });
+    }
+
+    // Pour les Administrateurs : vue d'ensemble globale de la boutique
+    const orders = await Order.findAll({
+      where: { boutiqueId, statut: { [Op.ne]: "annulee" } },
+      include: [{ model: OrderItem, as: "items", include: [{ model: Product, as: "product" }] }],
+    });
+
+    const chiffreAffaires = orders.reduce((s, o) => s + Number(o.total), 0);
+    const beneficeNet = orders.reduce((s, o) => {
+      return s + o.items.reduce((ss, it) => ss + (Number(it.prixUnitaire) - (it.product ? Number(it.product.coutAchat) : 0)) * it.quantite, 0);
+    }, 0);
+
+    const nbCommandes = await Order.count({ where: { boutiqueId } });
+    const totalClients = await User.count({ where: { role: "client" } });
+    
+    const produits = await Product.findAll({ 
+      where: { boutiqueId }, 
+      include: [
+        Category,
+        { model: Review, as: "avis" }
+      ] 
+    });
+    
+    const categories = await Category.findAll({ where: { boutiqueId } });
+    const stockFaible = produits.filter((p) => p.stock <= p.seuilAlerte);
+
+    // Total avis & Note moyenne
+    let totalReviews = 0;
+    let sumNotes = 0;
+
+    const prodsWithStats = produits.map((p) => {
+      const pAvis = p.avis || [];
+      const pNbAvis = pAvis.length;
+      const pSumNotes = pAvis.reduce((s, r) => s + r.note, 0);
+      const pNoteMoyenne = pNbAvis > 0 ? Number((pSumNotes / pNbAvis).toFixed(1)) : 5.0;
+
+      totalReviews += pNbAvis;
+      sumNotes += pSumNotes;
+
+      return {
+        id: p.id,
+        nom: p.nom,
+        prix: p.prix,
+        prixPromo: p.prixPromo,
+        imageUrl: p.imageUrl,
+        ventesCount: p.ventesCount || 0,
+        stock: p.stock,
+        categoryName: p.Category?.nom || "Non classé",
+        noteMoyenne: pNoteMoyenne,
+        nbAvis: pNbAvis
+      };
+    });
+
+    const noteMoyenneGlobale = totalReviews > 0 ? Number((sumNotes / totalReviews).toFixed(1)) : 4.9;
+
+    // Top 7 & Flop 7 Produits
+    const sortedProds = [...prodsWithStats].sort((a, b) => b.ventesCount - a.ventesCount);
+    const top7Produits = sortedProds.slice(0, 7);
+    const flop7Produits = [...prodsWithStats].sort((a, b) => a.ventesCount - b.ventesCount).slice(0, 7);
+
+    // Top & Flop Catégories
+    const categoryStats = categories.map(c => {
+      const prodsInCat = prodsWithStats.filter(p => p.categoryName === c.nom);
+      return {
+        id: c.id,
+        name: c.nom,
+        count: prodsInCat.length,
+        ventes: prodsInCat.reduce((s, p) => s + p.ventesCount, 0)
+      };
+    });
+
+    const topCategories = [...categoryStats].sort((a, b) => b.ventes - a.ventes);
+    const flopCategories = [...categoryStats].sort((a, b) => a.ventes - b.ventes);
+
+    const panierMoyen = nbCommandes > 0 ? Math.round(chiffreAffaires / nbCommandes) : 0;
+
+    res.json({
+      isEmploye: false,
+      chiffreAffaires,
+      beneficeNet,
+      nbCommandes,
+      panierMoyen,
+      totalClients,
+      totalReviews,
+      noteMoyenneGlobale,
+      stockFaibleCount: stockFaible.length,
+      stockFaibleList: stockFaible,
+      topProduits: top7Produits,
+      top7Produits,
+      flop7Produits,
+      categoryStats,
+      topCategories,
+      flopCategories,
+      totalProduits: produits.length,
+      totalCategories: categories.length,
+      mesCommandes
+    });
+  } catch (err) { next(err); }
+});
+
+/* ---------------------- FAMILLES DE PRODUITS ---------------------- */
+
+router.get("/familles", async (req, res, next) => {
+  try {
+    const list = await Famille.findAll({ where: { boutiqueId: req.boutiqueId } });
+    if (list.length === 0) {
+      const defaults = [
+        { nom: "Alimentation", boutiqueId: req.boutiqueId },
+        { nom: "Cosmétique", boutiqueId: req.boutiqueId },
+        { nom: "Maison & Entretien", boutiqueId: req.boutiqueId }
+      ];
+      await Famille.bulkCreate(defaults);
+      return res.json(await Famille.findAll({ where: { boutiqueId: req.boutiqueId } }));
+    }
+    res.json(list);
+  } catch (err) { next(err); }
+});
+
+router.post("/familles", async (req, res, next) => {
+  try {
+    const fam = await Famille.create({ ...req.body, boutiqueId: req.boutiqueId });
+    res.status(201).json(fam);
+  } catch (err) { next(err); }
+});
+
+router.put("/familles/:id", async (req, res, next) => {
+  try {
+    const fam = await Famille.findOne({ where: { id: req.params.id, boutiqueId: req.boutiqueId } });
+    if (!fam) return res.status(404).json({ message: "Famille introuvable." });
+    await fam.update(req.body);
+    res.json(fam);
+  } catch (err) { next(err); }
+});
+
+router.delete("/familles/:id", async (req, res, next) => {
+  try {
+    const fam = await Famille.findOne({ where: { id: req.params.id, boutiqueId: req.boutiqueId } });
+    if (!fam) return res.status(404).json({ message: "Famille introuvable." });
+    await fam.destroy();
+    res.json({ message: "Famille supprimée." });
+  } catch (err) { next(err); }
+});
+
+/* ---------------------- CATÉGORIES ---------------------- */
+
+router.get("/categories", async (req, res, next) => {
+  try {
+    res.json(await Category.findAll({ where: { boutiqueId: req.boutiqueId } }));
+  } catch (err) { next(err); }
+});
+
+router.post("/categories", async (req, res, next) => {
+  try {
+    const cat = await Category.create({ ...req.body, boutiqueId: req.boutiqueId });
+    res.status(201).json(cat);
+  } catch (err) { next(err); }
+});
+
+router.put("/categories/:id", async (req, res, next) => {
+  try {
+    const cat = await Category.findOne({ where: { id: req.params.id, boutiqueId: req.boutiqueId } });
+    if (!cat) return res.status(404).json({ message: "Catégorie introuvable." });
+    await cat.update(req.body);
+    res.json(cat);
+  } catch (err) { next(err); }
+});
+
+router.delete("/categories/:id", async (req, res, next) => {
+  try {
+    const cat = await Category.findOne({ where: { id: req.params.id, boutiqueId: req.boutiqueId } });
+    if (!cat) return res.status(404).json({ message: "Catégorie introuvable." });
+    await cat.destroy();
+    res.json({ message: "Catégorie supprimée." });
+  } catch (err) { next(err); }
+});
+
+/* ---------------------- PRODUITS (catalogue) ---------------------- */
+
+router.get("/products", async (req, res, next) => {
+  try {
+    res.json(await Product.findAll({ 
+      where: { boutiqueId: req.boutiqueId }, 
+      include: [Category, { model: Fournisseur, as: "fournisseur" }], 
+      order: [["createdAt", "DESC"]] 
+    }));
+  } catch (err) { next(err); }
+});
+
+router.post("/products", async (req, res, next) => {
+  try {
+    const product = await Product.create({ ...req.body, boutiqueId: req.boutiqueId });
+    await checkExpirationNotification(product, req.boutiqueId);
+
+    // Auto-enregistrement dans la table des Achats / Approvisionnements
+    if (product.stock > 0 || Number(product.coutAchat) > 0 || product.fournisseurId) {
+      const qty = product.stock || 1;
+      const unitPrice = Number(product.coutAchat) || 0;
+      await Achat.create({
+        boutiqueId: req.boutiqueId,
+        productId: product.id,
+        fournisseurId: product.fournisseurId || null,
+        quantite: qty,
+        prixAchatUnitaire: unitPrice,
+        totalAchat: qty * unitPrice,
+        notes: "Création initiale de la fiche produit"
+      }).catch(() => {});
+    }
+
+    const fullProduct = await Product.findByPk(product.id, {
+      include: [Category, { model: Fournisseur, as: "fournisseur" }]
+    });
+
+    purgeCache();
+    res.status(201).json(fullProduct);
+  } catch (err) { next(err); }
+});
+
+router.put("/products/:id", async (req, res, next) => {
+  try {
+    const product = await Product.findOne({ where: { id: req.params.id, boutiqueId: req.boutiqueId } });
+    if (!product) return res.status(404).json({ message: "Produit introuvable." });
+    await product.update(req.body);
+    await checkExpirationNotification(product, req.boutiqueId);
+
+    const fullProduct = await Product.findByPk(product.id, {
+      include: [Category, { model: Fournisseur, as: "fournisseur" }]
+    });
+
+    purgeCache();
+    res.json(fullProduct);
+  } catch (err) { next(err); }
+});
+
+router.delete("/products/:id", async (req, res, next) => {
+  try {
+    const product = await Product.findOne({ where: { id: req.params.id, boutiqueId: req.boutiqueId } });
+    if (!product) return res.status(404).json({ message: "Produit introuvable." });
+    await product.destroy();
+    purgeCache();
+    res.json({ message: "Produit supprimé." });
+  } catch (err) { next(err); }
+});
+
+/* ---------------------- COMMANDES ---------------------- */
+
+router.get("/orders", async (req, res, next) => {
+  try {
+    const where = { boutiqueId: req.boutiqueId };
+    if (req.query.statut) where.statut = req.query.statut;
+    const orders = await Order.findAll({
+      where,
+      include: [
+        { model: OrderItem, as: "items", include: [{ model: Product, as: "product" }] }, 
+        { model: User, as: "client", attributes: ["nom", "telephone"] },
+        { model: User, as: "employeAssigne", attributes: ["id", "nom", "role"] }
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    res.json(orders);
+  } catch (err) { next(err); }
+});
+
+router.patch("/orders/:id/status", async (req, res, next) => {
+  try {
+    const order = await Order.findOne({ where: { id: req.params.id, boutiqueId: req.boutiqueId } });
+    if (!order) return res.status(404).json({ message: "Commande introuvable." });
+    await order.update({ statut: req.body.statut });
+
+    // Notifier le client de la mise à jour du statut
+    const cmdNum = "COM-B" + String(order.id).padStart(3, "0");
+    const labels = { validee: "Confirmée", en_preparation: "En préparation", en_livraison: "En livraison", livree: "Livrée", annulee: "Annulée" };
+    const statutTxt = labels[req.body.statut] || req.body.statut;
+
+    Notification.create({
+      userId: order.clientId, boutiqueId: order.boutiqueId, orderId: order.id,
+      title: "Mise à jour de votre commande",
+      message: `Votre commande #${cmdNum} est maintenant : ${statutTxt}.`,
+      type: "status"
+    }).catch(() => {});
+
+    res.json(order);
+  } catch (err) { next(err); }
+});
+
+router.patch("/orders/:id/assign", async (req, res, next) => {
+  try {
+    const order = await Order.findOne({ where: { id: req.params.id, boutiqueId: req.boutiqueId } });
+    if (!order) return res.status(404).json({ message: "Commande introuvable." });
+    const empId = req.body.employeId || null;
+    await order.update({ employeAssigneId: empId });
+
+    if (empId) {
+      const cmdNum = "COM-B" + String(order.id).padStart(3, "0");
+      Notification.create({
+        userId: empId, boutiqueId: order.boutiqueId, orderId: order.id,
+        title: "Nouvelle commande assignée",
+        message: `La commande #${cmdNum} vous a été attribuée.`,
+        type: "order"
+      }).catch(() => {});
+    }
+
+    res.json(order);
+  } catch (err) { next(err); }
+});
+
+/* ---------------------- GESTION DES UTILISATEURS (ADMINS & EMPLOYÉS) ---------------------- */
+
+router.get("/employees", requireRole("admin"), async (req, res, next) => {
+  try {
+    const users = await User.findAll({ 
+      where: { boutiqueId: req.boutiqueId, role: { [Op.in]: ["admin", "employe"] } }, 
+      attributes: { exclude: ["motDePasseHash"] },
+      order: [["createdAt", "DESC"]]
+    });
+    res.json(users);
+  } catch (err) { next(err); }
+});
+
+router.post("/employees", requireRole("admin"), async (req, res, next) => {
+  try {
+    const { nom, email, telephone, motDePasse, role, permissions } = req.body;
+    const existant = await User.findOne({ where: { email } });
+    if (existant) return res.status(409).json({ message: "Un compte existe déjà avec cet email." });
+
+    const userRole = role === "admin" ? "admin" : "employe";
+    const userPermissions = userRole === "admin" 
+      ? ["voir_dashboard", "gerer_banners", "gerer_categories", "gerer_produits", "gerer_commandes", "gerer_parametres", "gerer_utilisateurs"]
+      : (permissions || []);
+
+    const motDePasseHash = await bcrypt.hash(motDePasse || "changeme123", 10);
+    const user = await User.create({
+      nom, email, telephone, motDePasseHash, permissions: userPermissions,
+      role: userRole, boutiqueId: req.boutiqueId, statut: "actif"
+    });
+
+    res.status(201).json({ 
+      id: user.id, nom: user.nom, email: user.email, telephone: user.telephone, 
+      role: user.role, permissions: user.permissions, statut: user.statut 
+    });
+  } catch (err) { next(err); }
+});
+
+router.put("/employees/:id", requireRole("admin"), async (req, res, next) => {
+  try {
+    const targetUser = await User.findOne({ 
+      where: { id: req.params.id, boutiqueId: req.boutiqueId, role: { [Op.in]: ["admin", "employe"] } } 
+    });
+    if (!targetUser) return res.status(404).json({ message: "Utilisateur introuvable." });
+
+    const { nom, email, telephone, motDePasse, role, permissions, statut } = req.body;
+    if (targetUser.id === req.user.id && statut === "suspendu") {
+      return res.status(400).json({ message: "Vous ne pouvez pas suspendre votre propre compte administrateur." });
+    }
+
+    if (nom) targetUser.nom = nom;
+    if (email) targetUser.email = email;
+    if (telephone !== undefined) targetUser.telephone = telephone;
+    if (statut) targetUser.statut = statut;
+    
+    if (role) {
+      targetUser.role = role === "admin" ? "admin" : "employe";
+    }
+
+    if (targetUser.role === "admin") {
+      targetUser.permissions = ["voir_dashboard", "gerer_banners", "gerer_categories", "gerer_produits", "gerer_commandes", "gerer_parametres", "gerer_utilisateurs"];
+    } else if (permissions !== undefined) {
+      targetUser.permissions = permissions;
+    }
+
+    if (motDePasse && motDePasse.trim()) {
+      targetUser.motDePasseHash = await bcrypt.hash(motDePasse.trim(), 10);
+    }
+
+    await targetUser.save();
+    res.json({ 
+      id: targetUser.id, nom: targetUser.nom, email: targetUser.email, telephone: targetUser.telephone, 
+      role: targetUser.role, permissions: targetUser.permissions, statut: targetUser.statut 
+    });
+  } catch (err) { next(err); }
+});
+
+router.patch("/employees/:id/status", requireRole("admin"), async (req, res, next) => {
+  try {
+    const targetUser = await User.findOne({ 
+      where: { id: req.params.id, boutiqueId: req.boutiqueId, role: { [Op.in]: ["admin", "employe"] } } 
+    });
+    if (!targetUser) return res.status(404).json({ message: "Utilisateur introuvable." });
+    
+    if (targetUser.id === req.user.id) {
+      return res.status(400).json({ message: "Vous ne pouvez pas suspendre votre propre compte administrateur." });
+    }
+
+    const nouveauStatut = targetUser.statut === "actif" ? "suspendu" : "actif";
+    await targetUser.update({ statut: nouveauStatut });
+    res.json(targetUser);
+  } catch (err) { next(err); }
+});
+
+router.delete("/employees/:id", requireRole("admin"), async (req, res, next) => {
+  try {
+    const targetUser = await User.findOne({ 
+      where: { id: req.params.id, boutiqueId: req.boutiqueId, role: { [Op.in]: ["admin", "employe"] } } 
+    });
+    if (!targetUser) return res.status(404).json({ message: "Utilisateur introuvable." });
+
+    if (targetUser.id === req.user.id) {
+      return res.status(400).json({ message: "Vous ne pouvez pas supprimer votre propre compte." });
+    }
+
+    await targetUser.destroy();
+    res.json({ message: "Utilisateur supprimé avec succès." });
+  } catch (err) { next(err); }
+});
+
+/* ---------------------- PARAMÈTRES BOUTIQUE ---------------------- */
+
+router.get("/boutique", async (req, res, next) => {
+  try {
+    res.json(await Boutique.findByPk(req.boutiqueId));
+  } catch (err) { next(err); }
+});
+
+router.put("/boutique", requireRole("admin"), async (req, res, next) => {
+  try {
+    const boutique = await Boutique.findByPk(req.boutiqueId);
+    const { 
+      nom, logoUrl, couleurPrincipale, fraisLivraison, zonesLivraison, 
+      bannerSlides, sideBanners, telephone, telephone2, adresse, adresse2, 
+      emailContact, aProposText 
+    } = req.body;
+    await boutique.update({ 
+      nom, logoUrl, couleurPrincipale, fraisLivraison, zonesLivraison, 
+      bannerSlides, sideBanners, telephone, telephone2, adresse, adresse2, 
+      emailContact, aProposText 
+    });
+    res.json(boutique);
+  } catch (err) { next(err); }
+});
+
+/* ---------------------- VENTE DIRECTE (POS CAISSE) ---------------------- */
+
+router.post("/ventes/directe", async (req, res, next) => {
+  try {
+    const { items, clientNom, clientTelephone, moyenPaiement } = req.body;
+    if (!items || !items.length) {
+      return res.status(400).json({ message: "Le panier de vente est vide." });
+    }
+
+    // Client par défaut ou client renseigné
+    let client = null;
+    if (clientTelephone || clientNom) {
+      const emailGuest = `client_${Date.now()}@marche-vert.local`;
+      [client] = await User.findOrCreate({
+        where: { telephone: clientTelephone || "non_renseigne", boutiqueId: req.boutiqueId },
+        defaults: {
+          nom: clientNom || "Client comptoir",
+          email: emailGuest,
+          motDePasseHash: "guest_cashier",
+          role: "client"
+        }
+      });
+    } else {
+      [client] = await User.findOrCreate({
+        where: { email: `comptoir_${req.boutiqueId}@marche-vert.local` },
+        defaults: {
+          nom: "Client comptoir",
+          telephone: "00000000",
+          motDePasseHash: "guest_cashier",
+          role: "client",
+          boutiqueId: req.boutiqueId
+        }
+      });
+    }
+
+    // Calcul sous-total et vérification des stocks
+    let sousTotal = 0;
+    for (const it of items) {
+      const p = await Product.findOne({ where: { id: it.productId, boutiqueId: req.boutiqueId } });
+      if (!p) return res.status(404).json({ message: `Produit ID ${it.productId} introuvable.` });
+      const prixEffectif = p.enPromo && p.prixPromo ? Number(p.prixPromo) : Number(p.prix);
+      it.prixUnitaire = prixEffectif;
+      sousTotal += prixEffectif * it.quantite;
+    }
+
+    // Création de la commande directe (statut "recuperee" / effectuée)
+    const order = await Order.create({
+      boutiqueId: req.boutiqueId,
+      clientId: client.id,
+      statut: "recuperee",
+      modeLivraison: "retrait",
+      adresseLivraison: "Achat direct en boutique / comptoir",
+      moyenPaiement: moyenPaiement || "cash",
+      typeVente: "vente_directe",
+      employeAssigneId: req.user.id,
+      sousTotal,
+      fraisLivraison: 0,
+      total: sousTotal
+    });
+
+    // Enregistrement des items et décrémentation directe des stocks
+    for (const it of items) {
+      await OrderItem.create({
+        orderId: order.id,
+        productId: it.productId,
+        quantite: it.quantite,
+        prixUnitaire: it.prixUnitaire
+      });
+
+      const p = await Product.findByPk(it.productId);
+      if (p) {
+        p.stock = Math.max(0, p.stock - it.quantite);
+        p.ventesCount = (p.ventesCount || 0) + it.quantite;
+        await p.save();
+      }
+    }
+
+    const fullOrder = await Order.findByPk(order.id, {
+      include: [
+        { model: OrderItem, as: "items", include: [{ model: Product, as: "product" }] },
+        { model: User, as: "client", attributes: ["nom", "telephone"] },
+        { model: User, as: "employeAssigne", attributes: ["nom"] }
+      ]
+    });
+
+    res.status(201).json(fullOrder);
+  } catch (err) { next(err); }
+});
+
+/* ---------------------- GESTION DES FOURNISSEURS ---------------------- */
+
+router.get("/fournisseurs", async (req, res, next) => {
+  try {
+    const list = await Fournisseur.findAll({ 
+      where: { boutiqueId: req.boutiqueId },
+      order: [["createdAt", "DESC"]]
+    });
+    res.json(list);
+  } catch (err) { next(err); }
+});
+
+router.post("/fournisseurs", requireRole("admin", "employe"), async (req, res, next) => {
+  try {
+    const fourn = await Fournisseur.create({ ...req.body, boutiqueId: req.boutiqueId });
+    res.status(201).json(fourn);
+  } catch (err) { next(err); }
+});
+
+router.put("/fournisseurs/:id", requireRole("admin", "employe"), async (req, res, next) => {
+  try {
+    const fourn = await Fournisseur.findOne({ where: { id: req.params.id, boutiqueId: req.boutiqueId } });
+    if (!fourn) return res.status(404).json({ message: "Fournisseur introuvable." });
+    await fourn.update(req.body);
+    res.json(fourn);
+  } catch (err) { next(err); }
+});
+
+router.delete("/fournisseurs/:id", requireRole("admin"), async (req, res, next) => {
+  try {
+    const fourn = await Fournisseur.findOne({ where: { id: req.params.id, boutiqueId: req.boutiqueId } });
+    if (!fourn) return res.status(404).json({ message: "Fournisseur introuvable." });
+    await fourn.destroy();
+    res.json({ message: "Fournisseur supprimé." });
+  } catch (err) { next(err); }
+});
+
+/* ---------------------- GESTION DES UNITÉS DE VENTE ---------------------- */
+
+router.get("/unites", async (req, res, next) => {
+  try {
+    let list = await UniteVente.findAll({ where: { boutiqueId: req.boutiqueId } });
+    if (list.length === 0) {
+      const defaults = [
+        { nom: "Kilogramme", abbreviation: "Kg", boutiqueId: req.boutiqueId },
+        { nom: "Litre", abbreviation: "Litre", boutiqueId: req.boutiqueId },
+        { nom: "Pièce / Unité", abbreviation: "Pièce", boutiqueId: req.boutiqueId },
+        { nom: "Carton", abbreviation: "Carton", boutiqueId: req.boutiqueId },
+        { nom: "Sac", abbreviation: "Sac", boutiqueId: req.boutiqueId },
+        { nom: "Bouteille", abbreviation: "Bouteille", boutiqueId: req.boutiqueId },
+        { nom: "Paquet / Pack", abbreviation: "Paquet", boutiqueId: req.boutiqueId }
+      ];
+      await UniteVente.bulkCreate(defaults);
+      list = await UniteVente.findAll({ where: { boutiqueId: req.boutiqueId } });
+    }
+    res.json(list);
+  } catch (err) { next(err); }
+});
+
+router.post("/unites", requireRole("admin", "employe"), async (req, res, next) => {
+  try {
+    const unite = await UniteVente.create({ ...req.body, boutiqueId: req.boutiqueId });
+    res.status(201).json(unite);
+  } catch (err) { next(err); }
+});
+
+router.put("/unites/:id", requireRole("admin", "employe"), async (req, res, next) => {
+  try {
+    const unite = await UniteVente.findOne({ where: { id: req.params.id, boutiqueId: req.boutiqueId } });
+    if (!unite) return res.status(404).json({ message: "Unité introuvable." });
+    await unite.update(req.body);
+    res.json(unite);
+  } catch (err) { next(err); }
+});
+
+router.delete("/unites/:id", requireRole("admin"), async (req, res, next) => {
+  try {
+    const unite = await UniteVente.findOne({ where: { id: req.params.id, boutiqueId: req.boutiqueId } });
+    if (!unite) return res.status(404).json({ message: "Unité introuvable." });
+    await unite.destroy();
+    res.json({ message: "Unité supprimée." });
+  } catch (err) { next(err); }
+});
+
+/* ---------------------- GESTION DES ACHATS & APPROVISIONNEMENTS ---------------------- */
+
+router.get("/achats", async (req, res, next) => {
+  try {
+    const list = await Achat.findAll({
+      where: { boutiqueId: req.boutiqueId },
+      include: [
+        { model: Product, as: "product" },
+        { model: Fournisseur, as: "fournisseur" }
+      ],
+      order: [["createdAt", "DESC"]]
+    });
+    res.json(list);
+  } catch (err) { next(err); }
+});
+
+router.post("/achats", requireRole("admin", "employe"), async (req, res, next) => {
+  try {
+    const { productId, fournisseurId, quantite, prixAchatUnitaire, notes } = req.body;
+    const prod = await Product.findOne({ where: { id: productId, boutiqueId: req.boutiqueId } });
+    if (!prod) return res.status(404).json({ message: "Produit introuvable." });
+
+    const qty = Number(quantite) || 1;
+    const unitPrice = Number(prixAchatUnitaire) || 0;
+    const totalAchat = qty * unitPrice;
+
+    const achat = await Achat.create({
+      boutiqueId: req.boutiqueId,
+      productId: prod.id,
+      fournisseurId: fournisseurId || null,
+      quantite: qty,
+      prixAchatUnitaire: unitPrice,
+      totalAchat,
+      notes: notes || ""
+    });
+
+    // Mise à jour automatique du stock et du prix/coût d'achat du produit
+    prod.stock = (prod.stock || 0) + qty;
+    if (unitPrice > 0) {
+      prod.coutAchat = unitPrice;
+    }
+    await prod.save();
+
+    const fullAchat = await Achat.findByPk(achat.id, {
+      include: [
+        { model: Product, as: "product" },
+        { model: Fournisseur, as: "fournisseur" }
+      ]
+    });
+
+    res.status(201).json(fullAchat);
+  } catch (err) { next(err); }
+});
+
+module.exports = router;

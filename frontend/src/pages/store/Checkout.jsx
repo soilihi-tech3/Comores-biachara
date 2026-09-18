@@ -1,0 +1,326 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Truck, Store, CreditCard, Banknote, Smartphone, ArrowLeft, Minus, Plus, Trash2, CheckCircle, MapPin, ShoppingBag, ArrowRight, Lock, AlertCircle } from "lucide-react";
+import api, { SLUG } from "../../api";
+import { useCart } from "../../context/CartContext.jsx";
+
+const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
+
+const PAYMENT_OPTIONS = [
+  { id: "cash",  label: "Espèces (Cash)",  sub: "Paiement à la livraison / réception", Icon: Banknote,   available: true },
+  { id: "mvola", label: "Mvola",           sub: "Paiement mobile",                     Icon: Smartphone, available: false },
+  { id: "holam", label: "Holam",           sub: "Paiement mobile",                     Icon: Smartphone, available: false },
+  { id: "carte", label: "Carte bancaire",  sub: "Visa / Mastercard",                   Icon: CreditCard, available: false },
+];
+
+export default function Checkout() {
+  const { cart, subtotal, updateQuantite, removeFromCart, clearCart, showToast } = useCart();
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ modeLivraison: "domicile", adresseLivraison: "", moyenPaiement: "cash" });
+  const [erreur, setErreur] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const fraisLivraison = form.modeLivraison === "domicile" ? 1000 : 0;
+  const total = subtotal + fraisLivraison;
+  const totalItems = cart.reduce((s, l) => s + l.quantite, 0);
+
+  function handleSelectPayment(m) {
+    if (!m.available) {
+      showToast(
+        `Le paiement par ${m.label} sera disponible très bientôt. Pour le moment, seul le paiement en Espèces (Cash) est disponible.`,
+        "info"
+      );
+      setForm((f) => ({ ...f, moyenPaiement: "cash" }));
+      return;
+    }
+    setForm((f) => ({ ...f, moyenPaiement: m.id }));
+  }
+
+  async function valider() {
+    setErreur("");
+    if (form.modeLivraison === "domicile" && !form.adresseLivraison.trim()) {
+      setErreur("Veuillez indiquer votre adresse de livraison.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const items = cart.map((l) => ({ productId: l.product.id, quantite: l.quantite }));
+      const res = await api.post(`/store/${SLUG}/orders`, { items, ...form });
+      clearCart();
+      navigate(`/confirmation/${res.data.id}`);
+    } catch (err) {
+      setErreur(err.response?.data?.message || "Impossible de valider la commande.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (cart.length === 0) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", gap: 16 }}>
+        <ShoppingBag size={64} color="var(--line)" strokeWidth={1.5} />
+        <h2 style={{ color: "var(--forest-dark)", margin: 0 }}>Votre panier est vide</h2>
+        <p style={{ color: "var(--muted)", margin: 0 }}>Ajoutez des articles pour passer commande.</p>
+        <button className="bs-btn-primary" onClick={() => navigate("/catalogue")} style={{ marginTop: 8, padding: "12px 28px" }}>
+          Découvrir le catalogue
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: "calc(100vh - 70px)", background: "var(--paper)", display: "flex", flexDirection: "column" }}>
+      {/* TOP BAR */}
+      <div style={{ background: "#fff", borderBottom: "1px solid var(--line)", padding: "12px 24px", display: "flex", alignItems: "center", gap: 20 }}>
+        <button onClick={() => navigate("/catalogue")} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 13, fontWeight: 600 }}>
+          <ArrowLeft size={15} /> Continuer les achats
+        </button>
+        <div style={{ flex: 1 }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--muted)" }}>
+          <Lock size={14} /> Paiement sécurisé
+        </div>
+        <div style={{ background: "var(--forest)", color: "#fff", borderRadius: 20, padding: "4px 12px", fontSize: 13, fontWeight: 700 }}>
+          {totalItems} article{totalItems > 1 ? "s" : ""}
+        </div>
+      </div>
+
+      {/* MAIN */}
+      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 440px", minHeight: 0 }}>
+
+        {/* ── LEFT: FORM AREA ── */}
+        <div style={{ overflowY: "auto", padding: "32px 40px 60px", borderRight: "1px solid var(--line)" }}>
+          <h1 style={{ fontFamily: "var(--font-heading)", fontSize: 30, color: "var(--forest-dark)", margin: "0 0 4px" }}>Finaliser la commande</h1>
+          <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 32 }}>Vérifiez votre panier et choisissez vos options de livraison.</p>
+
+          {erreur && (
+            <div style={{ background: "#FDF2F0", color: "#B4483A", border: "1px solid #F8D7D2", padding: "14px 18px", borderRadius: 12, fontWeight: 600, marginBottom: 24, display: "flex", alignItems: "center", gap: 10, fontSize: 14 }}>
+              <AlertCircle size={18} /> {erreur}
+            </div>
+          )}
+
+          {/* ── SECTION: PANIER ── */}
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--forest)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14 }}>1</div>
+              <h2 style={{ margin: 0, fontSize: 18, color: "var(--ink)" }}>Vos articles</h2>
+            </div>
+            <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden" }}>
+              {cart.map((l, idx) => {
+                const prix = l.product.prixPromo || l.product.prix;
+                return (
+                  <div key={l.product.id} style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", borderBottom: idx < cart.length - 1 ? "1px solid var(--line)" : "none" }}>
+                    <img src={l.product.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=80&q=80"} alt={l.product.nom} style={{ width: 68, height: 68, borderRadius: 12, objectFit: "cover", border: "1px solid var(--line)", flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: "var(--ink)", marginBottom: 2 }}>{l.product.nom}</div>
+                      <div style={{ fontSize: 13, color: "var(--muted)" }}>{fcfa(prix)} / {l.product.unite}</div>
+                      {l.product.prixPromo && (
+                        <div style={{ fontSize: 12, color: "var(--accent)", fontWeight: 600 }}>
+                          Promo · <span style={{ textDecoration: "line-through", color: "var(--muted)" }}>{fcfa(l.product.prix)}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
+                      <div style={{ fontWeight: 800, fontSize: 16, color: "var(--forest-dark)" }}>{fcfa(prix * l.quantite)}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ display: "flex", alignItems: "center", border: "1.5px solid var(--line)", borderRadius: 24, overflow: "hidden", background: "var(--paper)" }}>
+                          <button onClick={() => updateQuantite(l.product.id, -1)} style={{ width: 32, height: 32, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink)" }}><Minus size={13} /></button>
+                          <span style={{ width: 28, textAlign: "center", fontWeight: 700, fontSize: 14 }}>{l.quantite}</span>
+                          <button onClick={() => updateQuantite(l.product.id, 1)} style={{ width: 32, height: 32, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink)" }}><Plus size={13} /></button>
+                        </div>
+                        <button onClick={() => removeFromCart(l.product.id)} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "#FEF0EF", color: "#B4483A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Trash2 size={13} /></button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── SECTION: LIVRAISON ── */}
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--forest)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14 }}>2</div>
+              <h2 style={{ margin: 0, fontSize: 18, color: "var(--ink)" }}>Mode de livraison</h2>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {[
+                { id: "domicile", label: "Livraison à domicile",   sub: "Livré directement chez vous",           price: "+1 000 F CFA", Icon: Truck,  color: "#2D8653" },
+                { id: "retrait",  label: "Retrait en boutique",     sub: "Récupérez votre commande en magasin",   price: "Gratuit",      Icon: Store,  color: "#6C47FF" },
+              ].map((opt) => (
+                <div key={opt.id} onClick={() => setForm(f => ({ ...f, modeLivraison: opt.id }))} style={{
+                  display: "flex", alignItems: "center", gap: 16, padding: "18px 20px", borderRadius: 14,
+                  border: `2px solid ${form.modeLivraison === opt.id ? "var(--forest)" : "var(--line)"}`,
+                  background: form.modeLivraison === opt.id ? "var(--forest-light)" : "#fff",
+                  cursor: "pointer", transition: "all 0.2s"
+                }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 12, background: form.modeLivraison === opt.id ? "var(--forest)" : "var(--paper)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.2s" }}>
+                    <opt.Icon size={22} color={form.modeLivraison === opt.id ? "#fff" : opt.color} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: form.modeLivraison === opt.id ? "var(--forest-dark)" : "var(--ink)" }}>{opt.label}</div>
+                    <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>{opt.sub}</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <span style={{ fontWeight: 700, fontSize: 15, color: opt.id === "retrait" ? "#2D8653" : "var(--ink)" }}>{opt.price}</span>
+                    <div style={{
+                      width: 22, height: 22, borderRadius: "50%",
+                      border: `2.5px solid ${form.modeLivraison === opt.id ? "var(--forest)" : "var(--line)"}`,
+                      background: form.modeLivraison === opt.id ? "var(--forest)" : "#fff",
+                      display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s"
+                    }}>
+                      {form.modeLivraison === opt.id && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff" }} />}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {form.modeLivraison === "domicile" && (
+                <div style={{ position: "relative", marginTop: 4 }}>
+                  <MapPin size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--sage)", pointerEvents: "none" }} />
+                  <input className="bs-input" style={{ paddingLeft: 42, borderRadius: 12, fontSize: 14 }}
+                    placeholder="Adresse complète (quartier, ville, rue...)"
+                    value={form.adresseLivraison}
+                    onChange={(e) => setForm(f => ({ ...f, adresseLivraison: e.target.value }))}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── SECTION: PAIEMENT ── */}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--forest)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14 }}>3</div>
+              <h2 style={{ margin: 0, fontSize: 18, color: "var(--ink)" }}>Moyen de paiement</h2>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              {PAYMENT_OPTIONS.map((m) => {
+                const isSelected = form.moyenPaiement === m.id;
+                return (
+                  <div
+                    key={m.id}
+                    onClick={() => handleSelectPayment(m)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "16px 18px",
+                      borderRadius: 14,
+                      border: `2px solid ${isSelected ? "var(--forest)" : "var(--line)"}`,
+                      background: isSelected ? "var(--forest-light)" : m.available ? "#fff" : "#FAFAFA",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      position: "relative"
+                    }}
+                  >
+                    <div style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 10,
+                      background: isSelected ? "var(--forest)" : "var(--paper)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0
+                    }}>
+                      <m.Icon size={20} color={isSelected ? "#fff" : "var(--forest)"} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontWeight: 700, fontSize: 14, color: isSelected ? "var(--forest-dark)" : "var(--ink)" }}>
+                          {m.label}
+                        </span>
+                        {!m.available && (
+                          <span style={{ fontSize: 10, fontWeight: 700, background: "#E2E8F0", color: "#475569", padding: "2px 6px", borderRadius: 10 }}>
+                            Bientôt
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {m.sub}
+                      </div>
+                    </div>
+                    <div style={{
+                      marginLeft: "auto",
+                      width: 20,
+                      height: 20,
+                      borderRadius: "50%",
+                      border: `2px solid ${isSelected ? "var(--forest)" : "var(--line)"}`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0
+                    }}>
+                      {isSelected && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--forest)" }} />}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* ── RIGHT: STICKY SUMMARY ── */}
+        <div style={{ background: "#fff", borderLeft: "none", display: "flex", flexDirection: "column", height: "100%", position: "sticky", top: 0 }}>
+          <div style={{ flex: 1, overflowY: "auto", padding: "32px 28px" }}>
+            <h2 style={{ fontFamily: "var(--font-heading)", fontSize: 22, color: "var(--forest-dark)", margin: "0 0 24px" }}>Récapitulatif</h2>
+
+            {/* Items */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 24 }}>
+              {cart.map(l => {
+                const prix = l.product.prixPromo || l.product.prix;
+                return (
+                  <div key={l.product.id} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ position: "relative" }}>
+                      <img src={l.product.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=60&q=80"} alt="" style={{ width: 52, height: 52, borderRadius: 10, objectFit: "cover", border: "1px solid var(--line)" }} />
+                      <span style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, background: "var(--forest)", color: "#fff", borderRadius: "50%", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{l.quantite}</span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.product.nom}</div>
+                      <div style={{ fontSize: 12, color: "var(--muted)" }}>{fcfa(prix)} / {l.product.unite}</div>
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", flexShrink: 0 }}>{fcfa(prix * l.quantite)}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ height: 1, background: "var(--line)", marginBottom: 16 }} />
+
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 14 }}>
+              <span style={{ color: "var(--muted)" }}>Sous-total</span>
+              <span style={{ fontWeight: 600 }}>{fcfa(subtotal)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, fontSize: 14 }}>
+              <span style={{ color: "var(--muted)" }}>Livraison</span>
+              <span style={{ fontWeight: 600, color: fraisLivraison === 0 ? "#2D8653" : "var(--ink)" }}>
+                {fraisLivraison === 0 ? "Gratuite" : fcfa(fraisLivraison)}
+              </span>
+            </div>
+
+            <div style={{ background: "var(--forest-dark)", borderRadius: 14, padding: "18px 20px", marginBottom: 24 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ color: "#DDE8DF", fontSize: 14, fontWeight: 600 }}>Total à payer</span>
+                <span style={{ color: "#fff", fontSize: 24, fontWeight: 900 }}>{fcfa(total)}</span>
+              </div>
+            </div>
+
+            <button onClick={valider} disabled={loading} style={{
+              width: "100%", padding: "16px 20px", background: loading ? "var(--sage)" : "var(--forest)",
+              color: "#fff", border: "none", borderRadius: 14, fontWeight: 700, fontSize: 16,
+              cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, transition: "all 0.2s"
+            }}>
+              {loading ? (
+                <><span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} /> Validation...</>
+              ) : (
+                <><CheckCircle size={20} /> Valider la commande <ArrowRight size={18} /></>
+              )}
+            </button>
+            <div style={{ textAlign: "center", marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12, color: "var(--muted)" }}>
+              <Lock size={12} /> Paiement 100% sécurisé · Conditions générales de vente
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

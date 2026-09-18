@@ -1,0 +1,159 @@
+import React, { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Heart, Trash2 } from "lucide-react";
+import api, { SLUG } from "../../api";
+import ProductCard from "../../components/ProductCard.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { useCart } from "../../context/CartContext.jsx";
+
+export default function Catalogue() {
+  const [params, setParams] = useSearchParams();
+  const { user } = useAuth();
+  const { showToast } = useCart();
+  const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [favIds, setFavIds] = useState([]);
+
+  const categoryId = params.get("categoryId") || "";
+  const famille = params.get("famille") || "";
+  const search = params.get("search") || "";
+  const onlyFavoris = params.get("favoris") === "1";
+
+  // User-scoped favorites sync
+  useEffect(() => {
+    function updateFavs() {
+      const key = user && user.id ? `favorites_user_${user.id}` : "favorites_guest";
+      const list = JSON.parse(localStorage.getItem(key) || "[]");
+      setFavIds(list);
+    }
+    updateFavs();
+    window.addEventListener("favorites_updated", updateFavs);
+    return () => window.removeEventListener("favorites_updated", updateFavs);
+  }, [user?.id]);
+
+  useEffect(() => {
+    api.get(`/store/${SLUG}/categories`).then((res) => setCategories(res.data));
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    const query = {};
+    if (categoryId) query.categoryId = categoryId;
+    if (famille) query.famille = famille;
+    if (search) query.search = search;
+    api.get(`/store/${SLUG}/products`, { params: query })
+      .then((res) => setProducts(res.data))
+      .finally(() => setLoading(false));
+  }, [categoryId, famille, search]);
+
+  let displayedProducts = products;
+  if (onlyFavoris) {
+    displayedProducts = displayedProducts.filter(p => favIds.includes(p.id));
+  } else if (famille) {
+    const fLow = famille.toLowerCase().trim();
+    displayedProducts = displayedProducts.filter(p => {
+      const pFam = (p.Category?.famille || p.famille || "").toLowerCase();
+      return pFam.includes(fLow) || fLow.includes(pFam);
+    });
+  }
+
+  function clearAllFavorites() {
+    if (!window.confirm("Voulez-vous vraiment vider tous vos favoris ?")) return;
+    const key = user && user.id ? `favorites_user_${user.id}` : "favorites_guest";
+    localStorage.setItem(key, JSON.stringify([]));
+    window.dispatchEvent(new Event("favorites_updated"));
+    showToast("Tous vos favoris ont été supprimés.", "info", "Favoris");
+  }
+
+  return (
+    <>
+      <div className="bs-cats">
+        <div 
+          className={"bs-cat-card" + (!categoryId && !famille && !onlyFavoris ? " on" : "")} 
+          onClick={() => setParams({})}
+        >
+          <div className="bs-cat-name" style={{ padding: "20px 0" }}>Tout afficher</div>
+        </div>
+
+        <div 
+          className={"bs-cat-card" + (onlyFavoris ? " on" : "")} 
+          onClick={() => setParams({ favoris: "1" })}
+          style={{ 
+            borderColor: onlyFavoris ? "#B4483A" : undefined, 
+            background: onlyFavoris ? "#FAD2CD" : undefined 
+          }}
+        >
+          <div className="bs-cat-name" style={{ padding: "16px 0", color: onlyFavoris ? "#B4483A" : "var(--ink)", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <Heart size={16} fill={onlyFavoris ? "#B4483A" : "none"} color={onlyFavoris ? "#B4483A" : "var(--ink)"} /> Mes Favoris ({favIds.length})
+          </div>
+        </div>
+
+        {categories.map((c) => (
+          <div 
+            key={c.id} 
+            className={"bs-cat-card" + (categoryId == c.id && !onlyFavoris ? " on" : "")}
+            onClick={() => setParams({ categoryId: c.id })}
+          >
+            <img 
+              src={c.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300&q=80"} 
+              alt={c.nom} 
+              loading="lazy"
+              decoding="async"
+              className="bs-cat-img" 
+            />
+            <div className="bs-cat-name">{c.nom}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bs-section-title" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <h2>
+          {loading 
+            ? "Chargement du catalogue..." 
+            : onlyFavoris 
+            ? `Mes produits favoris (${displayedProducts.length})` 
+            : famille
+            ? `Produits de la section "${famille}" (${displayedProducts.length})`
+            : `${displayedProducts.length} produit(s) trouvé(s)`}
+        </h2>
+
+        {onlyFavoris && displayedProducts.length > 0 && (
+          <button 
+            onClick={clearAllFavorites}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              background: "#FDF2F0", color: "#B4483A", border: "1px solid #F8D7D2",
+              padding: "8px 16px", borderRadius: 20, fontWeight: 700, fontSize: 13,
+              cursor: "pointer", transition: "all 0.2s ease"
+            }}
+            title="Supprimer tous les favoris"
+          >
+            <Trash2 size={15} /> Supprimer tous les favoris
+          </button>
+        )}
+      </div>
+
+      {!loading && onlyFavoris && displayedProducts.length === 0 && (
+        <div style={{ padding: 60, textAlign: "center", color: "var(--muted)", background: "#fff", borderRadius: 16 }}>
+          <Heart size={44} color="#B4483A" style={{ marginBottom: 12, opacity: 0.8 }} />
+          <h3 style={{ margin: "0 0 8px", color: "var(--forest-dark)" }}>Aucun produit dans vos favoris</h3>
+          <p style={{ margin: 0, fontSize: 14 }}>
+            Parcourez le catalogue et cliquez sur l'icône cœur d'un produit pour l'ajouter à vos favoris personnels !
+          </p>
+        </div>
+      )}
+
+      {!loading && !onlyFavoris && displayedProducts.length === 0 && (
+        <div style={{ padding: 60, textAlign: "center", color: "var(--muted)", background: "#fff", borderRadius: 16 }}>
+          Aucun produit ne correspond à vos critères de recherche.
+        </div>
+      )}
+
+      <div className="bs-grid">
+        {displayedProducts.map((p) => <ProductCard key={p.id} product={p} isFavorisPage={onlyFavoris} />)}
+      </div>
+    </>
+  );
+}
+
