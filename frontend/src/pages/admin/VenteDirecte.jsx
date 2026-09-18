@@ -395,8 +395,10 @@ export default function VenteDirecte() {
             {/* Header Ticket */}
             <div style={{ textAlign: "center", borderBottom: "1px dashed #64748B", paddingBottom: 12, marginBottom: 12 }}>
               <div style={{ fontSize: 20, fontWeight: 900, color: "#0F172A", letterSpacing: 1 }}>{storeName.toUpperCase()}</div>
-              <div style={{ fontSize: 11, color: "#64748B", marginTop: 2 }}>TICKET DE CAISSE — VENTE DIRECTE</div>
-              <div style={{ fontSize: 11, color: "#64748B", marginTop: 4 }}>
+              {boutique?.adresse && <div style={{ fontSize: 10.5, color: "#475569", marginTop: 2 }}>{boutique.adresse}</div>}
+              {boutique?.telephone && <div style={{ fontSize: 10.5, color: "#475569", marginTop: 1 }}>Tél: {boutique.telephone}</div>}
+              <div style={{ fontSize: 11, color: "#64748B", marginTop: 4 }}>TICKET DE CAISSE — VENTE DIRECTE</div>
+              <div style={{ fontSize: 11, color: "#64748B", marginTop: 2 }}>
                 N° #COM-B{String(completedSale.id).padStart(3, "0")}
               </div>
               <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>

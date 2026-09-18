@@ -508,6 +508,7 @@ router.put("/boutique", requireRole("admin"), async (req, res, next) => {
       bannerSlides, sideBanners, telephone, telephone2, adresse, adresse2, 
       emailContact, aProposText 
     });
+    purgeCache();
     res.json(boutique);
   } catch (err) { next(err); }
 });

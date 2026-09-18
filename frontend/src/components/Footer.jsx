@@ -3,14 +3,21 @@ import { Link } from "react-router-dom";
 import { MapPin, Phone, Mail, Store, Facebook, Instagram, MessageCircle, Info, Package, Grid, Home as HomeIcon } from "lucide-react";
 import api, { SLUG } from "../api";
 
+import { useAuth } from "../context/AuthContext.jsx";
+
 export default function Footer() {
-  const [boutique, setBoutique] = useState(null);
+  const { boutique: boutiqueContext } = useAuth();
+  const [boutiqueLocal, setBoutiqueLocal] = useState(null);
   const [categories, setCategories] = useState([]);
 
+  const boutique = boutiqueContext || boutiqueLocal;
+
   useEffect(() => {
-    api.get(`/store/${SLUG}`).then(res => setBoutique(res.data)).catch(() => {});
+    if (!boutiqueContext) {
+      api.get(`/store/${SLUG}`).then(res => setBoutiqueLocal(res.data)).catch(() => {});
+    }
     api.get(`/store/${SLUG}/categories`).then(res => setCategories(res.data || [])).catch(() => {});
-  }, []);
+  }, [boutiqueContext]);
 
   return (
     <footer style={{ background: "var(--forest-dark)", color: "#F0F3EC", padding: "60px 24px 24px", marginTop: "auto" }}>

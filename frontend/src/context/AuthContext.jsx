@@ -9,10 +9,15 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const refreshBoutique = () => {
-    api.get("/admin/boutique")
-      .then((res) => setBoutique(res.data))
+    const timestamp = Date.now();
+    api.get(`/admin/boutique?t=${timestamp}`)
+      .then((res) => {
+        if (res.data) setBoutique(res.data);
+      })
       .catch(() => {
-        api.get(`/store/${SLUG}`).then((res) => setBoutique(res.data)).catch(() => {});
+        api.get(`/store/${SLUG}?t=${timestamp}`).then((res) => {
+          if (res.data) setBoutique(res.data);
+        }).catch(() => {});
       });
   };
 

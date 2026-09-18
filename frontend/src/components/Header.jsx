@@ -12,7 +12,7 @@ import ProfileModal from "./ProfileModal.jsx";
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 
 export default function Header({ setCartOpen: setCartOpenProp }) {
-  const { user, logout } = useAuth();
+  const { user, boutique: boutiqueContext, logout } = useAuth();
   const { count, showToast } = useCart();
   const [cartOpen, setCartOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -20,7 +20,7 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [boutique, setBoutique] = useState(null);
+  const [boutiqueLocal, setBoutiqueLocal] = useState(null);
   const [categories, setCategories] = useState([]);
   const [results, setResults] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
@@ -32,6 +32,8 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const boutique = boutiqueContext || boutiqueLocal;
+
   function openMobileSearch() {
     setMobileSearchOpen(true);
     setTimeout(() => {
@@ -40,10 +42,12 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
   }
 
   useEffect(() => {
-    api.get(`/store/${SLUG}`).then((res) => setBoutique(res.data)).catch(() => { });
+    if (!boutiqueContext) {
+      api.get(`/store/${SLUG}`).then((res) => setBoutiqueLocal(res.data)).catch(() => { });
+    }
     api.get(`/store/${SLUG}/products`).then((res) => setAllProducts(res.data || [])).catch(() => { });
     api.get(`/store/${SLUG}/categories`).then((res) => setCategories(res.data || [])).catch(() => { });
-  }, []);
+  }, [boutiqueContext]);
 
   // Live search filtering
   useEffect(() => {
