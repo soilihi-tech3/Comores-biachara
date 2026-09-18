@@ -20,6 +20,7 @@ const Product = sequelize.define("Product", {
   imageUrl: { type: DataTypes.TEXT, allowNull: true },
   imageUrl2: { type: DataTypes.TEXT, allowNull: true },
   ventesCount: { type: DataTypes.INTEGER, defaultValue: 0 },
+  isNouveau: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, { tableName: "products" });
 
 module.exports = Product;

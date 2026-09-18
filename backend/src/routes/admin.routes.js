@@ -147,6 +147,15 @@ router.get("/dashboard", async (req, res, next) => {
     const valeurStockAchat = produits.reduce((sum, p) => sum + (Number(p.stock || 0) * Number(p.coutAchat || 0)), 0);
     const totalVentesCount = prodsWithStats.reduce((sum, p) => sum + Number(p.ventesCount || 0), 0);
 
+    // Produits arrivant à péremption ou expirés (dans les 30 prochains jours)
+    const in30Days = new Date();
+    in30Days.setDate(in30Days.getDate() + 30);
+    const produitsExpirant = produits.filter((p) => {
+      if (!p.dateExpiration) return false;
+      const exp = new Date(p.dateExpiration);
+      return exp <= in30Days;
+    });
+
     res.json({
       isEmploye: false,
       chiffreAffaires,
@@ -161,6 +170,8 @@ router.get("/dashboard", async (req, res, next) => {
       noteMoyenneGlobale,
       stockFaibleCount: stockFaible.length,
       stockFaibleList: stockFaible,
+      produitsExpirantCount: produitsExpirant.length,
+      produitsExpirantList: produitsExpirant,
       topProduits: top7Produits,
       top7Produits,
       flop7Produits,

@@ -53,6 +53,7 @@ export default function AdminProduits() {
     prix: "",
     prixPromo: "",
     enPromo: false,
+    isNouveau: false,
     dateExpiration: "",
     poids: "1",
     unite: "Kg",
@@ -108,6 +109,7 @@ export default function AdminProduits() {
       prix: product.prix ?? "",
       prixPromo: product.prixPromo ?? "",
       enPromo: Boolean(product.enPromo || product.prixPromo),
+      isNouveau: Boolean(product.isNouveau),
       dateExpiration: product.dateExpiration || "",
       poids: product.poids || "1",
       unite: product.unite || "Kg",
@@ -136,6 +138,7 @@ export default function AdminProduits() {
       prix: form.prix !== "" ? Number(form.prix) : 0,
       prixPromo: form.enPromo && form.prixPromo !== "" && form.prixPromo !== null ? Number(form.prixPromo) : null,
       enPromo: Boolean(form.enPromo),
+      isNouveau: Boolean(form.isNouveau),
       coutAchat: form.coutAchat !== "" ? Number(form.coutAchat) : 0,
       stock: form.stock !== "" ? Number(form.stock) : 0,
       seuilAlerte: form.seuilAlerte !== "" ? Number(form.seuilAlerte) : 5,
@@ -583,6 +586,27 @@ export default function AdminProduits() {
                     <option value={form.unite}>{form.unite}</option>
                   )}
                 </select>
+              </div>
+            </div>
+
+            {/* SECTION CLASSEMENT NOUVEAUTÉ */}
+            <div style={{ background: "var(--paper)", padding: 16, borderRadius: 12, border: "1px solid var(--line)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <input
+                  type="checkbox"
+                  id="isNouveau"
+                  checked={form.isNouveau}
+                  onChange={(e) => set("isNouveau", e.target.checked)}
+                  style={{ width: 18, height: 18, accentColor: "var(--forest)", cursor: "pointer" }}
+                />
+                <div>
+                  <label htmlFor="isNouveau" style={{ fontWeight: 700, fontSize: 13.5, color: "var(--forest-dark)", cursor: "pointer", margin: 0 }}>
+                    Marquer comme NOUVEAU produit (Nouveauté) ?
+                  </label>
+                  <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
+                    Si cette option est activée, le produit apparaîtra dans la section "Nouveaux Produits" sur la page d'accueil avec un badge NOUVEAU.
+                  </div>
+                </div>
               </div>
             </div>
 

@@ -368,13 +368,20 @@ export default function Home() {
       )}
 
       {/* ---- NOUVEAUX PRODUITS ---- */}
-      {safeProducts.length > 0 && (
-        <CategoryScrollSection
-          category={{ id: "new", nom: "Nouveaux Produits" }}
-          products={[...safeProducts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 8)}
-          onNavigate={() => navigate("/catalogue")}
-        />
-      )}
+      {safeProducts.length > 0 && (() => {
+        const customNouveaux = safeProducts.filter(p => p.isNouveau || p.isNouveau === true || p.isNouveau === 1);
+        const displayNouveaux = customNouveaux.length > 0 
+          ? customNouveaux 
+          : [...safeProducts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 8);
+
+        return (
+          <CategoryScrollSection
+            category={{ id: "new", nom: "Nouveaux Produits" }}
+            products={displayNouveaux}
+            onNavigate={() => navigate("/catalogue")}
+          />
+        );
+      })()}
 
       {/* ---- SECTIONS SCROLLABLES CRÉÉES AUTOMATIQUEMENT PAR FAMILLE (UNIQUES ET STRICTES) ---- */}
       {uniqueFamilles.map((famName) => {

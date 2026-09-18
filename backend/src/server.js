@@ -80,9 +80,9 @@ const PORT = process.env.PORT || 4000;
 async function ensureColumns() {
   try {
     const queryInterface = sequelize.getQueryInterface();
-    const table = await queryInterface.describeTable("boutiques");
+    const tableBoutiques = await queryInterface.describeTable("boutiques");
 
-    const columnsToAdd = [
+    const columnsToAddBoutique = [
       { name: "horaires_ouverture", type: 'VARCHAR(255) DEFAULT "Tous les jours de 08h30 à 23h00"' },
       { name: "facebook_url", type: 'VARCHAR(255) DEFAULT ""' },
       { name: "instagram_url", type: 'VARCHAR(255) DEFAULT ""' },
@@ -90,11 +90,17 @@ async function ensureColumns() {
       { name: "whatsapp_number", type: 'VARCHAR(50) DEFAULT ""' }
     ];
 
-    for (const col of columnsToAdd) {
-      if (!table[col.name]) {
+    for (const col of columnsToAddBoutique) {
+      if (!tableBoutiques[col.name]) {
         console.log("[MIGRATION] Ajout colonne manquante sur boutiques:", col.name);
         await sequelize.query(`ALTER TABLE boutiques ADD COLUMN ${col.name} ${col.type};`);
       }
+    }
+
+    const tableProducts = await queryInterface.describeTable("products");
+    if (!tableProducts["is_nouveau"]) {
+      console.log("[MIGRATION] Ajout colonne is_nouveau sur products");
+      await sequelize.query(`ALTER TABLE products ADD COLUMN is_nouveau TINYINT(1) DEFAULT 0;`);
     }
   } catch (err) {
     console.warn("[MIGRATION WARNING]:", err.message);

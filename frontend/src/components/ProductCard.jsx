@@ -101,7 +101,7 @@ export default function ProductCard({ product, isFavorisPage }) {
         </button>
 
         {/* BLUE DISCOUNT PERCENTAGE BADGE */}
-        {hasPromo && (
+        {hasPromo ? (
           <span style={{
             position: "absolute", top: 12, left: 12,
             background: "#0284C7", color: "#fff",
@@ -111,7 +111,17 @@ export default function ProductCard({ product, isFavorisPage }) {
           }}>
             {promoPercent > 0 ? `-${promoPercent}%` : "PROMO"}
           </span>
-        )}
+        ) : product.isNouveau ? (
+          <span style={{
+            position: "absolute", top: 12, left: 12,
+            background: "#163424", color: "#fff",
+            padding: "4px 10px", borderRadius: 16,
+            fontWeight: 800, fontSize: 11.5, zIndex: 10,
+            boxShadow: "0 2px 6px rgba(22,52,36,0.35)"
+          }}>
+            NOUVEAU
+          </span>
+        ) : null}
 
         {/* OUT OF STOCK OR MAX IN CART BADGES */}
         {isOutOfStock ? (

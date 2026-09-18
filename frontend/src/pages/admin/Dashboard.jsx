@@ -251,7 +251,29 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 5. NOMBRE TOTAL DE VENTES (ARTICLES VENDUS) */}
+        {/* 5. NOMBRE TOTAL DE CATÉGORIES */}
+        <div style={{
+          background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #8B5CF6",
+          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>
+              Catégories en Catalogue
+            </span>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#F3E8FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Layers size={18} color="#8B5CF6" />
+            </div>
+          </div>
+          <div style={{ fontSize: 25, fontWeight: 900, color: "#8B5CF6", letterSpacing: "-0.02em" }}>
+            {data.totalCategories || 0}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
+            Catégories actives référencées
+          </div>
+        </div>
+
+        {/* 6. NOMBRE TOTAL DE VENTES (NOMBRE DE TRANSACTIONS DE VENTE / IDS) */}
         <div style={{
           background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #D97706",
           borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
@@ -266,14 +288,14 @@ export default function Dashboard() {
             </div>
           </div>
           <div style={{ fontSize: 25, fontWeight: 900, color: "#D97706", letterSpacing: "-0.02em" }}>
-            {data.totalVentesCount || 0} article{data.totalVentesCount > 1 ? "s" : ""}
+            {data.nbCommandes || 0} vente{data.nbCommandes > 1 ? "s" : ""}
           </div>
           <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
-            Total articles vendus
+            Total des transactions de vente créées
           </div>
         </div>
 
-        {/* 6. COMMANDES TOTAL */}
+        {/* 7. COMMANDES REÇUES */}
         <div style={{
           background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #0D9488",
           borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
@@ -295,7 +317,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 7. UTILISATEURS / CLIENTS */}
+        {/* 8. UTILISATEURS / CLIENTS */}
         <div style={{
           background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #7C3AED",
           borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
@@ -317,7 +339,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 8. AVIS CLIENTS & NOTE */}
+        {/* 9. AVIS CLIENTS & NOTE */}
         <div style={{
           background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #F59E0B",
           borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
@@ -342,7 +364,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 9. ALERTES STOCK */}
+        {/* 10. ALERTES STOCK */}
         <div style={{
           background: data.stockFaibleCount > 0 ? "#FFF5F4" : "#ffffff",
           border: data.stockFaibleCount > 0 ? "1px solid #FAD2CD" : "1px solid var(--line)",
@@ -363,6 +385,30 @@ export default function Dashboard() {
           </div>
           <div style={{ fontSize: 12, color: data.stockFaibleCount > 0 ? "#E11D48" : "var(--muted)", marginTop: 6 }}>
             {data.stockFaibleCount > 0 ? "Articles à réapprovisionner !" : "Stocks sous contrôle"}
+          </div>
+        </div>
+
+        {/* 11. PRODUITS BIENTÔT EXPIRÉS */}
+        <div style={{
+          background: data.produitsExpirantCount > 0 ? "#FFFBEB" : "#ffffff",
+          border: data.produitsExpirantCount > 0 ? "1px solid #FDE68A" : "1px solid var(--line)",
+          borderLeft: data.produitsExpirantCount > 0 ? "4px solid #D97706" : "4px solid var(--line)",
+          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: data.produitsExpirantCount > 0 ? "#D97706" : "var(--muted)" }}>
+              Produits Expirant Bientôt
+            </span>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: data.produitsExpirantCount > 0 ? "#FEF3C7" : "var(--paper)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Clock size={18} color={data.produitsExpirantCount > 0 ? "#D97706" : "var(--muted)"} />
+            </div>
+          </div>
+          <div style={{ fontSize: 25, fontWeight: 900, color: data.produitsExpirantCount > 0 ? "#D97706" : "var(--ink)", letterSpacing: "-0.02em" }}>
+            {data.produitsExpirantCount || 0}
+          </div>
+          <div style={{ fontSize: 12, color: data.produitsExpirantCount > 0 ? "#D97706" : "var(--muted)", marginTop: 6 }}>
+            {data.produitsExpirantCount > 0 ? "Articles à péremption imminente (< 30j)" : "Aucune péremption proche"}
           </div>
         </div>
 
