@@ -158,72 +158,211 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── KPI CARDS ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 16, marginBottom: 24 }}>
+      {/* ── HIGH-ELEGANCE KPI CARDS GRID ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 16, marginBottom: 28 }}>
         
-        <div className="bs-panel" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Chiffre d'affaires Global</span>
-            <div style={{ background: "var(--forest-light)", padding: 6, borderRadius: 8, color: "var(--forest)" }}>
-              <TrendingUp size={18} />
+        {/* 1. CHIFFRE D'AFFAIRES GLOBAL */}
+        <div style={{
+          background: "linear-gradient(135deg, #163424 0%, #224B35 100%)",
+          color: "#ffffff", borderRadius: 16, padding: "20px 22px",
+          display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 8px 24px rgba(22,52,36,0.22)", position: "relative", overflow: "hidden"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#DDE8DF" }}>
+              Chiffre d'Affaires Global
+            </span>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <TrendingUp size={18} color="#fff" />
             </div>
           </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "var(--ink)" }}>{fcfa(data.chiffreAffaires)}</div>
+          <div style={{ fontSize: 25, fontWeight: 900, color: "#ffffff", letterSpacing: "-0.02em" }}>
+            {fcfa(data.chiffreAffaires || 0)}
+          </div>
+          <div style={{ fontSize: 12, color: "#DDE8DF", opacity: 0.85, marginTop: 6 }}>
+            Ventes cumulées boutique
+          </div>
         </div>
 
-        <div className="bs-panel" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Bénéfice Net</span>
-            <div style={{ background: "var(--forest-light)", padding: 6, borderRadius: 8, color: "var(--forest)" }}>
-              <DollarSign size={18} />
+        {/* 2. BÉNÉFICE NET */}
+        <div style={{
+          background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #059669",
+          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>
+              Bénéfice Net
+            </span>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#ECFDF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <DollarSign size={18} color="#059669" />
             </div>
           </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "var(--ink)" }}>{fcfa(data.beneficeNet)}</div>
+          <div style={{ fontSize: 25, fontWeight: 900, color: "#059669", letterSpacing: "-0.02em" }}>
+            {fcfa(data.beneficeNet || 0)}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
+            Ventes moins coût d'achat
+          </div>
         </div>
 
-        <div className="bs-panel" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Commandes Total</span>
-            <div style={{ background: "var(--forest-light)", padding: 6, borderRadius: 8, color: "var(--forest)" }}>
-              <ShoppingBag size={18} />
+        {/* 3. VALEUR FINANCIÈRE DU STOCK */}
+        <div style={{
+          background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #4F46E5",
+          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>
+              Valeur du Stock (Argent)
+            </span>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Package size={18} color="#4F46E5" />
             </div>
           </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "var(--ink)" }}>{data.nbCommandes}</div>
+          <div style={{ fontSize: 25, fontWeight: 900, color: "#4F46E5", letterSpacing: "-0.02em" }}>
+            {fcfa(data.valeurStockVente || 0)}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
+            Valeur marchande en réserve
+          </div>
         </div>
 
-        <div className="bs-panel" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Utilisateurs / Clients</span>
-            <div style={{ background: "var(--forest-light)", padding: 6, borderRadius: 8, color: "var(--forest)" }}>
-              <UserCheck size={18} />
+        {/* 4. NOMBRE TOTAL DE PRODUITS */}
+        <div style={{
+          background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #0284C7",
+          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>
+              Produits en Catalogue
+            </span>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#E0F2FE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Layers size={18} color="#0284C7" />
             </div>
           </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "var(--ink)" }}>{data.totalClients || 0}</div>
+          <div style={{ fontSize: 25, fontWeight: 900, color: "#0284C7", letterSpacing: "-0.02em" }}>
+            {data.totalProduits || 0}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
+            Articles référencés en boutique
+          </div>
         </div>
 
-        {/* KPI REVIEWS & AVIS */}
-        <div className="bs-panel" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Avis Clients & Note</span>
-            <div style={{ background: "#FEF3C7", padding: 6, borderRadius: 8, color: "#D97706" }}>
-              <Star size={18} />
+        {/* 5. NOMBRE TOTAL DE VENTES (ARTICLES VENDUS) */}
+        <div style={{
+          background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #D97706",
+          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>
+              Nombre Total de Ventes
+            </span>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <ShoppingBag size={18} color="#D97706" />
+            </div>
+          </div>
+          <div style={{ fontSize: 25, fontWeight: 900, color: "#D97706", letterSpacing: "-0.02em" }}>
+            {data.totalVentesCount || 0} article{data.totalVentesCount > 1 ? "s" : ""}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
+            Total articles vendus
+          </div>
+        </div>
+
+        {/* 6. COMMANDES TOTAL */}
+        <div style={{
+          background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #0D9488",
+          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>
+              Commandes Reçues
+            </span>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#CCFBF1", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <CheckCircle2 size={18} color="#0D9488" />
+            </div>
+          </div>
+          <div style={{ fontSize: 25, fontWeight: 900, color: "#0D9488", letterSpacing: "-0.02em" }}>
+            {data.nbCommandes || 0}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
+            Commandes traitées & caisse
+          </div>
+        </div>
+
+        {/* 7. UTILISATEURS / CLIENTS */}
+        <div style={{
+          background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #7C3AED",
+          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>
+              Clients Inscrits
+            </span>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#F3E8FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <UserCheck size={18} color="#7C3AED" />
+            </div>
+          </div>
+          <div style={{ fontSize: 25, fontWeight: 900, color: "#7C3AED", letterSpacing: "-0.02em" }}>
+            {data.totalClients || 0}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
+            Comptes clients actifs
+          </div>
+        </div>
+
+        {/* 8. AVIS CLIENTS & NOTE */}
+        <div style={{
+          background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #F59E0B",
+          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>
+              Avis Clients & Note
+            </span>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Star size={18} color="#D97706" />
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "var(--ink)" }}>{data.noteMoyenneGlobale || "4.9"} / 5</div>
+            <div style={{ fontSize: 25, fontWeight: 900, color: "#D97706", letterSpacing: "-0.02em" }}>
+              {data.noteMoyenneGlobale || "4.9"} / 5
+            </div>
             <Stars rating={Math.round(data.noteMoyenneGlobale || 5)} size={14} />
           </div>
-          <div style={{ fontSize: 12, color: "var(--muted)" }}>{data.totalReviews || 0} avis enregistrés</div>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
+            {data.totalReviews || 0} avis enregistrés
+          </div>
         </div>
 
-        <div className="bs-panel" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 8, border: data.stockFaibleCount > 0 ? "1px solid #FAD2CD" : "1px solid var(--line)", background: data.stockFaibleCount > 0 ? "#FFF5F4" : "#fff" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ color: data.stockFaibleCount > 0 ? "#B4483A" : "var(--muted)", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Alertes Stock</span>
-            <div style={{ background: data.stockFaibleCount > 0 ? "#FAD2CD" : "var(--forest-light)", padding: 6, borderRadius: 8, color: data.stockFaibleCount > 0 ? "#B4483A" : "var(--forest)" }}>
-              <AlertTriangle size={18} />
+        {/* 9. ALERTES STOCK */}
+        <div style={{
+          background: data.stockFaibleCount > 0 ? "#FFF5F4" : "#ffffff",
+          border: data.stockFaibleCount > 0 ? "1px solid #FAD2CD" : "1px solid var(--line)",
+          borderLeft: data.stockFaibleCount > 0 ? "4px solid #E11D48" : "4px solid var(--line)",
+          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: data.stockFaibleCount > 0 ? "#E11D48" : "var(--muted)" }}>
+              Alertes Stock
+            </span>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: data.stockFaibleCount > 0 ? "#FFE4E6" : "var(--paper)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <AlertTriangle size={18} color={data.stockFaibleCount > 0 ? "#E11D48" : "var(--muted)"} />
             </div>
           </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: data.stockFaibleCount > 0 ? "#B4483A" : "var(--ink)" }}>{data.stockFaibleCount || 0}</div>
+          <div style={{ fontSize: 25, fontWeight: 900, color: data.stockFaibleCount > 0 ? "#E11D48" : "var(--ink)", letterSpacing: "-0.02em" }}>
+            {data.stockFaibleCount || 0}
+          </div>
+          <div style={{ fontSize: 12, color: data.stockFaibleCount > 0 ? "#E11D48" : "var(--muted)", marginTop: 6 }}>
+            {data.stockFaibleCount > 0 ? "Articles à réapprovisionner !" : "Stocks sous contrôle"}
+          </div>
         </div>
 
       </div>

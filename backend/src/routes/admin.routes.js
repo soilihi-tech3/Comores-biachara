@@ -142,11 +142,17 @@ router.get("/dashboard", async (req, res, next) => {
     const flopCategories = [...categoryStats].sort((a, b) => a.ventes - b.ventes);
 
     const panierMoyen = nbCommandes > 0 ? Math.round(chiffreAffaires / nbCommandes) : 0;
+    const valeurStockVente = produits.reduce((sum, p) => sum + (Number(p.stock || 0) * Number(p.prixPromo || p.prix || 0)), 0);
+    const valeurStockAchat = produits.reduce((sum, p) => sum + (Number(p.stock || 0) * Number(p.coutAchat || 0)), 0);
+    const totalVentesCount = prodsWithStats.reduce((sum, p) => sum + Number(p.ventesCount || 0), 0);
 
     res.json({
       isEmploye: false,
       chiffreAffaires,
       beneficeNet,
+      valeurStockVente,
+      valeurStockAchat,
+      totalVentesCount,
       nbCommandes,
       panierMoyen,
       totalClients,
