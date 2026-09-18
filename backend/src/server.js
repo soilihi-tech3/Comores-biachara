@@ -139,6 +139,20 @@ async function ensureColumns() {
       console.log("[MIGRATION] Ajout colonne is_nouveau sur products");
       await sequelize.query(`ALTER TABLE products ADD COLUMN is_nouveau TINYINT(1) DEFAULT 0;`);
     }
+
+    // Upgrade image columns to LONGTEXT to support Base64 images without "Data Too Long" errors
+    const alterQueries = [
+      "ALTER TABLE products MODIFY COLUMN image_url LONGTEXT NULL;",
+      "ALTER TABLE products MODIFY COLUMN image_url2 LONGTEXT NULL;",
+      "ALTER TABLE categories MODIFY COLUMN image_url LONGTEXT NULL;",
+      "ALTER TABLE boutiques MODIFY COLUMN logo_url LONGTEXT NULL;",
+      "ALTER TABLE boutiques MODIFY COLUMN banner_slides LONGTEXT NULL;",
+      "ALTER TABLE boutiques MODIFY COLUMN side_banners LONGTEXT NULL;"
+    ];
+
+    for (const q of alterQueries) {
+      await sequelize.query(q).catch(() => {});
+    }
   } catch (err) {
     console.warn("[MIGRATION WARNING]:", err.message);
   }

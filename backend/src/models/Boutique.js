@@ -4,7 +4,7 @@ const sequelize = require("../config/database");
 const Boutique = sequelize.define("Boutique", {
   nom: { type: DataTypes.STRING(150), allowNull: false },
   slug: { type: DataTypes.STRING(150), allowNull: false, unique: true },
-  logoUrl: { type: DataTypes.STRING(255) },
+  logoUrl: { type: DataTypes.TEXT("long") },
   couleurPrincipale: { type: DataTypes.STRING(20), defaultValue: "#1F4D3A" },
   formuleAbonnement: {
     type: DataTypes.ENUM("essai_gratuit", "forfait_mensuel", "commission"),

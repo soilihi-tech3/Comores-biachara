@@ -31,10 +31,10 @@ export default function ImageUploader({ value, onChange, label = "Image" }) {
 
       img.onload = () => {
         try {
-          // Compress image using HTML5 Canvas for optimal size & resolution
+          // Compress image using HTML5 Canvas for ultra-light payload & high sharpness
           const canvas = document.createElement("canvas");
-          const MAX_WIDTH = 1200;
-          const MAX_HEIGHT = 1200;
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
           let width = img.width;
           let height = img.height;
 
@@ -55,8 +55,8 @@ export default function ImageUploader({ value, onChange, label = "Image" }) {
           const ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0, width, height);
 
-          // Lightweight JPEG Data URL saved directly in database
-          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          // Lightweight JPEG Data URL (~40KB) saved directly in database
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.70);
           onChange(compressedDataUrl);
         } catch (err) {
           // Fallback to raw base64 if canvas compression encounters issues

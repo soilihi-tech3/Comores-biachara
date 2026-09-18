@@ -17,8 +17,8 @@ const Product = sequelize.define("Product", {
   seuilAlerte: { type: DataTypes.INTEGER, defaultValue: 5 },
   coutAchat: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
   fournisseurId: { type: DataTypes.INTEGER, allowNull: true },
-  imageUrl: { type: DataTypes.TEXT, allowNull: true },
-  imageUrl2: { type: DataTypes.TEXT, allowNull: true },
+  imageUrl: { type: DataTypes.TEXT("long"), allowNull: true },
+  imageUrl2: { type: DataTypes.TEXT("long"), allowNull: true },
   ventesCount: { type: DataTypes.INTEGER, defaultValue: 0 },
   isNouveau: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, { tableName: "products" });
