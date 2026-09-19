@@ -388,9 +388,9 @@ router.patch("/orders/:id/status", async (req, res, next) => {
       return res.status(404).json({ message: "Commande introuvable." });
     }
 
-    if (order.statut === "annulee") {
+    if (["annulee", "livree", "recuperee"].includes(order.statut)) {
       await t.rollback();
-      return res.status(400).json({ message: "Cette commande a été annulée. Son statut ne peut plus être modifié." });
+      return res.status(400).json({ message: "Cette commande est déjà " + (order.statut === "annulee" ? "annulée" : "terminée") + ". Son statut ne peut plus être modifié." });
     }
 
     const newStatut = req.body.statut;
@@ -414,7 +414,16 @@ router.patch("/orders/:id/status", async (req, res, next) => {
 
     // Notifier le client de la mise à jour du statut
     const cmdNum = "COM-B" + String(order.id).padStart(3, "0");
-    const labels = { validee: "Confirmée", en_preparation: "En préparation", en_livraison: "En livraison", livree: "Livrée", annulee: "Annulée" };
+    const labels = {
+      en_attente: "En attente",
+      validee: "Confirmée",
+      en_preparation: "En préparation",
+      pret_retrait: "Prête à récupérer en boutique",
+      en_livraison: "En cours de livraison",
+      recuperee: "Récupérée en boutique",
+      livree: "Livrée",
+      annulee: "Annulée"
+    };
     const statutTxt = labels[newStatut] || newStatut;
 
     Notification.create({

@@ -9,25 +9,38 @@ import TablePagination from "../../components/TablePagination";
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 const formatOrderNum = (id) => `COM-B${String(id).padStart(3, "0")}`;
 
-const STATUTS = ["en_attente", "validee", "en_livraison", "recuperee", "annulee"];
+const STATUTS_FILTER = [
+  { value: "tous", label: "Tous les statuts" },
+  { value: "en_attente", label: "En attente" },
+  { value: "validee", label: "Confirmées" },
+  { value: "en_preparation", label: "En préparation" },
+  { value: "pret_retrait", label: "Prêtes à récupérer" },
+  { value: "en_livraison", label: "En livraison" },
+  { value: "recuperee", label: "Récupérées" },
+  { value: "livree", label: "Livrées" },
+  { value: "annulee", label: "Annulées" }
+];
+
 const STATUT_LABEL = { 
   en_attente: "En attente", 
   validee: "Confirmée", 
-  en_preparation: "Confirmée",
-  en_livraison: "Livraison", 
+  en_preparation: "En préparation",
+  pret_retrait: "Prête à récupérer",
+  en_livraison: "En livraison", 
   recuperee: "Récupérée", 
-  livree: "Récupérée",
+  livree: "Livrée",
   annulee: "Annulée" 
 };
 
 const STATUT_STYLE = {
-  en_attente: { bg: "#FEF3C7", color: "#92400E", border: "#FCD34D" },
-  validee: { bg: "#E0F2FE", color: "#075985", border: "#7DD3FC" },
+  en_attente:     { bg: "#FEF3C7", color: "#92400E", border: "#FCD34D" },
+  validee:        { bg: "#E0F2FE", color: "#075985", border: "#7DD3FC" },
   en_preparation: { bg: "#E0F2FE", color: "#075985", border: "#7DD3FC" },
-  en_livraison: { bg: "#ECFDF5", color: "#065F46", border: "#6EE7B7" },
-  recuperee: { bg: "#D1FAE5", color: "#064E3B", border: "#34D399" },
-  livree: { bg: "#D1FAE5", color: "#064E3B", border: "#34D399" },
-  annulee: { bg: "#FEE2E2", color: "#991B1B", border: "#FCA5A5" }
+  pret_retrait:   { bg: "#E0F2FE", color: "#075985", border: "#7DD3FC" },
+  en_livraison:   { bg: "#ECFDF5", color: "#065F46", border: "#6EE7B7" },
+  recuperee:      { bg: "#D1FAE5", color: "#064E3B", border: "#34D399" },
+  livree:         { bg: "#D1FAE5", color: "#064E3B", border: "#34D399" },
+  annulee:        { bg: "#FEE2E2", color: "#991B1B", border: "#FCA5A5" }
 };
 
 const MOIS = [
@@ -369,9 +382,8 @@ export default function AdminOrders() {
               onChange={(e) => setStatusFilter(e.target.value)}
               style={{ border: "none", background: "transparent", fontSize: 12.5, padding: "2px 4px", outline: "none", cursor: "pointer" }}
             >
-              <option value="tous">Tous les statuts</option>
-              {STATUTS.map(s => (
-                <option key={s} value={s}>{STATUT_LABEL[s]}</option>
+              {STATUTS_FILTER.map(sf => (
+                <option key={sf.value} value={sf.value}>{sf.label}</option>
               ))}
             </select>
           </div>
@@ -500,12 +512,54 @@ export default function AdminOrders() {
                     {/* 8. Statut */}
                     <td>
                       {(() => {
-                        const isRecuperee = o.statut === "recuperee" || o.statut === "livree";
+                        const isLocked = ["annulee", "livree", "recuperee"].includes(o.statut);
+                        const isDelivery = o.modeLivraison === "domicile";
+
+                        const options = isDelivery
+                          ? [
+                              { key: "en_attente", label: "En attente" },
+                              { key: "validee", label: "Confirmée" },
+                              { key: "en_preparation", label: "En préparation" },
+                              { key: "en_livraison", label: "En livraison" },
+                              { key: "livree", label: "Livrée" },
+                              { key: "annulee", label: "Annulée" }
+                            ]
+                          : [
+                              { key: "en_attente", label: "En attente" },
+                              { key: "validee", label: "Confirmée" },
+                              { key: "en_preparation", label: "En préparation" },
+                              { key: "pret_retrait", label: "Prête à récupérer" },
+                              { key: "recuperee", label: "Récupérée" },
+                              { key: "annulee", label: "Annulée" }
+                            ];
+
+                        const currentLabel = STATUT_LABEL[o.statut] || o.statut;
+
+                        if (isLocked) {
+                          return (
+                            <span
+                              style={{
+                                background: badgeStyle.bg,
+                                color: badgeStyle.color,
+                                border: `1px solid ${badgeStyle.border}`,
+                                borderRadius: 20,
+                                padding: "6px 14px",
+                                fontWeight: 700,
+                                fontSize: 12,
+                                display: "inline-block",
+                                opacity: 0.85,
+                                cursor: "not-allowed"
+                              }}
+                              title={`Cette commande est ${currentLabel.toLowerCase()}. Son statut ne peut plus être modifié.`}
+                            >
+                              {currentLabel}
+                            </span>
+                          );
+                        }
 
                         return (
                           <select
                             value={o.statut}
-                            disabled={isRecuperee}
                             onChange={(e) => changeStatus(o.id, e.target.value)}
                             style={{
                               background: badgeStyle.bg,
@@ -515,15 +569,13 @@ export default function AdminOrders() {
                               padding: "6px 12px",
                               fontWeight: 700,
                               fontSize: 12,
-                              cursor: isRecuperee ? "not-allowed" : "pointer",
-                              opacity: isRecuperee ? 0.85 : 1,
+                              cursor: "pointer",
                               outline: "none"
                             }}
-                            title={isRecuperee ? "Cette commande a été récupérée. Le statut ne peut plus être modifié." : ""}
                           >
-                            {STATUTS.map((s) => (
-                              <option key={s} value={s} style={{ background: "#fff", color: "#000" }}>
-                                {STATUT_LABEL[s]}
+                            {options.map((opt) => (
+                              <option key={opt.key} value={opt.key} style={{ background: "#fff", color: "#000" }}>
+                                {opt.label}
                               </option>
                             ))}
                           </select>
