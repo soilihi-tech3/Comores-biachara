@@ -587,6 +587,97 @@ router.delete("/employees/:id", requireRole("admin"), async (req, res, next) => 
   } catch (err) { next(err); }
 });
 
+/* ---------------------- GESTION DES CLIENTS ---------------------- */
+
+router.get("/clients", async (req, res, next) => {
+  try {
+    const clients = await User.findAll({
+      where: { role: "client" },
+      attributes: { exclude: ["motDePasseHash"] },
+      order: [["createdAt", "DESC"]]
+    });
+    res.json(clients);
+  } catch (err) { next(err); }
+});
+
+router.post("/clients", async (req, res, next) => {
+  try {
+    const { nom, email, telephone, motDePasse } = req.body;
+    const cleanEmail = email ? String(email).trim().toLowerCase() : null;
+    const cleanPhone = telephone ? String(telephone).trim() : null;
+
+    if (!nom || !cleanPhone || !motDePasse) {
+      return res.status(400).json({ message: "Le nom, le numéro de téléphone et le mot de passe sont requis." });
+    }
+
+    const existant = await User.findOne({ 
+      where: { [Op.or]: [{ telephone: cleanPhone }, ...(cleanEmail ? [{ email: cleanEmail }] : [])] } 
+    });
+    if (existant) return res.status(409).json({ message: "Un compte client existe déjà avec ce téléphone ou cet e-mail." });
+
+    const motDePasseHash = await bcrypt.hash(motDePasse, 10);
+    const client = await User.create({
+      nom: nom.trim(),
+      email: cleanEmail,
+      telephone: cleanPhone,
+      motDePasseHash,
+      role: "client",
+      statut: "actif",
+      isEmailVerified: true
+    });
+
+    res.status(201).json({
+      id: client.id, nom: client.nom, email: client.email, telephone: client.telephone,
+      role: client.role, statut: client.statut, isEmailVerified: client.isEmailVerified
+    });
+  } catch (err) { next(err); }
+});
+
+router.put("/clients/:id", async (req, res, next) => {
+  try {
+    const client = await User.findOne({ where: { id: req.params.id, role: "client" } });
+    if (!client) return res.status(404).json({ message: "Client introuvable." });
+
+    const { nom, email, telephone, motDePasse, statut } = req.body;
+    if (nom) client.nom = nom.trim();
+    if (email !== undefined) client.email = email ? String(email).trim().toLowerCase() : null;
+    if (telephone !== undefined) client.telephone = telephone ? String(telephone).trim() : null;
+    if (statut) client.statut = statut;
+
+    if (motDePasse && motDePasse.trim()) {
+      client.motDePasseHash = await bcrypt.hash(motDePasse.trim(), 10);
+    }
+
+    await client.save();
+    res.json({
+      id: client.id, nom: client.nom, email: client.email, telephone: client.telephone,
+      role: client.role, statut: client.statut, isEmailVerified: client.isEmailVerified
+    });
+  } catch (err) { next(err); }
+});
+
+router.patch("/clients/:id/status", async (req, res, next) => {
+  try {
+    const client = await User.findOne({ where: { id: req.params.id, role: "client" } });
+    if (!client) return res.status(404).json({ message: "Client introuvable." });
+
+    const nouveauStatut = client.statut === "actif" ? "suspendu" : "actif";
+    await client.update({ statut: nouveauStatut });
+    res.json({ id: client.id, nom: client.nom, statut: client.statut });
+  } catch (err) { next(err); }
+});
+
+router.delete("/clients/:id", async (req, res, next) => {
+  try {
+    const client = await User.findOne({ where: { id: req.params.id, role: "client" } });
+    if (!client) return res.status(404).json({ message: "Client introuvable." });
+
+    await client.destroy();
+    res.json({ message: "Compte client supprimé avec succès." });
+  } catch (err) { next(err); }
+});
+
+
 /* ---------------------- PARAMÈTRES BOUTIQUE ---------------------- */
 
 router.get("/boutique", async (req, res, next) => {

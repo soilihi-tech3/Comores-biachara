@@ -3,12 +3,13 @@ import { NavLink, Link, Outlet, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, Package, ShoppingCart, Users, Store, LogOut, Layers, 
   PanelLeftClose, PanelLeftOpen, User, Image, LayoutGrid, CreditCard, 
-  ShoppingBag, Truck, Scale, History, Menu, X, ExternalLink, ArrowLeft, Clock, Lock
+  ShoppingBag, Truck, Scale, History, Menu, X, ExternalLink, ArrowLeft, Clock, Lock, UserCheck
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useCart } from "../../context/CartContext.jsx";
 import NotificationMenu from "../../components/NotificationMenu.jsx";
 import ProfileModal from "../../components/ProfileModal.jsx";
+
 
 const ROUTE_MODULE_MAP = {
   "/admin/vente": { key: "vente", label: "Vente Directe (POS)" },
@@ -21,6 +22,7 @@ const ROUTE_MODULE_MAP = {
   "/admin/categories": { key: "categories", label: "Catégories" },
   "/admin/produits": { key: "produits", label: "Produits" },
   "/admin/commandes": { key: "commandes", label: "Commandes" },
+  "/admin/clients": { key: "clients", label: "Clients" },
 };
 
 export default function AdminLayout() {
@@ -46,9 +48,11 @@ export default function AdminLayout() {
     { to: "/admin/categories", label: "Catégories", icon: Layers, permKey: "gerer_categories", moduleKey: "categories" },
     { to: "/admin/produits", label: "Produits", icon: Package, permKey: ["ajouter_produit", "modifier_produit", "supprimer_produit", "gerer_produits"], moduleKey: "produits" },
     { to: "/admin/commandes", label: "Commandes", icon: ShoppingCart, permKey: ["valider_commande", "changer_statut_commande", "assigner_commande", "gerer_commandes"], moduleKey: "commandes" },
-    { to: "/admin/employes", label: "Utilisateurs", icon: Users, adminOnly: true },
+    { to: "/admin/clients", label: "Clients", icon: UserCheck, permKey: ["gerer_commandes", "gerer_utilisateurs", "voir_dashboard"] },
+    { to: "/admin/employes", label: "Équipe & Rôles", icon: Users, adminOnly: true },
     { to: "/admin/parametres", label: "Paramètres Boutique", icon: Store, permKey: "gerer_parametres" },
   ];
+
 
   const links = allLinks.filter(item => {
     if (user?.role === "admin" || user?.role === "super_admin") return true;

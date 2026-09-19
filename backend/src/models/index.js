@@ -71,7 +71,10 @@ Achat.belongsTo(Product, { foreignKey: "productId", as: "product" });
 Fournisseur.hasMany(Achat, { foreignKey: "fournisseurId", as: "achats" });
 Achat.belongsTo(Fournisseur, { foreignKey: "fournisseurId", as: "fournisseur" });
 
+const EmailLog = require("./EmailLog");
+
 module.exports = { 
   sequelize, Boutique, User, Category, Product, Order, OrderItem, 
-  Review, Notification, Famille, Fournisseur, UniteVente, Achat 
+  Review, Notification, Famille, Fournisseur, UniteVente, Achat, EmailLog 
 };
+

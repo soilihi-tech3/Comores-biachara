@@ -9,6 +9,7 @@
     "seed": "node src/seed.js"
   },
   "dependencies": {
+    "@getbrevo/brevo": "^6.0.3",
     "bcryptjs": "^2.4.3",
     "compression": "^1.8.2",
     "cors": "^2.8.5",

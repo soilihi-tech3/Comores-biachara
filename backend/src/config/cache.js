@@ -128,10 +128,23 @@ async function remember(key, ttlSeconds, fetchFn) {
   return fresh;
 }
 
+async function delCache(key) {
+  if (isRedisAvailable && redis) {
+    try {
+      await redis.del(key);
+    } catch (err) {
+      isRedisAvailable = false;
+    }
+  }
+  memoryCache.delete(key);
+}
+
 module.exports = {
   getCache,
   setCache,
+  delCache,
   clearCachePattern,
   cacheMiddleware,
   remember
 };
+

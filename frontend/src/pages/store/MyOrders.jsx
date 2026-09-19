@@ -1,31 +1,31 @@
 import React, { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Package, Truck, CheckCircle, XCircle, Clock, ShoppingBag, Search, ChevronRight, MapPin, CreditCard, ArrowLeft, PackageOpen, TrendingUp } from "lucide-react";
 import api, { SLUG } from "../../api";
 
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 
 const STATUT_CONFIG = {
-  en_attente:     { label: "En attente",        color: "#B7791F", bg: "#FFFBEA", Icon: Clock,       step: 0 },
-  validee:        { label: "Confirmée",          color: "#2B6CB0", bg: "#EBF4FF", Icon: CheckCircle, step: 1 },
-  en_preparation: { label: "Confirmée",          color: "#2B6CB0", bg: "#EBF4FF", Icon: CheckCircle, step: 1 },
-  en_livraison:   { label: "Livraison",          color: "#2F6B4F", bg: "#EBF2ED", Icon: Truck,       step: 3 },
-  recuperee:      { label: "Récupérée",          color: "#1F4D3A", bg: "#EBF2ED", Icon: CheckCircle, step: 4 },
-  livree:         { label: "Récupérée",          color: "#1F4D3A", bg: "#EBF2ED", Icon: CheckCircle, step: 4 },
-  pret_retrait:   { label: "Prête à récupérer", color: "#2B6CB0", bg: "#EBF4FF", Icon: Package,     step: 3 },
-  annulee:        { label: "Annulée",            color: "#B4483A", bg: "#FDF2F0", Icon: XCircle,     step: -1 },
+  en_attente:   { label: "En attente",        color: "#B7791F", bg: "#FFFBEA", Icon: Clock,       step: 0 },
+  validee:      { label: "Confirmée",         color: "#2B6CB0", bg: "#EBF4FF", Icon: CheckCircle, step: 1 },
+  pret_retrait: { label: "Prête à récupérer", color: "#2D8653", bg: "#EBF7F0", Icon: Package,     step: 2 },
+  en_livraison: { label: "En livraison",      color: "#2F6B4F", bg: "#EBF2ED", Icon: Truck,       step: 2 },
+  recuperee:    { label: "Récupérée",         color: "#163424", bg: "#EBF7F0", Icon: CheckCircle, step: 3 },
+  livree:       { label: "Livrée",            color: "#163424", bg: "#EBF7F0", Icon: CheckCircle, step: 3 },
+  annulee:      { label: "Annulée",           color: "#B4483A", bg: "#FDF2F0", Icon: XCircle,     step: -1 },
 };
 
 const DELIVERY_STEPS = [
-  { key: "en_attente",     label: "Reçue",            icon: ShoppingBag },
-  { key: "validee",        label: "Confirmée",         icon: CheckCircle },
-  { key: "en_preparation", label: "Préparation",       icon: Package },
-  { key: "en_livraison",   label: "En livraison",      icon: Truck },
-  { key: "livree",         label: "Livrée",            icon: CheckCircle },
+  { key: "en_attente",   label: "Reçue",        icon: ShoppingBag },
+  { key: "validee",      label: "Confirmée",    icon: CheckCircle },
+  { key: "en_livraison", label: "En livraison", icon: Truck },
+  { key: "livree",       label: "Livrée",       icon: CheckCircle },
 ];
 const PICKUP_STEPS = [
-  { key: "en_attente",   label: "Reçue",              icon: ShoppingBag },
-  { key: "validee",      label: "Confirmée",           icon: CheckCircle },
-  { key: "pret_retrait", label: "Prête à récupérer",  icon: Package },
+  { key: "en_attente",   label: "Reçue",             icon: ShoppingBag },
+  { key: "validee",      label: "Confirmée",          icon: CheckCircle },
+  { key: "pret_retrait", label: "Prête à récupérer", icon: Package },
+  { key: "recuperee",    label: "Récupérée",         icon: CheckCircle },
 ];
 
 const MOYEN_LABEL = {
@@ -36,18 +36,23 @@ const MOYEN_LABEL = {
 };
 
 const FILTERS = [
-  { key: "all",           label: "Toutes les commandes", icon: ShoppingBag },
-  { key: "en_attente",    label: "En attente",            icon: Clock },
-  { key: "validee",       label: "Confirmées",            icon: CheckCircle },
-  { key: "en_preparation",label: "En préparation",        icon: Package },
-  { key: "en_livraison",  label: "En livraison",          icon: Truck },
-  { key: "livree",        label: "Livrées",               icon: CheckCircle },
-  { key: "annulee",       label: "Annulées",              icon: XCircle },
+  { key: "all",          label: "Toutes les commandes", icon: ShoppingBag },
+  { key: "en_attente",   label: "En attente",            icon: Clock },
+  { key: "validee",      label: "Confirmées",            icon: CheckCircle },
+  { key: "pret_retrait", label: "Prêtes à récupérer",   icon: Package },
+  { key: "en_livraison", label: "En livraison",          icon: Truck },
+  { key: "recuperee",    label: "Récupérées",            icon: CheckCircle },
+  { key: "livree",       label: "Livrées",               icon: CheckCircle },
+  { key: "annulee",      label: "Annulées",              icon: XCircle },
 ];
+
 
 import { subscribeRealtime } from "../../utils/realtime.js";
 
 export default function MyOrders() {
+  const [searchParams] = useSearchParams();
+  const targetOrderId = searchParams.get("orderId") || searchParams.get("id");
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
@@ -60,15 +65,22 @@ export default function MyOrders() {
         const freshOrders = res.data || [];
         setOrders(freshOrders);
 
-        // Auto-update selected order if currently open
-        setSelected(prev => {
-          if (!prev) return null;
-          const found = freshOrders.find(o => o.id === prev.id);
-          return found || prev;
-        });
+        // Auto-sélection si une commande est spécifiée dans l'URL (?orderId=18)
+        if (targetOrderId && !selected) {
+          const target = freshOrders.find(o => String(o.id) === String(targetOrderId));
+          if (target) setSelected(target);
+        } else {
+          // Auto-update selected order if currently open
+          setSelected(prev => {
+            if (!prev) return null;
+            const found = freshOrders.find(o => o.id === prev.id);
+            return found || prev;
+          });
+        }
       })
       .finally(() => setLoading(false));
   };
+
 
   useEffect(() => {
     fetchOrders();

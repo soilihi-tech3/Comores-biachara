@@ -35,12 +35,53 @@ export default function Confirmation() {
       <h1 style={{ fontFamily: "var(--font-heading)", fontSize: 32, color: "var(--forest-dark)", margin: "0 0 10px" }}>
         Commande confirmée !
       </h1>
-      <p style={{ color: "var(--muted)", fontSize: 15, lineHeight: 1.6, marginBottom: 32 }}>
-        Votre commande <strong style={{ color: "var(--ink)" }}>#{id}</strong> a bien été enregistrée.<br />
-        Vous serez notifié à chaque étape de la préparation et de la livraison.
-      </p>
+      {/* BARRE DE PROGRESSION DU PROCESSUS DE COMMANDE */}
+      <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 20, padding: "20px 24px", marginBottom: 28, boxShadow: "0 2px 12px rgba(34,75,53,0.06)", textAlign: "left" }}>
+        <div style={{ fontWeight: 800, fontSize: 15, color: "var(--forest-dark)", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+          <Truck size={18} color="var(--forest)" />
+          <span>Processus & Suivi de votre commande</span>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
+          {(order?.modeLivraison === "domicile" ? [
+            { step: 1, label: "Reçue", active: true },
+            { step: 2, label: "Validée", active: ["validee", "en_livraison", "livree"].includes(order?.statut) },
+            { step: 3, label: "En livraison", active: ["en_livraison", "livree"].includes(order?.statut) },
+            { step: 4, label: "Livrée", active: order?.statut === "livree" }
+          ] : [
+            { step: 1, label: "Reçue", active: true },
+            { step: 2, label: "Validée", active: ["validee", "pret_retrait", "recuperee"].includes(order?.statut) },
+            { step: 3, label: "Prête à récupérer", active: ["pret_retrait", "recuperee"].includes(order?.statut) },
+            { step: 4, label: "Récupérée", active: order?.statut === "recuperee" }
+          ]).map((st, idx, arr) => (
+            <div key={st.step} style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, position: "relative", zIndex: 1 }}>
+              {idx > 0 && (
+                <div style={{
+                  position: "absolute", left: "-50%", top: 15, width: "100%", height: 3,
+                  background: st.active ? "var(--forest)" : "var(--line)", zIndex: -1
+                }} />
+              )}
+              <div style={{
+                width: 32, height: 32, borderRadius: "50%",
+                background: st.active ? "var(--forest)" : "#fff",
+                border: st.active ? "2px solid var(--forest)" : "2px solid var(--line)",
+                color: st.active ? "#fff" : "var(--muted)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontWeight: 800, fontSize: 13, boxShadow: st.active ? "0 2px 8px rgba(34,75,53,0.2)" : "none"
+              }}>
+                {st.active ? <CheckCircle size={16} /> : st.step}
+              </div>
+              <span style={{ fontSize: 11, fontWeight: st.active ? 700 : 500, color: st.active ? "var(--forest-dark)" : "var(--muted)", marginTop: 6, textAlign: "center" }}>
+                {st.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
 
       {/* ORDER SUMMARY */}
+
       {order && (
         <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 20, overflow: "hidden", marginBottom: 24, boxShadow: "var(--shadow-md)", textAlign: "left" }}>
           <div style={{ padding: "16px 20px", background: "var(--paper)", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 10 }}>

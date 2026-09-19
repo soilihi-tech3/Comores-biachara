@@ -27,7 +27,9 @@ import AdminProduits from "./pages/admin/Produits.jsx";
 import AdminCategories from "./pages/admin/Categories.jsx";
 import AdminOrders from "./pages/admin/Orders.jsx";
 import AdminEmployees from "./pages/admin/Employees.jsx";
+import AdminClients from "./pages/admin/Clients.jsx";
 import AdminSettings from "./pages/admin/Settings.jsx";
+
 import VenteDirecte from "./pages/admin/VenteDirecte.jsx";
 import Fournisseurs from "./pages/admin/Fournisseurs.jsx";
 import UnitesVente from "./pages/admin/UnitesVente.jsx";
@@ -132,7 +134,9 @@ export default function App() {
           <Route path="produits" element={<AdminProduits />} />
           <Route path="categories" element={<AdminCategories />} />
           <Route path="commandes" element={<AdminOrders />} />
+          <Route path="clients" element={<AdminClients />} />
           <Route path="employes" element={<AdminEmployees />} />
+
           <Route path="utilisateurs" element={<AdminEmployees />} />
           <Route path="parametres" element={<AdminSettings defaultTab="general" />} />
         </Route>
