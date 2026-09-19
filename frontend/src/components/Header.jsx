@@ -314,7 +314,7 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
 
                       <div style={{ padding: "6px 0" }}>
                         <button
-                          onClick={() => { setUserMenuOpen(false); setProfileOpen(true); }}
+                          onClick={() => { setUserMenuOpen(false); navigate("/profil"); }}
                           style={{
                             width: "100%", padding: "10px 16px", background: "none", border: "none",
                             textAlign: "left", cursor: "pointer", fontSize: 13, fontWeight: 600,
@@ -510,10 +510,10 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
           <span>Panier</span>
         </button>
         {user ? (
-          <button className="bs-mobile-nav-item" onClick={() => setProfileOpen(true)}>
+          <Link to="/profil" className={`bs-mobile-nav-item ${location.pathname === "/profil" ? "active" : ""}`}>
             <User size={19} />
             <span>Profil</span>
-          </button>
+          </Link>
         ) : (
           <Link to="/connexion" className={`bs-mobile-nav-item ${location.pathname === "/connexion" ? "active" : ""}`}>
             <User size={19} />

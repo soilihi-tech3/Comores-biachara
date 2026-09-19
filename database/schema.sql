@@ -16,6 +16,7 @@ CREATE TABLE boutiques (
   couleur_principale VARCHAR(20) DEFAULT '#1F4D3A',
   formule_abonnement ENUM('essai_gratuit','forfait_mensuel','commission') DEFAULT 'essai_gratuit',
   statut ENUM('active','suspendue') DEFAULT 'active',
+  adresse_retrait TEXT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

@@ -62,6 +62,7 @@ router.get("/:slug", loadBoutique, cacheMiddleware(300), (req, res) => {
     telephone2: b.telephone2,
     adresse: b.adresse,
     adresse2: b.adresse2,
+    adresseRetrait: b.adresseRetrait || "",
     emailContact: b.emailContact,
     aProposText: b.aProposText,
     horairesOuverture: b.horairesOuverture || "Tous les jours de 08h30 à 23h00",
@@ -246,9 +247,18 @@ router.post("/:slug/orders", loadBoutique, authenticate, requireRole("client"), 
       type: "order"
     }).catch(() => {});
 
+    const { envoyerNotificationAdminNouvelleCommande, envoyerConfirmationCommande } = require("../services/emailService");
+    const originUrl = req.headers.origin || process.env.FRONTEND_URL || "http://localhost:5173";
+
     // Notification e-mail transactionnelle au client
     if (req.user.email) {
-      sendOrderConfirmationEmail(req.user.email, req.user.nom, complete, req.boutique.nom).catch(() => {});
+      envoyerConfirmationCommande(req.user.email, complete, req.boutique.nom).catch((err) => console.error("⚠️ Email confirmation client non envoyé:", err.message));
+    }
+
+    // Notification e-mail transactionnelle à l'administrateur de la boutique
+    const adminEmail = req.boutique.emailContact || process.env.BREVO_SENDER_EMAIL;
+    if (adminEmail) {
+      envoyerNotificationAdminNouvelleCommande(adminEmail, complete, req.boutique.nom, originUrl).catch((err) => console.error("⚠️ Email notification admin non envoyé:", err.message));
     }
 
     clearCachePattern("cache:/api/store").catch(() => {});

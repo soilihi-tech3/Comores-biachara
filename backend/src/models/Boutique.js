@@ -17,6 +17,7 @@ const Boutique = sequelize.define("Boutique", {
   telephone2: { type: DataTypes.STRING(20) },
   adresse: { type: DataTypes.STRING(255) },
   adresse2: { type: DataTypes.STRING(255) },
+  adresseRetrait: { type: DataTypes.TEXT },
   emailContact: { type: DataTypes.STRING(150) },
   aProposText: { type: DataTypes.TEXT },
   horairesOuverture: { type: DataTypes.STRING(255), defaultValue: "Tous les jours de 08h30 à 23h00" },

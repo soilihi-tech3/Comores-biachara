@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Truck, Store, CreditCard, Banknote, Smartphone, ArrowLeft, Minus, Plus, Trash2, CheckCircle, MapPin, ShoppingBag, ArrowRight, Lock, AlertCircle } from "lucide-react";
+import { Truck, Store, CreditCard, Banknote, Smartphone, ArrowLeft, Minus, Plus, Trash2, CheckCircle, MapPin, ShoppingBag, ArrowRight, Lock, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import api, { SLUG } from "../../api";
 import { useCart } from "../../context/CartContext.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -9,11 +9,31 @@ const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0
 
 export default function Checkout() {
   const { cart, subtotal, updateQuantite, removeFromCart, clearCart, showToast } = useCart();
-  const { boutique } = useAuth();
+  const { boutique, user } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ modeLivraison: "domicile", adresseLivraison: "", moyenPaiement: "cash" });
+
+  const [form, setForm] = useState({
+    modeLivraison: "domicile",
+    adresseLivraison: user?.adresse || "",
+    moyenPaiement: "cash"
+  });
+
+  // Gestion de l'affichage dépliable (Accordéon) pour libérer de l'espace à l'écran
+  const [openSteps, setOpenSteps] = useState({ 1: true, 2: true, 3: true });
+
+  const toggleStep = (stepNum) => {
+    setOpenSteps((prev) => ({ ...prev, [stepNum]: !prev[stepNum] }));
+  };
+
   const [erreur, setErreur] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Pré-remplir l'adresse de livraison si l'utilisateur est chargé ou mis à jour
+  useEffect(() => {
+    if (user?.adresse && !form.adresseLivraison) {
+      setForm((f) => ({ ...f, adresseLivraison: user.adresse }));
+    }
+  }, [user]);
 
   const modesPaiement = boutique?.modesPaiement || { especes: true, mvola: true, holam: true, carte: false };
 
@@ -39,7 +59,8 @@ export default function Checkout() {
     }
   }, [boutique]);
 
-  const fraisLivraison = form.modeLivraison === "domicile" ? 1000 : 0;
+  const tarifLivraisonConfig = boutique?.fraisLivraison !== undefined ? Number(boutique.fraisLivraison) : 10;
+  const fraisLivraison = form.modeLivraison === "domicile" ? tarifLivraisonConfig : 0;
   const total = subtotal + fraisLivraison;
   const totalItems = cart.reduce((s, l) => s + l.quantite, 0);
 
@@ -61,7 +82,9 @@ export default function Checkout() {
   async function valider() {
     setErreur("");
     if (form.modeLivraison === "domicile" && !form.adresseLivraison.trim()) {
-      setErreur("Veuillez indiquer votre adresse de livraison.");
+      const msg = "Veuillez indiquer votre adresse de livraison complète.";
+      setErreur(msg);
+      showToast(msg, "error", "Adresse manquante");
       return;
     }
     setLoading(true);
@@ -69,9 +92,12 @@ export default function Checkout() {
       const items = cart.map((l) => ({ productId: l.product.id, quantite: l.quantite }));
       const res = await api.post(`/store/${SLUG}/orders`, { items, ...form });
       clearCart();
+      showToast("Commande validée avec succès !", "success", "Félicitations");
       navigate(`/confirmation/${res.data.id}`);
     } catch (err) {
-      setErreur(err.response?.data?.message || "Impossible de valider la commande.");
+      const errorMsg = err.response?.data?.message || "Impossible de valider la commande.";
+      setErreur(errorMsg);
+      showToast(errorMsg, "error", "Erreur");
     } finally {
       setLoading(false);
     }
@@ -121,100 +147,188 @@ export default function Checkout() {
           )}
 
           {/* ── SECTION: PANIER ── */}
-          <div style={{ marginBottom: 32, width: "100%", boxSizing: "border-box" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--forest)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14 }}>1</div>
-              <h2 style={{ margin: 0, fontSize: 18, color: "var(--ink)" }}>Vos articles</h2>
+          <div style={{ marginBottom: 24, width: "100%", boxSizing: "border-box" }}>
+            <div
+              onClick={() => toggleStep(1)}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "12px 16px", background: "#fff", border: "1px solid var(--line)",
+                borderRadius: 14, cursor: "pointer", marginBottom: openSteps[1] ? 12 : 0,
+                boxShadow: "0 2px 6px rgba(0,0,0,0.03)"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--forest)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14 }}>1</div>
+                <h2 style={{ margin: 0, fontSize: 18, color: "var(--ink)" }}>Vos articles</h2>
+                {!openSteps[1] && (
+                  <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600, marginLeft: 8 }}>
+                    ({totalItems} article{totalItems > 1 ? "s" : ""})
+                  </span>
+                )}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--forest)", fontWeight: 700, fontSize: 13 }}>
+                <span>{openSteps[1] ? "Réduire" : "Détails"}</span>
+                {openSteps[1] ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </div>
             </div>
-            <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", width: "100%", boxSizing: "border-box" }}>
-              {cart.map((l, idx) => {
-                const prix = l.product.prixPromo || l.product.prix;
-                return (
-                  <div key={l.product.id} style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", borderBottom: idx < cart.length - 1 ? "1px solid var(--line)" : "none", flexWrap: "wrap" }}>
-                    <img src={l.product.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=80&q=80"} alt={l.product.nom} style={{ width: 68, height: 68, borderRadius: 12, objectFit: "cover", border: "1px solid var(--line)", flexShrink: 0 }} />
-                    <div style={{ flex: "1 1 180px", minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 15, color: "var(--ink)", marginBottom: 2 }}>{l.product.nom}</div>
-                      <div style={{ fontSize: 13, color: "var(--muted)" }}>{fcfa(prix)} / {l.product.unite}</div>
-                      {l.product.prixPromo && (
-                        <div style={{ fontSize: 12, color: "var(--accent)", fontWeight: 600 }}>
-                          Promo · <span style={{ textDecoration: "line-through", color: "var(--muted)" }}>{fcfa(l.product.prix)}</span>
+
+            {openSteps[1] && (
+              <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", width: "100%", boxSizing: "border-box" }}>
+                {cart.map((l, idx) => {
+                  const prix = l.product.prixPromo || l.product.prix;
+                  return (
+                    <div key={l.product.id} style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", borderBottom: idx < cart.length - 1 ? "1px solid var(--line)" : "none", flexWrap: "wrap" }}>
+                      <img src={l.product.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=80&q=80"} alt={l.product.nom} style={{ width: 68, height: 68, borderRadius: 12, objectFit: "cover", border: "1px solid var(--line)", flexShrink: 0 }} />
+                      <div style={{ flex: "1 1 180px", minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 15, color: "var(--ink)", marginBottom: 2 }}>{l.product.nom}</div>
+                        <div style={{ fontSize: 13, color: "var(--muted)" }}>{fcfa(prix)} / {l.product.unite}</div>
+                        {l.product.prixPromo && (
+                          <div style={{ fontSize: 12, color: "var(--accent)", fontWeight: 600 }}>
+                            Promo · <span style={{ textDecoration: "line-through", color: "var(--muted)" }}>{fcfa(l.product.prix)}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, width: "100%", maxWidth: 220, marginLeft: "auto" }}>
+                        <div style={{ fontWeight: 800, fontSize: 16, color: "var(--forest-dark)" }}>{fcfa(prix * l.quantite)}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ display: "flex", alignItems: "center", border: "1.5px solid var(--line)", borderRadius: 24, overflow: "hidden", background: "var(--paper)" }}>
+                            <button onClick={() => updateQuantite(l.product.id, -1)} style={{ width: 32, height: 32, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink)" }}><Minus size={13} /></button>
+                            <span style={{ width: 28, textAlign: "center", fontWeight: 700, fontSize: 14 }}>{l.quantite}</span>
+                            <button onClick={() => updateQuantite(l.product.id, 1)} style={{ width: 32, height: 32, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink)" }}><Plus size={13} /></button>
+                          </div>
+                          <button onClick={() => removeFromCart(l.product.id)} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "#FEF0EF", color: "#B4483A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Trash2 size={13} /></button>
                         </div>
-                      )}
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, width: "100%", maxWidth: 220, marginLeft: "auto" }}>
-                      <div style={{ fontWeight: 800, fontSize: 16, color: "var(--forest-dark)" }}>{fcfa(prix * l.quantite)}</div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <div style={{ display: "flex", alignItems: "center", border: "1.5px solid var(--line)", borderRadius: 24, overflow: "hidden", background: "var(--paper)" }}>
-                          <button onClick={() => updateQuantite(l.product.id, -1)} style={{ width: 32, height: 32, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink)" }}><Minus size={13} /></button>
-                          <span style={{ width: 28, textAlign: "center", fontWeight: 700, fontSize: 14 }}>{l.quantite}</span>
-                          <button onClick={() => updateQuantite(l.product.id, 1)} style={{ width: 32, height: 32, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink)" }}><Plus size={13} /></button>
-                        </div>
-                        <button onClick={() => removeFromCart(l.product.id)} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "#FEF0EF", color: "#B4483A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Trash2 size={13} /></button>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* ── SECTION: LIVRAISON ── */}
-          <div style={{ marginBottom: 32 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--forest)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14 }}>2</div>
-              <h2 style={{ margin: 0, fontSize: 18, color: "var(--ink)" }}>Mode de livraison</h2>
+          <div style={{ marginBottom: 24 }}>
+            <div
+              onClick={() => toggleStep(2)}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "12px 16px", background: "#fff", border: "1px solid var(--line)",
+                borderRadius: 14, cursor: "pointer", marginBottom: openSteps[2] ? 12 : 0,
+                boxShadow: "0 2px 6px rgba(0,0,0,0.03)"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--forest)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14 }}>2</div>
+                <h2 style={{ margin: 0, fontSize: 18, color: "var(--ink)" }}>Mode de livraison</h2>
+                {!openSteps[2] && (
+                  <span style={{ fontSize: 13, color: "var(--forest)", fontWeight: 700, marginLeft: 8 }}>
+                    ({form.modeLivraison === "domicile" ? `Livraison à domicile : +${fcfa(tarifLivraisonConfig)}` : "Retrait gratuit en boutique"})
+                  </span>
+                )}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--forest)", fontWeight: 700, fontSize: 13 }}>
+                <span>{openSteps[2] ? "Réduire" : "Changer"}</span>
+                {openSteps[2] ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {[
-                { id: "domicile", label: "Livraison à domicile",   sub: "Livré directement chez vous",           price: "+1 000 F CFA", Icon: Truck,  color: "#2D8653" },
-                { id: "retrait",  label: "Retrait en boutique",     sub: "Récupérez votre commande en magasin",   price: "Gratuit",      Icon: Store,  color: "#6C47FF" },
-              ].map((opt) => (
-                <div key={opt.id} onClick={() => setForm(f => ({ ...f, modeLivraison: opt.id }))} style={{
-                  display: "flex", alignItems: "center", gap: 16, padding: "18px 20px", borderRadius: 14,
-                  border: `2px solid ${form.modeLivraison === opt.id ? "var(--forest)" : "var(--line)"}`,
-                  background: form.modeLivraison === opt.id ? "var(--forest-light)" : "#fff",
-                  cursor: "pointer", transition: "all 0.2s"
-                }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 12, background: form.modeLivraison === opt.id ? "var(--forest)" : "var(--paper)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.2s" }}>
-                    <opt.Icon size={22} color={form.modeLivraison === opt.id ? "#fff" : opt.color} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: form.modeLivraison === opt.id ? "var(--forest-dark)" : "var(--ink)" }}>{opt.label}</div>
-                    <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>{opt.sub}</div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                    <span style={{ fontWeight: 700, fontSize: 15, color: opt.id === "retrait" ? "#2D8653" : "var(--ink)" }}>{opt.price}</span>
-                    <div style={{
-                      width: 22, height: 22, borderRadius: "50%",
-                      border: `2.5px solid ${form.modeLivraison === opt.id ? "var(--forest)" : "var(--line)"}`,
-                      background: form.modeLivraison === opt.id ? "var(--forest)" : "#fff",
-                      display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s"
-                    }}>
-                      {form.modeLivraison === opt.id && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff" }} />}
+
+            {openSteps[2] && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {[
+                  { id: "domicile", label: "Livraison à domicile", sub: "Livré directement chez vous", price: `+${fcfa(tarifLivraisonConfig)}`, Icon: Truck, color: "#2D8653" },
+                  { id: "retrait", label: "Retrait en boutique", sub: "Récupérez votre commande en magasin", price: "Gratuit", Icon: Store, color: "#6C47FF" },
+                ].map((opt) => (
+                  <div key={opt.id} onClick={() => setForm(f => ({ ...f, modeLivraison: opt.id }))} style={{
+                    display: "flex", alignItems: "center", gap: 16, padding: "18px 20px", borderRadius: 14,
+                    border: `2px solid ${form.modeLivraison === opt.id ? "var(--forest)" : "var(--line)"}`,
+                    background: form.modeLivraison === opt.id ? "var(--forest-light)" : "#fff",
+                    cursor: "pointer", transition: "all 0.2s"
+                  }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 12, background: form.modeLivraison === opt.id ? "var(--forest)" : "var(--paper)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.2s" }}>
+                      <opt.Icon size={22} color={form.modeLivraison === opt.id ? "#fff" : opt.color} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: form.modeLivraison === opt.id ? "var(--forest-dark)" : "var(--ink)" }}>{opt.label}</div>
+                      <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>{opt.sub}</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                      <span style={{ fontWeight: 700, fontSize: 15, color: opt.id === "retrait" ? "#2D8653" : "var(--ink)" }}>{opt.price}</span>
+                      <div style={{
+                        width: 22, height: 22, borderRadius: "50%",
+                        border: `2.5px solid ${form.modeLivraison === opt.id ? "var(--forest)" : "var(--line)"}`,
+                        background: form.modeLivraison === opt.id ? "var(--forest)" : "#fff",
+                        display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s"
+                      }}>
+                        {form.modeLivraison === opt.id && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff" }} />}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-              {form.modeLivraison === "domicile" && (
-                <div style={{ position: "relative", marginTop: 4 }}>
-                  <MapPin size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--sage)", pointerEvents: "none" }} />
-                  <input className="bs-input" style={{ paddingLeft: 42, borderRadius: 12, fontSize: 14 }}
-                    placeholder="Adresse complète (quartier, ville, rue...)"
-                    value={form.adresseLivraison}
-                    onChange={(e) => setForm(f => ({ ...f, adresseLivraison: e.target.value }))}
-                  />
-                </div>
-              )}
-            </div>
+                ))}
+                {form.modeLivraison === "domicile" && (
+                  <div style={{ position: "relative", marginTop: 4 }}>
+                    <MapPin size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--sage)", pointerEvents: "none" }} />
+                    <input className="bs-input" style={{ paddingLeft: 42, borderRadius: 12, fontSize: 14 }}
+                      placeholder="Adresse complète (quartier, ville, rue...)"
+                      value={form.adresseLivraison}
+                      onChange={(e) => setForm(f => ({ ...f, adresseLivraison: e.target.value }))}
+                    />
+                  </div>
+                )}
+                {form.modeLivraison === "retrait" && (
+                  <div style={{
+                    marginTop: 6,
+                    padding: "16px 18px",
+                    borderRadius: 14,
+                    background: "#F4F0FF",
+                    border: "1px solid #D8CFFC",
+                    color: "#3B2595"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: 14, marginBottom: 4 }}>
+                      <MapPin size={18} color="#6C47FF" />
+                      <span>Adresse & Emplacement du point de retrait :</span>
+                    </div>
+                    <div style={{ fontSize: 13.5, lineHeight: "1.5", color: "#4A399F", whiteSpace: "pre-wrap", fontWeight: 500 }}>
+                      {boutique?.adresseRetrait || boutique?.adresse || "Adresse du point de retrait en boutique non renseignée par l'administrateur."}
+                    </div>
+                    {boutique?.horairesOuverture && (
+                      <div style={{ fontSize: 12, marginTop: 8, color: "#6C47FF", fontWeight: 600 }}>
+                        🕒 Horaires : {boutique.horairesOuverture}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ── SECTION: PAIEMENT ── */}
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--forest)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14 }}>3</div>
-              <h2 style={{ margin: 0, fontSize: 18, color: "var(--ink)" }}>Moyen de paiement</h2>
+          <div style={{ marginBottom: 24 }}>
+            <div
+              onClick={() => toggleStep(3)}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "12px 16px", background: "#fff", border: "1px solid var(--line)",
+                borderRadius: 14, cursor: "pointer", marginBottom: openSteps[3] ? 12 : 0,
+                boxShadow: "0 2px 6px rgba(0,0,0,0.03)"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--forest)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14 }}>3</div>
+                <h2 style={{ margin: 0, fontSize: 18, color: "var(--ink)" }}>Moyen de paiement</h2>
+                {!openSteps[3] && (
+                  <span style={{ fontSize: 13, color: "var(--forest)", fontWeight: 700, marginLeft: 8 }}>
+                    ({PAYMENT_OPTIONS.find(p => p.id === form.moyenPaiement)?.label || form.moyenPaiement})
+                  </span>
+                )}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--forest)", fontWeight: 700, fontSize: 13 }}>
+                <span>{openSteps[3] ? "Réduire" : "Changer"}</span>
+                {openSteps[3] ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </div>
             </div>
-            <div className="bs-payment-grid">
+
+            {openSteps[3] && (
+              <div className="bs-payment-grid">
               {PAYMENT_OPTIONS.map((m) => {
                 const isSelected = form.moyenPaiement === m.id;
                 return (
@@ -278,12 +392,13 @@ export default function Checkout() {
                 );
               })}
             </div>
-          </div>
+          )}
+        </div>
         </div>
 
-        {/* ── RIGHT: STICKY SUMMARY ── */}
-        <div style={{ background: "#fff", borderLeft: "none", display: "flex", flexDirection: "column", height: "100%", position: "sticky", top: 0 }}>
-          <div style={{ flex: 1, overflowY: "auto", padding: "32px 28px" }}>
+        {/* ── RIGHT: SUMMARY PANEL ── */}
+        <div style={{ background: "#fff", borderLeft: "none", display: "flex", flexDirection: "column", height: "fit-content" }}>
+          <div style={{ padding: "32px 28px" }}>
             <h2 style={{ fontFamily: "var(--font-heading)", fontSize: 22, color: "var(--forest-dark)", margin: "0 0 24px" }}>Récapitulatif</h2>
 
             {/* Items */}

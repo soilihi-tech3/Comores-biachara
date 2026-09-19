@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Package, Truck, CheckCircle, XCircle, Clock, ShoppingBag, Search, ChevronRight, MapPin, CreditCard, ArrowLeft, PackageOpen, TrendingUp } from "lucide-react";
 import api, { SLUG } from "../../api";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 
@@ -50,6 +51,7 @@ const FILTERS = [
 import { subscribeRealtime } from "../../utils/realtime.js";
 
 export default function MyOrders() {
+  const { boutique } = useAuth();
   const [searchParams] = useSearchParams();
   const targetOrderId = searchParams.get("orderId") || searchParams.get("id");
 
@@ -242,7 +244,7 @@ export default function MyOrders() {
               {
                 label: "Mode de livraison",
                 content: isDelivery ? "Livraison à domicile" : "Retrait en boutique",
-                sub: o.adresseLivraison,
+                sub: isDelivery ? o.adresseLivraison : (boutique?.adresse ? `Point de retrait : ${boutique.adresse}` : null),
                 Icon: isDelivery ? Truck : Package,
               },
               {

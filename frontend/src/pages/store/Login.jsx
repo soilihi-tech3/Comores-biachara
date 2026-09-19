@@ -114,12 +114,15 @@ export default function Login() {
               <Mail size={18} className="bs-input-icon" />
               <input
                 type="text"
-                placeholder="Ex: +269 330 00 00 ou nom@exemple.com"
+                placeholder="Ex: +269 3300000, 771234567 ou email@domaine.com"
                 required
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               />
             </div>
+            <span style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 4 }}>
+              Vous pouvez saisir votre numéro avec l'indicatif (+221, +269, +33...), sans indicatif, ou votre adresse e-mail.
+            </span>
           </div>
 
           <div className="bs-input-group">

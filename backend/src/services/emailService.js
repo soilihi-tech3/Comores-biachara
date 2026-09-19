@@ -181,6 +181,49 @@ async function envoyerConfirmationCommande(email, commande, boutiqueNom = "EasyM
 }
 
 /**
+ * Envoie un e-mail à l'administrateur lorsqu'une nouvelle commande est passée
+ */
+async function envoyerNotificationAdminNouvelleCommande(adminEmail, commande, boutiqueNom = "EasyMarket", baseUrl = "") {
+  try {
+    const plainOrder = commande && typeof commande.get === "function" ? commande.get({ plain: true }) : (commande || {});
+    const rawId = plainOrder.id || plainOrder.orderId || 0;
+    const cmdId = "COM-B" + String(rawId).padStart(3, "0");
+    const clientNom = plainOrder.client?.nom || plainOrder.nomClient || "Client";
+    const totalValue = plainOrder.total !== undefined ? Number(plainOrder.total) : ((Number(plainOrder.sousTotal) || 0) + (Number(plainOrder.fraisLivraison) || 0));
+    const totalFormatted = totalValue.toLocaleString('fr-FR');
+
+    const originUrl = baseUrl || process.env.FRONTEND_URL || "http://localhost:5173";
+    const adminUrl = `${originUrl}/admin/commandes`;
+
+    const html = `
+      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #f8fafc; border-radius: 16px;">
+        <div style="background: #163424; padding: 20px; border-radius: 12px; text-align: center; color: #ffffff; margin-bottom: 20px;">
+          <h2 style="margin: 0; font-size: 20px;">🎉 Nouvelle Commande Reçue !</h2>
+          <p style="margin: 6px 0 0; opacity: 0.9; font-size: 14px;">${boutiqueNom}</p>
+        </div>
+        <div style="background: #ffffff; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
+          <p style="font-size: 15px; color: #1e293b; margin-top: 0;">Une nouvelle commande vient d'être effectuée sur votre boutique par <strong>${clientNom}</strong>.</p>
+          <div style="background: #f1f5f9; padding: 16px; border-radius: 10px; margin: 18px 0;">
+            <div style="font-size: 14px; color: #475569; margin-bottom: 6px;">N° de Commande : <strong style="color: #163424;">#${cmdId}</strong></div>
+            <div style="font-size: 14px; color: #475569; margin-bottom: 6px;">Montant Total : <strong style="color: #163424;">${totalFormatted} €</strong></div>
+            <div style="font-size: 14px; color: #475569;">Mode de Livraison : <strong>${plainOrder.modeLivraison === 'domicile' ? 'Livraison à domicile' : 'Retrait en boutique'}</strong></div>
+          </div>
+          <div style="text-align: center; margin-top: 24px;">
+            <a href="${adminUrl}" style="background: #2D8653; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 30px; font-weight: bold; font-size: 14px; display: inline-block;">Gérer la commande dans l'Admin</a>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const subject = `🔔 [Nouvelle Commande] #${cmdId} de ${clientNom} (${totalFormatted} €) — ${boutiqueNom}`;
+    return await sendEmailCore({ to: adminEmail, subject, html, type: "admin_notification" });
+  } catch (err) {
+    console.error("❌ [EMAIL ADMIN NOTIFICATION ERROR]:", err.message);
+    return false;
+  }
+}
+
+/**
  * 3. Envoie une notification de changement de statut de commande
  */
 async function envoyerChangementStatut(email, commande, ancienStatut, nouveauStatut, boutiqueNom = "EasyMarket") {
@@ -244,6 +287,7 @@ async function envoyerResetMotDePasse(email, resetUrl, nomUtilisateur = "Client"
 module.exports = {
   envoyerOTP,
   envoyerConfirmationCommande,
+  envoyerNotificationAdminNouvelleCommande,
   envoyerChangementStatut,
   envoyerResetMotDePasse,
   sendEmailCore,

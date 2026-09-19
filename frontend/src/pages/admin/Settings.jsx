@@ -184,7 +184,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
         <div className="bs-panel">
           <h3 style={{ marginTop: 0, fontSize: 18, color: "var(--forest-dark)" }}>Identité & Informations de la Boutique</h3>
           
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
             <div className="bs-field">
               <label>Nom de la boutique</label>
               <input className="bs-input" value={boutique.nom || ""} onChange={(e) => set("nom", e.target.value)} />
@@ -193,6 +193,11 @@ export default function AdminSettings({ defaultTab = "general" }) {
             <div className="bs-field">
               <label>Email de Contact</label>
               <input className="bs-input" type="email" value={boutique.emailContact || ""} onChange={(e) => set("emailContact", e.target.value)} placeholder="contact@maboutique.com" />
+            </div>
+
+            <div className="bs-field">
+              <label>Frais de livraison à domicile (€)</label>
+              <input className="bs-input" type="number" step="0.01" value={boutique.fraisLivraison ?? 10} onChange={(e) => set("fraisLivraison", parseFloat(e.target.value) || 0)} placeholder="ex: 10" />
             </div>
           </div>
 
@@ -225,6 +230,21 @@ export default function AdminSettings({ defaultTab = "general" }) {
               <label>Adresse Secondaire N° 2 (Facultatif)</label>
               <input className="bs-input" value={boutique.adresse2 || ""} onChange={(e) => set("adresse2", e.target.value)} placeholder="Entrepôt B, Zone Industrielle" />
             </div>
+          </div>
+
+          <div className="bs-field" style={{ marginTop: 16 }}>
+            <label style={{ fontWeight: 700, color: "var(--forest-dark)" }}>📍 Adresse & Instructions détaillées pour le Point de Retrait en Boutique</label>
+            <p style={{ margin: "2px 0 8px", fontSize: 12.5, color: "var(--muted)" }}>
+              Décrivez exactement où se trouve la boutique (ex: repères, étage, numéro de porte) pour les clients qui choisissent "Retrait en boutique".
+            </p>
+            <textarea
+              className="bs-input"
+              rows={3}
+              value={boutique.adresseRetrait || ""}
+              onChange={(e) => set("adresseRetrait", e.target.value)}
+              placeholder="Ex: 12 Rue des Marchands, Moroni — Entrez par le portail vert au rez-de-chaussée à côté de la banque."
+              style={{ padding: 12 }}
+            />
           </div>
 
           <h3 style={{ marginTop: 28, fontSize: 16, color: "var(--forest-dark)" }}>Horaires d'Ouverture & WhatsApp Contact</h3>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { UserPlus, User, Mail, Phone, Lock, AlertCircle, ShieldCheck, RefreshCw, Send, MessageSquare } from "lucide-react";
+import { UserPlus, User, Mail, Lock, AlertCircle, ShieldCheck, RefreshCw, Send, MessageSquare } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
+import PhoneInputSelect from "../../components/PhoneInputSelect.jsx";
 
 export default function Register() {
   const { register, verifyOtp, resendOtp, boutique } = useAuth();
@@ -128,16 +129,11 @@ export default function Register() {
 
               <div className="bs-input-group">
                 <label>Téléphone Mobile *</label>
-                <div className="bs-input-wrapper">
-                  <Phone size={18} className="bs-input-icon" />
-                  <input
-                    type="tel"
-                    placeholder="+269 330 00 00 ou +33 6 00 00 00 00"
-                    required
-                    value={form.telephone}
-                    onChange={(e) => setForm((f) => ({ ...f, telephone: e.target.value }))}
-                  />
-                </div>
+                <PhoneInputSelect
+                  value={form.telephone}
+                  onChange={(val) => setForm((f) => ({ ...f, telephone: val }))}
+                  placeholder="330 00 00 ou 6 00 00 00 00"
+                />
               </div>
 
               <div className="bs-input-group">

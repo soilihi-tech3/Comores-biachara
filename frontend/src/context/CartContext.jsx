@@ -1,11 +1,24 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { AlertTriangle, CheckCircle2, X, Info } from "lucide-react";
 
 const CartContext = createContext(null);
 
 export function CartProvider({ children }) {
-  const [cart, setCart] = useState([]); // [{ product, quantite }]
+  const [cart, setCart] = useState(() => {
+    try {
+      const saved = localStorage.getItem("easymarket_cart");
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [toast, setToast] = useState(null); // { message, type }
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("easymarket_cart", JSON.stringify(cart));
+    } catch (e) {}
+  }, [cart]);
 
   function showToast(message, type = "warning") {
     setToast({ message, type, id: Date.now() });

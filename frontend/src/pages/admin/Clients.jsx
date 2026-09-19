@@ -146,6 +146,43 @@ export default function AdminClients() {
         </button>
       </div>
 
+      {/* ── KPI STATS CARDS ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+        <div style={{ background: "#fff", border: "1px solid var(--line)", padding: "18px 20px", borderRadius: 16, display: "flex", alignItems: "center", gap: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
+          <div style={{ width: 46, height: 46, borderRadius: 12, background: "var(--forest-light)", color: "var(--forest)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <UserCheck size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)", fontWeight: 600 }}>Total Clients Inscrits & Vérifiés</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: "var(--forest-dark)", marginTop: 2 }}>{clients.length}</div>
+          </div>
+        </div>
+
+        <div style={{ background: "#fff", border: "1px solid var(--line)", padding: "18px 20px", borderRadius: 16, display: "flex", alignItems: "center", gap: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
+          <div style={{ width: 46, height: 46, borderRadius: 12, background: "#EBF7F0", color: "#1F4D3A", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <CheckCircle size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)", fontWeight: 600 }}>Clients Actifs (Autorisés)</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: "#1F4D3A", marginTop: 2 }}>
+              {clients.filter(c => c.statut === "actif").length}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ background: "#fff", border: "1px solid var(--line)", padding: "18px 20px", borderRadius: 16, display: "flex", alignItems: "center", gap: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
+          <div style={{ width: 46, height: 46, borderRadius: 12, background: "#FDF2F0", color: "#B4483A", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Ban size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)", fontWeight: 600 }}>Clients Suspendus / Inactifs</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: "#B4483A", marginTop: 2 }}>
+              {clients.filter(c => c.statut === "suspendu").length}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* ── SEARCH & FILTERS BAR ── */}
       <div style={{ display: "flex", gap: 14, marginBottom: 20, flexWrap: "wrap" }}>
         <div style={{ position: "relative", flex: 1, minWidth: 260 }}>

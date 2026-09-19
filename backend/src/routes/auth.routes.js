@@ -88,8 +88,12 @@ router.post("/register", registerLimiter, async (req, res, next) => {
         envoyerOTP(cleanEmail, otpCode, cleanNom).catch(err => console.error("⚠️ OTP email non envoyé:", err.message));
       }
 
+      const token = signToken({ id: existUser.id, role: existUser.role });
+
       return res.status(200).json({
         requireOtp: true,
+        token,
+        user: publicUser(existUser),
         email: existUser.email,
         telephone: existUser.telephone,
         message: "Code de vérification à 6 chiffres envoyé pour valider votre compte."
@@ -120,11 +124,15 @@ router.post("/register", registerLimiter, async (req, res, next) => {
       envoyerOTP(cleanEmail, otpCode, cleanNom).catch(err => console.error("⚠️ OTP email non envoyé:", err.message));
     }
 
+    const token = signToken({ id: user.id, role: user.role });
+
     res.status(201).json({
       requireOtp: true,
+      token,
+      user: publicUser(user),
       email: user.email,
       telephone: user.telephone,
-      message: "Compte créé ! Un code de vérification à 6 chiffres a été envoyé par e-mail."
+      message: "Compte créé avec succès ! Un code de vérification à 6 chiffres a été envoyé par e-mail."
     });
   } catch (err) { next(err); }
 });
@@ -190,6 +198,11 @@ router.post("/verify-otp", async (req, res, next) => {
     if (cleanEmail) await delCache(`otp:${cleanEmail}`);
     if (cleanPhone) await delCache(`otp:${cleanPhone}`);
     await delCache(attemptsKey);
+
+    try {
+      const { broadcast } = require("../utils/broadcaster");
+      broadcast("user_registered", { userId: user.id, role: user.role, boutiqueId: user.boutiqueId });
+    } catch (e) {}
 
     const token = signToken({ id: user.id, role: user.role });
     res.json({ success: true, message: "Vérification réussie ! Vous êtes connecté.", token, user: publicUser(user) });
@@ -311,11 +324,21 @@ router.post("/login", async (req, res, next) => {
       return res.status(400).json({ message: "Veuillez saisir votre numéro de téléphone ou email et votre mot de passe." });
     }
 
-    const { Op } = require("sequelize");
+    const { Op, Sequelize } = require("sequelize");
+    const cleanDigits = inputVal.replace(/[^0-9]/g, "");
+
+    const phoneOr = [{ telephone: inputVal }];
+    if (cleanDigits) {
+      phoneOr.push(Sequelize.where(
+        Sequelize.fn("REPLACE", Sequelize.fn("REPLACE", Sequelize.col("telephone"), " ", ""), "+", ""),
+        cleanDigits
+      ));
+    }
+
     const user = await User.findOne({
       where: {
         [Op.or]: [
-          { telephone: inputVal },
+          ...phoneOr,
           { email: inputVal.toLowerCase() }
         ]
       }

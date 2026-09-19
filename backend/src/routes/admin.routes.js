@@ -82,7 +82,15 @@ router.get("/dashboard", async (req, res, next) => {
     }, 0);
 
     const nbCommandes = await Order.count({ where: { boutiqueId } });
-    const totalClients = await User.count({ where: { role: "client" } });
+    const totalClients = await User.count({ 
+      where: { 
+        role: "client",
+        [Op.or]: [
+          { boutiqueId },
+          { boutiqueId: null }
+        ]
+      } 
+    });
     
     const produits = await Product.findAll({ 
       where: { boutiqueId }, 
@@ -592,7 +600,7 @@ router.delete("/employees/:id", requireRole("admin"), async (req, res, next) => 
 router.get("/clients", async (req, res, next) => {
   try {
     const clients = await User.findAll({
-      where: { role: "client" },
+      where: { role: "client", isEmailVerified: true },
       attributes: { exclude: ["motDePasseHash"] },
       order: [["createdAt", "DESC"]]
     });
@@ -691,13 +699,13 @@ router.put("/boutique", requireRole("admin"), async (req, res, next) => {
     const boutique = await Boutique.findByPk(req.boutiqueId);
     const { 
       nom, logoUrl, couleurPrincipale, fraisLivraison, zonesLivraison, 
-      bannerSlides, sideBanners, telephone, telephone2, adresse, adresse2, 
+      bannerSlides, sideBanners, telephone, telephone2, adresse, adresse2, adresseRetrait, 
       emailContact, aProposText, horairesOuverture, facebookUrl, instagramUrl, 
       tiktokUrl, whatsappNumber, modesPaiement, modulesActifs 
     } = req.body;
     await boutique.update({ 
       nom, logoUrl, couleurPrincipale, fraisLivraison, zonesLivraison, 
-      bannerSlides, sideBanners, telephone, telephone2, adresse, adresse2, 
+      bannerSlides, sideBanners, telephone, telephone2, adresse, adresse2, adresseRetrait, 
       emailContact, aProposText, horairesOuverture, facebookUrl, instagramUrl, 
       tiktokUrl, whatsappNumber, modesPaiement, modulesActifs 
     });

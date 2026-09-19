@@ -25,7 +25,8 @@ export default function Dashboard() {
         detail.type === "order_created" ||
         detail.type === "order_updated" ||
         detail.type === "product_updated" ||
-        detail.type === "category_updated"
+        detail.type === "category_updated" ||
+        detail.type === "user_registered"
       ) {
         loadDashboard();
       }

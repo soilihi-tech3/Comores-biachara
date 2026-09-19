@@ -20,6 +20,7 @@ import MyOrders from "./pages/store/MyOrders.jsx";
 import Login from "./pages/store/Login.jsx";
 import Register from "./pages/store/Register.jsx";
 import About from "./pages/store/About.jsx";
+import Profile from "./pages/store/Profile.jsx";
 
 import AdminLayout from "./pages/admin/AdminLayout.jsx";
 import Dashboard from "./pages/admin/Dashboard.jsx";
@@ -109,6 +110,9 @@ export default function App() {
         <Route path="/produit/:id" element={<StoreLayout><ProductDetail /></StoreLayout>} />
         <Route path="/connexion" element={<StoreLayout><Login /></StoreLayout>} />
         <Route path="/inscription" element={<StoreLayout><Register /></StoreLayout>} />
+        <Route path="/profil" element={
+          <ProtectedRoute roles={["client", "admin", "employe", "super_admin"]}><WideLayout><Profile /></WideLayout></ProtectedRoute>
+        } />
         <Route path="/commander" element={
           <ProtectedRoute roles={["client"]}><WideLayout><Checkout /></WideLayout></ProtectedRoute>
         } />

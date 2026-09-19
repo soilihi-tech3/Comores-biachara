@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { CheckCircle, ShoppingBag, ArrowRight, Package, Truck } from "lucide-react";
+import { CheckCircle, ShoppingBag, ArrowRight, Package, Truck, MapPin, Store } from "lucide-react";
 import api, { SLUG } from "../../api";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 
 export default function Confirmation() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { boutique } = useAuth();
   const [order, setOrder] = useState(null);
 
   useEffect(() => {
@@ -118,11 +120,11 @@ export default function Confirmation() {
           </div>
 
           <div style={{ padding: "14px 20px", borderTop: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 10, background: "var(--paper)" }}>
-            {order.modeLivraison === "domicile" ? <Truck size={16} color="var(--forest)" /> : <Package size={16} color="var(--forest)" />}
+            {order.modeLivraison === "domicile" ? <Truck size={16} color="var(--forest)" /> : <Store size={16} color="var(--forest)" />}
             <span style={{ fontSize: 13, color: "var(--muted)" }}>
               {order.modeLivraison === "domicile"
                 ? `Livraison à : ${order.adresseLivraison || "Adresse non spécifiée"}`
-                : "Retrait en boutique"}
+                : `Retrait en boutique (Point de retrait : ${boutique?.adresse || "Adresse principale de la boutique"})`}
             </span>
           </div>
         </div>

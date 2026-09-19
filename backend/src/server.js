@@ -122,6 +122,7 @@ async function ensureColumns() {
     const tableBoutiques = await queryInterface.describeTable("boutiques");
 
     const columnsToAddBoutique = [
+      { name: "adresse_retrait", type: 'TEXT' },
       { name: "horaires_ouverture", type: 'VARCHAR(255) DEFAULT "Tous les jours de 08h30 à 23h00"' },
       { name: "facebook_url", type: 'VARCHAR(255) DEFAULT ""' },
       { name: "instagram_url", type: 'VARCHAR(255) DEFAULT ""' },
