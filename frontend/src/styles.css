@@ -1656,6 +1656,10 @@ a { text-decoration: none; color: inherit; }
     padding: 6px;
     border-radius: 14px;
     border: 1px solid var(--line);
+    position: sticky;
+    top: 60px;
+    z-index: 95;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   }
 
   .bs-pos-tab {

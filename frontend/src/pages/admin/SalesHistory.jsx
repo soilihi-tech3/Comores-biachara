@@ -6,6 +6,7 @@ import {
 import api from "../../api";
 import TablePagination from "../../components/TablePagination.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { subscribeRealtime } from "../../utils/realtime.js";
 
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 

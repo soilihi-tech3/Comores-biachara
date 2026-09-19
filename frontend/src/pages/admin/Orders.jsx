@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { 
-  Search, Filter, ShoppingBag, DollarSign, Clock, CheckCircle2, 
+import {
+  Search, Filter, ShoppingBag, DollarSign, Clock, CheckCircle2,
   Truck, UserCheck, Eye, X, Phone, MapPin, CreditCard, Calendar
 } from "lucide-react";
 import api from "../../api";
@@ -13,7 +13,7 @@ const STATUTS_FILTER = [
   { value: "tous", label: "Tous les statuts" },
   { value: "en_attente", label: "En attente" },
   { value: "validee", label: "Confirmées" },
-  { value: "en_preparation", label: "En préparation" },
+
   { value: "pret_retrait", label: "Prêtes à récupérer" },
   { value: "en_livraison", label: "En livraison" },
   { value: "recuperee", label: "Récupérées" },
@@ -21,26 +21,26 @@ const STATUTS_FILTER = [
   { value: "annulee", label: "Annulées" }
 ];
 
-const STATUT_LABEL = { 
-  en_attente: "En attente", 
-  validee: "Confirmée", 
-  en_preparation: "En préparation",
+const STATUT_LABEL = {
+  en_attente: "En attente",
+  validee: "Confirmée",
+
   pret_retrait: "Prête à récupérer",
-  en_livraison: "En livraison", 
-  recuperee: "Récupérée", 
+  en_livraison: "En livraison",
+  recuperee: "Récupérée",
   livree: "Livrée",
-  annulee: "Annulée" 
+  annulee: "Annulée"
 };
 
 const STATUT_STYLE = {
-  en_attente:     { bg: "#FEF3C7", color: "#92400E", border: "#FCD34D" },
-  validee:        { bg: "#E0F2FE", color: "#075985", border: "#7DD3FC" },
+  en_attente: { bg: "#FEF3C7", color: "#92400E", border: "#FCD34D" },
+  validee: { bg: "#E0F2FE", color: "#075985", border: "#7DD3FC" },
   en_preparation: { bg: "#E0F2FE", color: "#075985", border: "#7DD3FC" },
-  pret_retrait:   { bg: "#E0F2FE", color: "#075985", border: "#7DD3FC" },
-  en_livraison:   { bg: "#ECFDF5", color: "#065F46", border: "#6EE7B7" },
-  recuperee:      { bg: "#D1FAE5", color: "#064E3B", border: "#34D399" },
-  livree:         { bg: "#D1FAE5", color: "#064E3B", border: "#34D399" },
-  annulee:        { bg: "#FEE2E2", color: "#991B1B", border: "#FCA5A5" }
+  pret_retrait: { bg: "#E0F2FE", color: "#075985", border: "#7DD3FC" },
+  en_livraison: { bg: "#ECFDF5", color: "#065F46", border: "#6EE7B7" },
+  recuperee: { bg: "#D1FAE5", color: "#064E3B", border: "#34D399" },
+  livree: { bg: "#D1FAE5", color: "#064E3B", border: "#34D399" },
+  annulee: { bg: "#FEE2E2", color: "#991B1B", border: "#FCA5A5" }
 };
 
 const MOIS = [
@@ -78,8 +78,8 @@ export default function AdminOrders() {
   const [pageSize, setPageSize] = useState(10);
 
   function load() {
-    api.get("/admin/orders", { 
-      params: statusFilter !== "tous" ? { statut: statusFilter } : {} 
+    api.get("/admin/orders", {
+      params: statusFilter !== "tous" ? { statut: statusFilter } : {}
     }).then((res) => {
       const freshOrders = res.data || [];
       setOrders(freshOrders);
@@ -123,10 +123,10 @@ export default function AdminOrders() {
     setCurrentPage(1);
   }, [search, statusFilter, employeeFilter, dateFilter, monthFilter, yearFilter]);
 
-  useEffect(() => { 
+  useEffect(() => {
     api.get("/admin/employees")
       .then((res) => setEmployees(res.data || []))
-      .catch(() => {}); 
+      .catch(() => { });
   }, []);
 
   async function changeStatus(id, statut) {
@@ -196,9 +196,9 @@ export default function AdminOrders() {
     // Match by product name
     const matchProduct = o.items?.some(it => it.product?.nom?.toLowerCase().includes(q));
 
-    const matchSearch = !q || 
+    const matchSearch = !q ||
       formattedNum.includes(q) ||
-      rawId.includes(q) || 
+      rawId.includes(q) ||
       o.client?.nom?.toLowerCase().includes(q) ||
       o.client?.telephone?.includes(q) ||
       o.moyenPaiement?.toLowerCase().includes(q) ||
@@ -224,7 +224,7 @@ export default function AdminOrders() {
 
   // Summary stats
   const totalAmount = filteredOrders.reduce((sum, o) => sum + Number(o.total), 0);
-  const pendingCount = orders.filter(o => ["en_attente", "validee", "en_preparation", "en_livraison"].includes(o.statut)).length;
+  const pendingCount = orders.filter(o => ["en_attente", "validee", "en_livraison"].includes(o.statut)).length;
   const deliveredCount = orders.filter(o => o.statut === "recuperee" || o.statut === "livree").length;
 
   const paginatedOrders = filteredOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -517,21 +517,21 @@ export default function AdminOrders() {
 
                         const options = isDelivery
                           ? [
-                              { key: "en_attente", label: "En attente" },
-                              { key: "validee", label: "Confirmée" },
-                              { key: "en_preparation", label: "En préparation" },
-                              { key: "en_livraison", label: "En livraison" },
-                              { key: "livree", label: "Livrée" },
-                              { key: "annulee", label: "Annulée" }
-                            ]
+                            { key: "en_attente", label: "En attente" },
+                            { key: "validee", label: "Confirmée" },
+
+                            { key: "en_livraison", label: "En livraison" },
+                            { key: "livree", label: "Livrée" },
+                            { key: "annulee", label: "Annulée" }
+                          ]
                           : [
-                              { key: "en_attente", label: "En attente" },
-                              { key: "validee", label: "Confirmée" },
-                              { key: "en_preparation", label: "En préparation" },
-                              { key: "pret_retrait", label: "Prête à récupérer" },
-                              { key: "recuperee", label: "Récupérée" },
-                              { key: "annulee", label: "Annulée" }
-                            ];
+                            { key: "en_attente", label: "En attente" },
+                            { key: "validee", label: "Confirmée" },
+
+                            { key: "pret_retrait", label: "Prête à récupérer" },
+                            { key: "recuperee", label: "Récupérée" },
+                            { key: "annulee", label: "Annulée" }
+                          ];
 
                         const currentLabel = STATUT_LABEL[o.statut] || o.statut;
 
@@ -640,7 +640,7 @@ export default function AdminOrders() {
 
       {/* ── MODAL DETAIL COMMANDE (PHOTOS ET DETAILS COMPLETS) ── */}
       {selectedOrder && (
-        <div 
+        <div
           onClick={() => setSelectedOrder(null)}
           style={{
             position: "fixed", inset: 0, zIndex: 1000,
@@ -648,7 +648,7 @@ export default function AdminOrders() {
             display: "flex", alignItems: "center", justifyContent: "center"
           }}
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
             style={{
               background: "#fff", borderRadius: 20, padding: 32,
@@ -722,10 +722,10 @@ export default function AdminOrders() {
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {selectedOrder.items?.map((it, idx) => (
                   <div key={idx} style={{ display: "flex", alignItems: "center", gap: 12, padding: 10, background: "var(--paper)", borderRadius: 10, border: "1px solid var(--line)" }}>
-                    <img 
-                      src={it.product?.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=60&q=80"} 
-                      alt={it.product?.nom} 
-                      style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", border: "1px solid var(--line)" }} 
+                    <img
+                      src={it.product?.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=60&q=80"}
+                      alt={it.product?.nom}
+                      style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", border: "1px solid var(--line)" }}
                     />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: 13.5, color: "var(--ink)" }}>{it.product?.nom}</div>

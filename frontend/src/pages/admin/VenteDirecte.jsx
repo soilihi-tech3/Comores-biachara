@@ -12,8 +12,6 @@ export default function VenteDirecte() {
   const { boutique } = useAuth();
   const storeName = boutique?.nom || "Marché Vert";
   const [products, setProducts] = useState([]);
-  const [familles, setFamilles] = useState([]);
-  const [selectedFamille, setSelectedFamille] = useState("toutes");
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState([]);
   const [clientNom, setClientNom] = useState("");
@@ -26,7 +24,6 @@ export default function VenteDirecte() {
 
   function load() {
     api.get("/admin/products").then(res => setProducts(res.data || []));
-    api.get("/admin/familles").then(res => setFamilles(res.data || []));
   }
 
   useEffect(() => {
@@ -41,9 +38,7 @@ export default function VenteDirecte() {
 
   const filteredProducts = products.filter(p => {
     const q = search.trim().toLowerCase();
-    const matchSearch = !q || p.nom.toLowerCase().includes(q);
-    const matchFamille = selectedFamille === "toutes" || p.famille === selectedFamille;
-    return matchSearch && matchFamille;
+    return !q || p.nom.toLowerCase().includes(q) || (p.famille && p.famille.toLowerCase().includes(q));
   });
 
   function addToCart(p) {
@@ -147,48 +142,17 @@ export default function VenteDirecte() {
       <div className="bs-pos-grid">
         {/* LEFT COLUMN: PRODUCT SELECTION & SEARCH */}
         <div className={`bs-pos-products-col ${mobileTab === "produits" ? "mobile-active" : "mobile-hidden"}`}>
-          {/* SEARCH & FAMILIES FILTER */}
-          <div className="bs-panel" style={{ padding: 16, marginBottom: 16 }}>
-            <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
-              <div style={{ position: "relative", flex: 1 }}>
-                <Search size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--muted)" }} />
-                <input
-                  className="bs-input"
-                  placeholder="Rechercher un produit à ajouter au panier..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  style={{ paddingLeft: 38, borderRadius: 10, fontSize: 13.5, height: 40 }}
-                />
-              </div>
-            </div>
-
-            {/* FAMILIES CHIPS */}
-            <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
-              <button
-                onClick={() => setSelectedFamille("toutes")}
-                style={{
-                  background: selectedFamille === "toutes" ? "var(--forest)" : "var(--paper)",
-                  color: selectedFamille === "toutes" ? "#fff" : "var(--ink)",
-                  border: "1px solid var(--line)", padding: "6px 14px", borderRadius: 20,
-                  fontSize: 12.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap"
-                }}
-              >
-                Toutes les familles
-              </button>
-              {familles.map(f => (
-                <button
-                  key={f.id}
-                  onClick={() => setSelectedFamille(f.nom)}
-                  style={{
-                    background: selectedFamille === f.nom ? "var(--forest)" : "var(--paper)",
-                    color: selectedFamille === f.nom ? "#fff" : "var(--ink)",
-                    border: "1px solid var(--line)", padding: "6px 14px", borderRadius: 20,
-                    fontSize: 12.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap"
-                  }}
-                >
-                  {f.nom}
-                </button>
-              ))}
+          {/* SEARCH BAR */}
+          <div className="bs-panel" style={{ padding: 14, marginBottom: 16 }}>
+            <div style={{ position: "relative", width: "100%" }}>
+              <Search size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--muted)" }} />
+              <input
+                className="bs-input"
+                placeholder="Rechercher un produit à ajouter au panier..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{ paddingLeft: 38, borderRadius: 10, fontSize: 13.5, height: 40 }}
+              />
             </div>
           </div>
 
