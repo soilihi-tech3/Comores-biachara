@@ -5,6 +5,7 @@ const { sequelize, Product, Category, Order, OrderItem, User, Boutique, Notifica
 const { authenticate, requireRole, requireOwnBoutique } = require("../middleware/auth");
 const { clearCachePattern } = require("../config/cache");
 const { broadcast } = require("../utils/broadcaster");
+const { sendOrderStatusEmail } = require("../services/email.service");
 
 const router = express.Router();
 
@@ -438,9 +439,19 @@ router.patch("/orders/:id/status", async (req, res, next) => {
       broadcast("product_updated", { boutiqueId: order.boutiqueId });
     }
 
+    User.findByPk(order.clientId).then(clientUser => {
+      if (clientUser && clientUser.email) {
+        Boutique.findByPk(order.boutiqueId).then(b => {
+          sendOrderStatusEmail(clientUser.email, clientUser.nom, order, newStatut, b?.nom || "Marché Vert").catch(() => {});
+        }).catch(() => {});
+      }
+    }).catch(() => {});
+
     res.json(order);
   } catch (err) {
-    await t.rollback();
+    if (t && !t.finished) {
+      await t.rollback();
+    }
     next(err);
   }
 });

@@ -144,6 +144,20 @@ async function ensureColumns() {
       await sequelize.query(`ALTER TABLE products ADD COLUMN is_nouveau TINYINT(1) DEFAULT 0;`);
     }
 
+    const tableUsers = await queryInterface.describeTable("users");
+    const columnsToAddUser = [
+      { name: "otp_code", type: "VARCHAR(255) NULL" },
+      { name: "otp_expires_at", type: "DATETIME NULL" },
+      { name: "is_email_verified", type: "TINYINT(1) DEFAULT 0" }
+    ];
+
+    for (const col of columnsToAddUser) {
+      if (!tableUsers[col.name]) {
+        console.log("[MIGRATION] Ajout colonne manquante sur users:", col.name);
+        await sequelize.query(`ALTER TABLE users ADD COLUMN ${col.name} ${col.type};`);
+      }
+    }
+
     // Upgrade image columns to LONGTEXT to support Base64 images without "Data Too Long" errors
     const alterQueries = [
       "ALTER TABLE products MODIFY COLUMN image_url LONGTEXT NULL;",

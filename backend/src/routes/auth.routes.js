@@ -6,14 +6,17 @@ const { authenticate } = require("../middleware/auth");
 
 const router = express.Router();
 
+const { sendOtpEmail } = require("../services/email.service");
+
 function publicUser(user) {
   return {
     id: user.id, nom: user.nom, email: user.email, telephone: user.telephone,
     adresse: user.adresse, role: user.role, boutiqueId: user.boutiqueId, permissions: user.permissions,
+    isEmailVerified: user.isEmailVerified,
   };
 }
 
-// Inscription client (public)
+// Inscription client avec génération OTP à 6 chiffres
 router.post("/register", async (req, res, next) => {
   try {
     const { nom, email, telephone, motDePasse } = req.body;
@@ -25,29 +28,142 @@ router.post("/register", async (req, res, next) => {
       return res.status(400).json({ message: "Le nom, le numéro de téléphone et le mot de passe sont requis." });
     }
 
-    const existPhone = await User.findOne({ where: { telephone: cleanPhone } });
-    if (existPhone) {
-      return res.status(409).json({ message: "Un compte existe déjà avec ce numéro de téléphone." });
-    }
+    const { Op } = require("sequelize");
+    const whereCond = [{ telephone: cleanPhone }];
+    if (cleanEmail) whereCond.push({ email: cleanEmail });
 
-    if (cleanEmail) {
-      const existEmail = await User.findOne({ where: { email: cleanEmail } });
-      if (existEmail) {
-        return res.status(409).json({ message: "Un compte existe déjà avec cet e-mail." });
+    const existUser = await User.findOne({ where: { [Op.or]: whereCond } });
+
+    if (existUser) {
+      if (existUser.isEmailVerified) {
+        return res.status(409).json({ message: "Un compte vérifié existe déjà avec ce numéro de téléphone ou cet e-mail." });
       }
+      // Compte existant non vérifié : on régénère le code OTP et met à jour les données
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+      const motDePasseHash = await bcrypt.hash(motDePasse, 10);
+
+      existUser.nom = cleanNom;
+      existUser.email = cleanEmail;
+      existUser.telephone = cleanPhone;
+      existUser.motDePasseHash = motDePasseHash;
+      existUser.otpCode = otpCode;
+      existUser.otpExpiresAt = otpExpiresAt;
+      await existUser.save();
+
+      if (cleanEmail) {
+        sendOtpEmail(cleanEmail, cleanNom, otpCode).catch(() => {});
+      }
+
+      return res.status(200).json({
+        requireOtp: true,
+        email: existUser.email,
+        telephone: existUser.telephone,
+        message: "Code de vérification à 6 chiffres renvoyé pour valider votre compte."
+      });
     }
 
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
     const motDePasseHash = await bcrypt.hash(motDePasse, 10);
+
     const user = await User.create({
       nom: cleanNom,
       email: cleanEmail,
       telephone: cleanPhone,
       motDePasseHash,
-      role: "client"
+      role: "client",
+      otpCode,
+      otpExpiresAt,
+      isEmailVerified: false
     });
 
+    if (cleanEmail) {
+      sendOtpEmail(cleanEmail, cleanNom, otpCode).catch(() => {});
+    }
+
+    res.status(201).json({
+      requireOtp: true,
+      email: user.email,
+      telephone: user.telephone,
+      message: "Compte créé ! Un code de vérification à 6 chiffres a été envoyé."
+    });
+  } catch (err) { next(err); }
+});
+
+// Vérification du code OTP à 6 chiffres
+router.post("/verify-otp", async (req, res, next) => {
+  try {
+    const { email, telephone, otpCode } = req.body;
+    const cleanEmail = email ? String(email).trim().toLowerCase() : null;
+    const cleanPhone = telephone ? String(telephone).trim() : null;
+    const cleanOtp = otpCode ? String(otpCode).trim() : null;
+
+    if (!cleanOtp) {
+      return res.status(400).json({ message: "Veuillez saisir le code OTP à 6 chiffres." });
+    }
+
+    const { Op } = require("sequelize");
+    const whereConditions = [];
+    if (cleanEmail) whereConditions.push({ email: cleanEmail });
+    if (cleanPhone) whereConditions.push({ telephone: cleanPhone });
+
+    if (whereConditions.length === 0) {
+      return res.status(400).json({ message: "Aucun identifiant fourni pour la vérification." });
+    }
+
+    const user = await User.findOne({ where: { [Op.or]: whereConditions } });
+    if (!user) {
+      return res.status(404).json({ message: "Compte introuvable." });
+    }
+
+    if (user.otpCode !== cleanOtp) {
+      return res.status(400).json({ message: "Code OTP incorrect. Veuillez réessayer." });
+    }
+
+    if (user.otpExpiresAt && new Date(user.otpExpiresAt) < new Date()) {
+      return res.status(400).json({ message: "Le code OTP a expiré. Veuillez demander un nouveau code." });
+    }
+
+    user.isEmailVerified = true;
+    user.otpCode = null;
+    user.otpExpiresAt = null;
+    await user.save();
+
     const token = signToken({ id: user.id, role: user.role });
-    res.status(201).json({ token, user: publicUser(user) });
+    res.json({ message: "Vérification réussie ! Vous êtes connecté.", token, user: publicUser(user) });
+  } catch (err) { next(err); }
+});
+
+// Renvoi du code OTP par email / notification
+router.post("/resend-otp", async (req, res, next) => {
+  try {
+    const { email, telephone } = req.body;
+    const cleanEmail = email ? String(email).trim().toLowerCase() : null;
+    const cleanPhone = telephone ? String(telephone).trim() : null;
+
+    const { Op } = require("sequelize");
+    const whereConditions = [];
+    if (cleanEmail) whereConditions.push({ email: cleanEmail });
+    if (cleanPhone) whereConditions.push({ telephone: cleanPhone });
+
+    if (whereConditions.length === 0) {
+      return res.status(400).json({ message: "Identifiant requis." });
+    }
+
+    const user = await User.findOne({ where: { [Op.or]: whereConditions } });
+    if (!user) return res.status(404).json({ message: "Compte introuvable." });
+
+    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otpCode = newOtp;
+    user.otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    await user.save();
+
+    if (user.email) {
+      sendOtpEmail(user.email, user.nom, newOtp).catch(() => {});
+    }
+
+    res.json({ message: "Un nouveau code OTP a été envoyé à votre e-mail." });
   } catch (err) { next(err); }
 });
 

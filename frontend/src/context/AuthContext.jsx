@@ -58,10 +58,27 @@ export function AuthProvider({ children }) {
 
   async function register(nom, email, telephone, motDePasse) {
     const res = await api.post("/auth/register", { nom, email, telephone, motDePasse });
-    localStorage.setItem("token", res.data.token);
-    setUser(res.data.user);
-    refreshBoutique();
-    return res.data.user;
+    if (res.data.token) {
+      localStorage.setItem("token", res.data.token);
+      setUser(res.data.user);
+      refreshBoutique();
+    }
+    return res.data;
+  }
+
+  async function verifyOtp(email, telephone, otpCode) {
+    const res = await api.post("/auth/verify-otp", { email, telephone, otpCode });
+    if (res.data.token) {
+      localStorage.setItem("token", res.data.token);
+      setUser(res.data.user);
+      refreshBoutique();
+    }
+    return res.data;
+  }
+
+  async function resendOtp(email, telephone) {
+    const res = await api.post("/auth/resend-otp", { email, telephone });
+    return res.data;
   }
 
   function logout() {
@@ -70,7 +87,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, boutique, refreshBoutique, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, boutique, refreshBoutique, loading, login, register, verifyOtp, resendOtp, logout }}>
       {children}
     </AuthContext.Provider>
   );

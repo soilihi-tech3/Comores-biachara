@@ -15,6 +15,9 @@ const User = sequelize.define("User", {
   },
   permissions: { type: DataTypes.JSON, allowNull: true },
   statut: { type: DataTypes.ENUM("actif", "suspendu"), defaultValue: "actif" },
+  otpCode: { type: DataTypes.STRING(10), allowNull: true },
+  otpExpiresAt: { type: DataTypes.DATE, allowNull: true },
+  isEmailVerified: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, { tableName: "users" });
 
 module.exports = User;

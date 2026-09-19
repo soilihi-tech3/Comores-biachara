@@ -3,7 +3,8 @@ const { Op } = require("sequelize");
 const { sequelize, Product, Category, Order, OrderItem, Review, User, Notification, Famille } = require("../models");
 const { authenticate, requireRole, loadBoutique } = require("../middleware/auth");
 const { cacheMiddleware, clearCachePattern } = require("../config/cache");
-const { addClient, removeClient, broadcast } = require("../utils/broadcaster");
+const { sendOrderConfirmationEmail, sendOrderStatusEmail } = require("../services/email.service");
+const { broadcast, addClient, removeClient } = require("../utils/broadcaster");
 
 const router = express.Router({ mergeParams: true });
 
@@ -245,15 +246,52 @@ router.post("/:slug/orders", loadBoutique, authenticate, requireRole("client"), 
       type: "order"
     }).catch(() => {});
 
+    // Notification e-mail transactionnelle au client
+    if (req.user.email) {
+      sendOrderConfirmationEmail(req.user.email, req.user.nom, complete, req.boutique.nom).catch(() => {});
+    }
+
     clearCachePattern("cache:/api/store").catch(() => {});
     broadcast("order_created", { orderId: order.id, clientId: req.user.id, boutiqueId: req.boutique.id });
     broadcast("product_updated", { boutiqueId: req.boutique.id });
 
     res.status(201).json(complete);
   } catch (err) {
-    await t.rollback();
+    if (t && !t.finished) {
+      await t.rollback();
+    }
     next(err);
   }
+});
+
+// POST /api/store/:slug/create-payment-intent (Création d'un paiement Stripe par carte)
+router.post("/:slug/create-payment-intent", loadBoutique, authenticate, async (req, res, next) => {
+  try {
+    const { amount, currency = "eur" } = req.body;
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+
+    if (!stripeSecretKey) {
+      // Fallback mode démonstration / test local
+      return res.json({
+        clientSecret: "pi_demo_secret_" + Math.random().toString(36).substring(2),
+        isDemo: true,
+        publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || "pk_test_demo"
+      });
+    }
+
+    const stripe = require("stripe")(stripeSecretKey);
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(Number(amount) * 100), // Stripe attend des centimes
+      currency: currency.toLowerCase(),
+      metadata: { boutiqueId: req.boutique.id, userId: req.user.id }
+    });
+
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      isDemo: false,
+      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY
+    });
+  } catch (err) { next(err); }
 });
 
 // GET /api/store/:slug/orders/mine  (client connecté)
@@ -307,6 +345,10 @@ router.patch("/:slug/orders/:id/cancel", loadBoutique, authenticate, requireRole
     }
 
     await t.commit();
+
+    if (req.user.email) {
+      sendOrderStatusEmail(req.user.email, req.user.nom, order, "annulee", req.boutique.nom).catch(() => {});
+    }
 
     clearCachePattern("cache:/api/store").catch(() => {});
     broadcast("order_updated", { orderId: order.id, statut: "annulee", clientId: req.user.id, boutiqueId: req.boutique.id });
