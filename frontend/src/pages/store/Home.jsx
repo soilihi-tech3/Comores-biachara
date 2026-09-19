@@ -129,7 +129,7 @@ function CategoryScrollSection({ category, products, onNavigate }) {
 }
 
 export default function Home() {
-  const { getData, setData, isStale } = useData();
+  const { getData, setData, isStale, invalidate } = useData();
 
   const [categories, setCategories] = useState(() => {
     const cached = getData(`categories:${SLUG}`);
@@ -216,7 +216,9 @@ export default function Home() {
         detail.type === "category_updated" ||
         detail.type === "boutique_updated"
       ) {
-        loadData();
+        invalidate("products");
+        invalidate("categories");
+        loadData(true);
       }
     });
     return unsub;

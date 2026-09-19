@@ -90,6 +90,9 @@ export default function Catalogue() {
       .then((res) => {
         setData(cacheKey, res.data, 120000);
         setProducts(res.data);
+        if (!categoryId && !famille && !search) {
+          try { localStorage.setItem(`cached_products_${SLUG}`, JSON.stringify(res.data)); } catch (e) {}
+        }
       })
       .finally(() => setLoading(false));
   }
@@ -105,10 +108,10 @@ export default function Catalogue() {
   useEffect(() => {
     const unsub = subscribeRealtime((detail) => {
       if (detail.type === "product_updated") {
-        invalidate(`products:${SLUG}`);
+        invalidate("products");
         loadProducts(true);
       } else if (detail.type === "category_updated") {
-        invalidate(`categories:${SLUG}`);
+        invalidate("categories");
         loadCategories(true);
       }
     });

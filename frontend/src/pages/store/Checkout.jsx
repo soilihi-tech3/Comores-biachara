@@ -24,6 +24,10 @@ export default function Checkout() {
     { id: "carte", key: "carte", label: "Carte bancaire", sub: "Visa / Mastercard", Icon: CreditCard, available: !!modesPaiement.carte },
   ];
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Auto-select first available payment option if current choice is disabled
   useEffect(() => {
     const currentOpt = PAYMENT_OPTIONS.find(o => o.id === form.moyenPaiement);

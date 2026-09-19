@@ -150,7 +150,7 @@ export default function MyOrders() {
               <p style={{ color: "var(--muted)", fontSize: 13, margin: 0 }}>Passée le {new Date(o.createdAt).toLocaleDateString("fr-FR", { dateStyle: "long" })}</p>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {o.statut === "en_attente" && (
+              {!["livree", "recuperee", "en_livraison", "annulee"].includes(o.statut) && (
                 <button
                   onClick={() => cancelOrder(o.id)}
                   style={{

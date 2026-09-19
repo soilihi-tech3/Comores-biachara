@@ -36,6 +36,34 @@ export function DataProvider({ children }) {
       }
       return changed ? next : prev;
     });
+
+    try {
+      if (keyPrefix) {
+        if (keyPrefix.includes("products")) {
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith("cached_products_")) {
+              localStorage.removeItem(k);
+            }
+          }
+        }
+        if (keyPrefix.includes("categories")) {
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith("cached_categories_")) {
+              localStorage.removeItem(k);
+            }
+          }
+        }
+      } else {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith("cached_products_") || k.startsWith("cached_categories_") || k.startsWith("cached_boutique_"))) {
+            localStorage.removeItem(k);
+          }
+        }
+      }
+    } catch (e) {}
   }, []);
 
   return (

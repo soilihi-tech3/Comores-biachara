@@ -376,20 +376,46 @@ router.get("/orders", async (req, res, next) => {
 });
 
 router.patch("/orders/:id/status", async (req, res, next) => {
+  const t = await sequelize.transaction();
   try {
-    const order = await Order.findOne({ where: { id: req.params.id, boutiqueId: req.boutiqueId } });
-    if (!order) return res.status(404).json({ message: "Commande introuvable." });
+    const order = await Order.findOne({
+      where: { id: req.params.id, boutiqueId: req.boutiqueId },
+      include: [{ model: OrderItem, as: "items" }],
+      transaction: t
+    });
+    if (!order) {
+      await t.rollback();
+      return res.status(404).json({ message: "Commande introuvable." });
+    }
 
     if (order.statut === "annulee") {
+      await t.rollback();
       return res.status(400).json({ message: "Cette commande a été annulée. Son statut ne peut plus être modifié." });
     }
 
-    await order.update({ statut: req.body.statut });
+    const newStatut = req.body.statut;
+    await order.update({ statut: newStatut }, { transaction: t });
+
+    if (newStatut === "annulee" && order.items && order.items.length > 0) {
+      for (const item of order.items) {
+        const prod = await Product.findByPk(item.productId, { transaction: t });
+        if (prod) {
+          await prod.update({
+            stock: (prod.stock || 0) + item.quantite,
+            ventesCount: Math.max(0, (prod.ventesCount || 0) - item.quantite)
+          }, { transaction: t });
+        }
+      }
+    }
+
+    await t.commit();
+
+    purgeCache();
 
     // Notifier le client de la mise à jour du statut
     const cmdNum = "COM-B" + String(order.id).padStart(3, "0");
     const labels = { validee: "Confirmée", en_preparation: "En préparation", en_livraison: "En livraison", livree: "Livrée", annulee: "Annulée" };
-    const statutTxt = labels[req.body.statut] || req.body.statut;
+    const statutTxt = labels[newStatut] || newStatut;
 
     Notification.create({
       userId: order.clientId, boutiqueId: order.boutiqueId, orderId: order.id,
@@ -398,9 +424,16 @@ router.patch("/orders/:id/status", async (req, res, next) => {
       type: "status"
     }).catch(() => {});
 
-    broadcast("order_updated", { orderId: order.id, statut: req.body.statut, clientId: order.clientId, boutiqueId: order.boutiqueId });
+    broadcast("order_updated", { orderId: order.id, statut: newStatut, clientId: order.clientId, boutiqueId: order.boutiqueId });
+    if (newStatut === "annulee") {
+      broadcast("product_updated", { boutiqueId: order.boutiqueId });
+    }
+
     res.json(order);
-  } catch (err) { next(err); }
+  } catch (err) {
+    await t.rollback();
+    next(err);
+  }
 });
 
 router.patch("/orders/:id/assign", async (req, res, next) => {
@@ -648,6 +681,7 @@ router.post("/ventes/directe", async (req, res, next) => {
       ]
     });
 
+    purgeCache();
     broadcast("order_created", { orderId: order.id, clientId: client.id, boutiqueId: req.boutiqueId });
     broadcast("product_updated", { boutiqueId: req.boutiqueId });
 
@@ -781,6 +815,8 @@ router.post("/achats", requireRole("admin", "employe"), async (req, res, next) =
       prod.coutAchat = unitPrice;
     }
     await prod.save();
+    purgeCache();
+    broadcast("product_updated", { productId: prod.id, boutiqueId: req.boutiqueId });
 
     const fullAchat = await Achat.findByPk(achat.id, {
       include: [

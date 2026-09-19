@@ -1,7 +1,15 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import Header from "./components/Header.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
 
 import Home from "./pages/store/Home.jsx";
 import Catalogue from "./pages/store/Catalogue.jsx";
@@ -88,6 +96,7 @@ export default function App() {
 
   return (
     <>
+      <ScrollToTop />
       <PWAInstallPrompt />
       <RealtimeToastNotifier />
       <Routes>

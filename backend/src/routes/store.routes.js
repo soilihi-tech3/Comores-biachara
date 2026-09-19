@@ -268,27 +268,53 @@ router.get("/:slug/orders/mine", loadBoutique, authenticate, requireRole("client
   } catch (err) { next(err); }
 });
 
-// PATCH /api/store/:slug/orders/:id/cancel (client connecté — annuler uniquement si en attente)
+// PATCH /api/store/:slug/orders/:id/cancel (client connecté — annuler commande si non livrée)
 router.patch("/:slug/orders/:id/cancel", loadBoutique, authenticate, requireRole("client"), async (req, res, next) => {
+  const t = await sequelize.transaction();
   try {
     const order = await Order.findOne({
-      where: { id: req.params.id, clientId: req.user.id, boutiqueId: req.boutique.id }
+      where: { id: req.params.id, clientId: req.user.id, boutiqueId: req.boutique.id },
+      include: [{ model: OrderItem, as: "items" }],
+      transaction: t,
+      lock: t.LOCK.UPDATE
     });
 
     if (!order) {
+      await t.rollback();
       return res.status(404).json({ message: "Commande introuvable." });
     }
 
-    if (order.statut !== "en_attente") {
+    if (["livree", "recuperee", "en_livraison", "annulee"].includes(order.statut)) {
+      await t.rollback();
       return res.status(400).json({
-        message: "Impossible d'annuler cette commande car elle a déjà été confirmée ou prise en charge."
+        message: "Impossible d'annuler cette commande car elle est déjà en cours de livraison, livrée ou déjà annulée."
       });
     }
 
-    await order.update({ statut: "annulee" });
-    broadcast("order_updated", { orderId: order.id, statut: "annulee" });
+    await order.update({ statut: "annulee" }, { transaction: t });
+
+    // Restituer le stock pour chaque article
+    if (order.items && order.items.length > 0) {
+      for (const item of order.items) {
+        const prod = await Product.findByPk(item.productId, { transaction: t, lock: t.LOCK.UPDATE });
+        if (prod) {
+          await prod.update({
+            stock: (prod.stock || 0) + item.quantite,
+            ventesCount: Math.max(0, (prod.ventesCount || 0) - item.quantite)
+          }, { transaction: t });
+        }
+      }
+    }
+
+    await t.commit();
+
+    clearCachePattern("cache:/api/store").catch(() => {});
+    broadcast("order_updated", { orderId: order.id, statut: "annulee", clientId: req.user.id, boutiqueId: req.boutique.id });
+    broadcast("product_updated", { boutiqueId: req.boutique.id });
+
     res.json({ message: "Votre commande a été annulée avec succès.", order });
   } catch (err) {
+    await t.rollback();
     next(err);
   }
 });

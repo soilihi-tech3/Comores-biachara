@@ -11,6 +11,7 @@ export default function Confirmation() {
   const [order, setOrder] = useState(null);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     api.get(`/store/${SLUG}/orders/mine`).then(res => {
       const found = res.data.find(o => String(o.id) === String(id));
       setOrder(found || null);
@@ -18,7 +19,7 @@ export default function Confirmation() {
   }, [id]);
 
   return (
-    <div style={{ maxWidth: 640, margin: "40px auto", padding: "0 16px 60px", textAlign: "center" }}>
+    <div style={{ maxWidth: 640, margin: "40px auto", padding: "0 16px 60px", textAlign: "center", minHeight: "75vh" }}>
       {/* SUCCESS ICON */}
       <div style={{
         width: 90, height: 90, borderRadius: "50%",
