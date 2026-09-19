@@ -18,36 +18,30 @@ export function MvolaLogo({ height = 28, style = {} }) {
   );
 }
 
-// 2. HOLO Logo (Blue HOLO logo matching user image)
-export function HoloLogo({ height = 28, style = {} }) {
+// 2. WERO Logo (Yellow background badge with WERO dark text matching user image)
+export function WeroLogo({ height = 26, style = {} }) {
   return (
-    <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", lineHeight: 1, ...style }}>
+    <div style={{
+      background: "#FFF899", border: "1px solid #FFE866", borderRadius: 8,
+      padding: "3px 12px", display: "inline-flex", alignItems: "center", justifyContent: "center",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.06)", height, ...style
+    }}>
       <span style={{
-        fontFamily: "Impact, sans-serif",
-        fontSize: Math.round(height * 0.85),
+        fontFamily: "'Outfit', 'Arial Black', sans-serif",
         fontWeight: 900,
-        color: "#1E58E7",
-        fontStyle: "italic",
+        fontSize: Math.round(height * 0.75),
+        color: "#1E1E1E",
         letterSpacing: "1px",
         lineHeight: 1
       }}>
-        HOLO®
-      </span>
-      <span style={{
-        fontFamily: "Inter, sans-serif",
-        fontSize: Math.max(8, Math.round(height * 0.26)),
-        fontWeight: 700,
-        color: "#00A887",
-        letterSpacing: "0.5px",
-        marginTop: 2,
-        lineHeight: 1,
-        whiteSpace: "nowrap"
-      }}>
-        BDC – MOBILE BANKING
+        W<span style={{ fontStyle: "italic", opacity: 0.85 }}>e</span>RO
       </span>
     </div>
   );
 }
+
+// Alias for backward compatibility
+export const HoloLogo = WeroLogo;
 
 // 3. VISA Logo Badge
 export function VisaLogo({ height = 20 }) {

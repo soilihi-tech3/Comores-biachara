@@ -5,7 +5,7 @@ import api, { SLUG } from "../../api";
 import { useCart } from "../../context/CartContext.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 
-import { MvolaLogo, HoloLogo, OnlinePaymentBadges, CashLogo } from "../../components/PaymentLogos";
+import { MvolaLogo, WeroLogo, OnlinePaymentBadges, CashLogo } from "../../components/PaymentLogos";
 
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 
@@ -49,8 +49,8 @@ export default function Checkout() {
       renderLogo: () => <MvolaLogo height={32} />
     },
     { 
-      id: "holam", key: "holam", label: "HOLO Mobile", sub: "BDC – Mobile Banking", Icon: Smartphone, available: !!modesPaiement.holam,
-      renderLogo: () => <HoloLogo height={28} />
+      id: "wero", key: "holam", label: "Wero", sub: "Paiement mobile sécurisé", Icon: Smartphone, available: !!modesPaiement.holam,
+      renderLogo: () => <WeroLogo height={28} />
     },
     { 
       id: "carte", key: "carte", label: "Paiement en ligne sécurisé", sub: "Visa / MasterCard / PayPal / Virement", Icon: CreditCard, available: !!modesPaiement.carte,

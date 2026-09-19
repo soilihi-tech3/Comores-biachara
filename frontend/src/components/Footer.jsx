@@ -4,7 +4,7 @@ import { MapPin, Phone, Mail, Store, Facebook, Instagram, MessageCircle, Info, P
 import api, { SLUG } from "../api";
 
 import { useAuth } from "../context/AuthContext.jsx";
-import { MvolaLogo, HoloLogo, VisaLogo, MastercardLogo, PaypalLogo, VirementLogo, CashLogo } from "./PaymentLogos";
+import { MvolaLogo, WeroLogo, VisaLogo, MastercardLogo, PaypalLogo, VirementLogo, CashLogo } from "./PaymentLogos";
 
 export default function Footer() {
   const { boutique: boutiqueContext } = useAuth();
@@ -199,9 +199,9 @@ export default function Footer() {
               <MvolaLogo height={24} />
             </div>
 
-            {/* HOLO */}
-            <div style={{ background: "#fff", padding: "4px 10px", borderRadius: 8, display: "flex", alignItems: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}>
-              <HoloLogo height={22} />
+            {/* WERO */}
+            <div style={{ background: "#fff", padding: "4px 8px", borderRadius: 8, display: "flex", alignItems: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}>
+              <WeroLogo height={24} />
             </div>
 
             {/* Cartes / Paypal / Virement */}
