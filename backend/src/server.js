@@ -12,6 +12,8 @@ const adminRoutes = require("./routes/admin.routes");
 const superadminRoutes = require("./routes/superadmin.routes");
 const notificationRoutes = require("./routes/notification.routes");
 const uploadRoutes = require("./routes/upload.routes");
+const iconsRoutes = require("./routes/icons.routes");
+const resolveBoutique = require("./middleware/resolveBoutique");
 const path = require("path");
 const runSeed = require("./seed");
 
@@ -29,6 +31,8 @@ app.use(compression());
 app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
 app.use(express.json({ limit: "10mb" }));
 app.use(morgan("dev"));
+app.use(resolveBoutique);
+app.use(iconsRoutes);
 
 // Rate limiter for high traffic protection (1000 requests per 15 minutes per IP)
 const apiLimiter = rateLimit({

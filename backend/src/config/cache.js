@@ -120,9 +120,18 @@ function cacheMiddleware(durationSeconds = 120) {
   };
 }
 
+async function remember(key, ttlSeconds, fetchFn) {
+  const cached = await getCache(key);
+  if (cached) return cached;
+  const fresh = await fetchFn();
+  if (fresh) await setCache(key, fresh, ttlSeconds);
+  return fresh;
+}
+
 module.exports = {
   getCache,
   setCache,
   clearCachePattern,
-  cacheMiddleware
+  cacheMiddleware,
+  remember
 };
