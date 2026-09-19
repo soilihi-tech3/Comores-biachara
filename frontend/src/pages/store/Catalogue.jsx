@@ -13,15 +13,38 @@ export default function Catalogue() {
   const { user } = useAuth();
   const { showToast } = useCart();
   const { invalidate, getData, setData, isStale } = useData();
-  const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [favIds, setFavIds] = useState([]);
 
   const categoryId = params.get("categoryId") || "";
   const famille = params.get("famille") || "";
   const search = params.get("search") || "";
   const onlyFavoris = params.get("favoris") === "1";
+
+  const cacheKey = `products:${SLUG}:${categoryId}:${famille}:${search}`;
+
+  const [categories, setCategories] = useState(() => {
+    const cached = getData(`categories:${SLUG}`);
+    if (cached && Array.isArray(cached)) return cached;
+    try {
+      const ls = localStorage.getItem(`cached_categories_${SLUG}`);
+      return ls ? JSON.parse(ls) : [];
+    } catch (e) { return []; }
+  });
+
+  const [products, setProducts] = useState(() => {
+    const cached = getData(cacheKey);
+    if (cached && Array.isArray(cached)) return cached;
+    try {
+      const ls = localStorage.getItem(`cached_products_${SLUG}`);
+      return ls ? JSON.parse(ls) : [];
+    } catch (e) { return []; }
+  });
+
+  const [loading, setLoading] = useState(() => {
+    const cached = getData(cacheKey);
+    return !cached && products.length === 0;
+  });
+
+  const [favIds, setFavIds] = useState([]);
 
   // Scroll to top on filter change
   useEffect(() => {

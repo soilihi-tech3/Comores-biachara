@@ -257,9 +257,10 @@ export default function ProductDetail() {
                 justifyContent: "center", 
                 gap: 8, 
                 fontSize: 16,
-                background: isMaxStockReached ? "#D97706" : undefined
+                background: product.stock <= 0 ? "var(--line)" : isMaxStockReached ? "#D97706" : undefined,
+                color: product.stock <= 0 ? "var(--muted)" : undefined,
+                cursor: "pointer"
               }} 
-              disabled={product.stock === 0}
               onClick={handleAddToCart}
             >
               {added ? (

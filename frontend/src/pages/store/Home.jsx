@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import api, { SLUG } from "../../api";
 import ProductCard from "../../components/ProductCard.jsx";
 import { subscribeRealtime } from "../../utils/realtime.js";
+import { useData } from "../../context/DataContext.jsx";
 
 const DEFAULT_SLIDES = [
   {
@@ -128,9 +129,35 @@ function CategoryScrollSection({ category, products, onNavigate }) {
 }
 
 export default function Home() {
-  const [categories, setCategories] = useState([]);
-  const [familles, setFamilles] = useState([]);
-  const [products, setProducts] = useState([]);
+  const { getData, setData, isStale } = useData();
+
+  const [categories, setCategories] = useState(() => {
+    const cached = getData(`categories:${SLUG}`);
+    if (cached && Array.isArray(cached)) return cached;
+    try {
+      const ls = localStorage.getItem(`cached_categories_${SLUG}`);
+      return ls ? JSON.parse(ls) : [];
+    } catch (e) { return []; }
+  });
+
+  const [familles, setFamilles] = useState(() => {
+    const cached = getData(`familles:${SLUG}`);
+    if (cached && Array.isArray(cached)) return cached;
+    try {
+      const ls = localStorage.getItem(`cached_familles_${SLUG}`);
+      return ls ? JSON.parse(ls) : [];
+    } catch (e) { return []; }
+  });
+
+  const [products, setProducts] = useState(() => {
+    const cached = getData(`products:${SLUG}`);
+    if (cached && Array.isArray(cached)) return cached;
+    try {
+      const ls = localStorage.getItem(`cached_products_${SLUG}`);
+      return ls ? JSON.parse(ls) : [];
+    } catch (e) { return []; }
+  });
+
   const [boutique, setBoutique] = useState(() => {
     try {
       const cached = localStorage.getItem(`cached_boutique_${SLUG}`);
@@ -139,10 +166,16 @@ export default function Home() {
       return null;
     }
   });
+
   const [activeSlide, setActiveSlide] = useState(0);
   const navigate = useNavigate();
 
-  function loadData() {
+  function loadData(force = false) {
+    if (!force && !isStale(`categories:${SLUG}`) && categories.length > 0 && products.length > 0) {
+      // Data is fresh in cache, no un-necessary refetch!
+      return;
+    }
+
     api.get(`/store/${SLUG}`).then((res) => {
       setBoutique(res.data);
       try {
@@ -151,13 +184,27 @@ export default function Home() {
     }).catch(() => {});
 
     api.get(`/store/${SLUG}/categories`).then((res) => {
-      if (Array.isArray(res.data)) setCategories(res.data);
+      if (Array.isArray(res.data)) {
+        setData(`categories:${SLUG}`, res.data, 300000);
+        setCategories(res.data);
+        try { localStorage.setItem(`cached_categories_${SLUG}`, JSON.stringify(res.data)); } catch (e) {}
+      }
     }).catch(() => {});
+
     api.get(`/store/${SLUG}/familles`).then((res) => {
-      if (Array.isArray(res.data)) setFamilles(res.data);
+      if (Array.isArray(res.data)) {
+        setData(`familles:${SLUG}`, res.data, 600000);
+        setFamilles(res.data);
+        try { localStorage.setItem(`cached_familles_${SLUG}`, JSON.stringify(res.data)); } catch (e) {}
+      }
     }).catch(() => {});
+
     api.get(`/store/${SLUG}/products`).then((res) => {
-      if (Array.isArray(res.data)) setProducts(res.data);
+      if (Array.isArray(res.data)) {
+        setData(`products:${SLUG}`, res.data, 120000);
+        setProducts(res.data);
+        try { localStorage.setItem(`cached_products_${SLUG}`, JSON.stringify(res.data)); } catch (e) {}
+      }
     }).catch(() => {});
   }
 
