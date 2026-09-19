@@ -1,9 +1,104 @@
 require("dotenv").config();
 const nodemailer = require("nodemailer");
+const https = require("https");
 const dns = require("dns");
 
 if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder("ipv4first");
+}
+
+// Envoi d'e-mail via l'API HTTP REST de Brevo (HTTPS Port 443 - 100% garanti sur Render)
+async function sendViaBrevoApi(to, subject, html) {
+  const apiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY;
+  if (!apiKey) return false;
+
+  const senderEmail = process.env.GMAIL_USER || process.env.EMAIL_FROM_ADDR || "soilihiabdou99@gmail.com";
+  const payload = JSON.stringify({
+    sender: { name: "Marché Vert", email: senderEmail },
+    to: [{ email: to }],
+    subject,
+    htmlContent: html
+  });
+
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: "api.brevo.com",
+      path: "/v3/smtp/email",
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "api-key": apiKey.trim(),
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(payload)
+      }
+    }, (res) => {
+      let body = "";
+      res.on("data", chunk => body += chunk);
+      res.on("end", () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          console.log(`✉️ [EMAIL BREVO API HTTP ENVOYÉ] à ${to} : "${subject}"`);
+          resolve(true);
+        } else {
+          console.error(`❌ [BREVO API ERROR ${res.statusCode}]: ${body}`);
+          resolve(false);
+        }
+      });
+    });
+
+    req.on("error", (err) => {
+      console.error(`❌ [BREVO API NETWORK ERROR]: ${err.message}`);
+      resolve(false);
+    });
+
+    req.write(payload);
+    req.end();
+  });
+}
+
+// Envoi d'e-mail via l'API HTTP REST de Resend (HTTPS Port 443 - 100% garanti sur Render)
+async function sendViaResendApi(to, subject, html) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return false;
+
+  const payload = JSON.stringify({
+    from: process.env.EMAIL_FROM || "Marché Vert <onboarding@resend.dev>",
+    to: [to],
+    subject,
+    html
+  });
+
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: "api.resend.com",
+      path: "/emails",
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey.trim()}`,
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(payload)
+      }
+    }, (res) => {
+      let body = "";
+      res.on("data", chunk => body += chunk);
+      res.on("end", () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          console.log(`✉️ [EMAIL RESEND API HTTP ENVOYÉ] à ${to} : "${subject}"`);
+          resolve(true);
+        } else {
+          console.error(`❌ [RESEND API ERROR ${res.statusCode}]: ${body}`);
+          resolve(false);
+        }
+      });
+    });
+
+    req.on("error", (err) => {
+      console.error(`❌ [RESEND API NETWORK ERROR]: ${err.message}`);
+      resolve(false);
+    });
+
+    req.write(payload);
+    req.end();
+  });
 }
 
 function createGmailTransporter(port = 465, secure = true) {
@@ -23,9 +118,9 @@ function createGmailTransporter(port = 465, secure = true) {
     tls: {
       rejectUnauthorized: false
     },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 8000
   });
 }
 
@@ -42,7 +137,7 @@ function getSmtpTransporter() {
       tls: {
         rejectUnauthorized: false
       },
-      connectionTimeout: 10000
+      connectionTimeout: 8000
     });
   }
   return null;
@@ -50,10 +145,22 @@ function getSmtpTransporter() {
 
 async function sendMail({ to, subject, html }) {
   if (!to) return;
-  
+
+  // Priority 1: Brevo API v3 (HTTPS 443 - Toujours fonctionnel sur Render)
+  if (process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY) {
+    const okBrevo = await sendViaBrevoApi(to, subject, html);
+    if (okBrevo) return true;
+  }
+
+  // Priority 2: Resend API (HTTPS 443 - Toujours fonctionnel sur Render)
+  if (process.env.RESEND_API_KEY) {
+    const okResend = await sendViaResendApi(to, subject, html);
+    if (okResend) return true;
+  }
+
   const fromEmail = process.env.EMAIL_FROM || (process.env.GMAIL_USER ? `"Marché Vert" <${process.env.GMAIL_USER.trim()}>` : '"Marché Vert" <no-reply@marchevert.com>');
 
-  // 1. Essai via Gmail Port 465 (SSL)
+  // Priority 3: Essai via Gmail Port 465 (SSL)
   const transporter465 = createGmailTransporter(465, true);
   if (transporter465) {
     try {
@@ -62,7 +169,6 @@ async function sendMail({ to, subject, html }) {
       return true;
     } catch (err465) {
       console.warn(`⚠️ [GMAIL PORT 465 ÉCHEC sur Render]: ${err465.message}. Tentative sur Port 587 (TLS)...`);
-      // 2. Fallback Gmail Port 587 (TLS/STARTTLS) pour compatibilité Cloud Render/Railway
       try {
         const transporter587 = createGmailTransporter(587, false);
         await transporter587.sendMail({ from: fromEmail, to, subject, html });
@@ -74,7 +180,7 @@ async function sendMail({ to, subject, html }) {
     }
   }
 
-  // 3. Essai via SMTP Générique (Brevo / Sendgrid / etc.)
+  // Priority 4: SMTP Custom (Brevo / SendGrid / Mailgun / etc.)
   const smtpTransporter = getSmtpTransporter();
   if (smtpTransporter) {
     try {
@@ -86,12 +192,12 @@ async function sendMail({ to, subject, html }) {
     }
   }
 
-  // 4. Fallback Dev / Console Logging
+  // Fallback Dev / Console Logging
   console.log("\n=================== ✉️ EMAIL TRANSACTIONNEL (DEV LOG) ===================");
   console.log(`Destinataire : ${to}`);
   console.log(`Sujet        : ${subject}`);
   console.log("--------------------------------------------------------------------------");
-  console.log(html.replace(/<[^>]*>?/gm, " ")); // Plain text preview
+  console.log(html.replace(/<[^>]*>?/gm, " "));
   console.log("==========================================================================\n");
   return true;
 }
