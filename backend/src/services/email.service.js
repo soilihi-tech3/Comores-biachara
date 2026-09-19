@@ -6,63 +6,87 @@ if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder("ipv4first");
 }
 
-function getTransporter() {
+function createGmailTransporter(port = 465, secure = true) {
   const gmailUser = process.env.GMAIL_USER;
   const gmailPass = process.env.GMAIL_APP_PASS || process.env.GMAIL_PASS;
+  if (!gmailUser || !gmailPass) return null;
 
-  if (gmailUser && gmailPass) {
-    const cleanPass = gmailPass.replace(/\s+/g, "").trim();
-    return nodemailer.createTransport({
-      service: "gmail",
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      family: 4,
-      auth: {
-        user: gmailUser.trim(),
-        pass: cleanPass,
-      },
-    });
-  }
+  const cleanPass = gmailPass.replace(/\s+/g, "").trim();
+  return nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port,
+    secure,
+    auth: {
+      user: gmailUser.trim(),
+      pass: cleanPass,
+    },
+    tls: {
+      rejectUnauthorized: false
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000
+  });
+}
 
+function getSmtpTransporter() {
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
     return nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT || 587),
       secure: Number(process.env.SMTP_PORT) === 465,
-      family: 4,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      tls: {
+        rejectUnauthorized: false
+      },
+      connectionTimeout: 10000
     });
   }
-
   return null;
 }
 
 async function sendMail({ to, subject, html }) {
   if (!to) return;
   
-  const transporter = getTransporter();
   const fromEmail = process.env.EMAIL_FROM || (process.env.GMAIL_USER ? `"Marché Vert" <${process.env.GMAIL_USER.trim()}>` : '"Marché Vert" <no-reply@marchevert.com>');
 
-  if (transporter) {
+  // 1. Essai via Gmail Port 465 (SSL)
+  const transporter465 = createGmailTransporter(465, true);
+  if (transporter465) {
     try {
-      await transporter.sendMail({
-        from: fromEmail,
-        to,
-        subject,
-        html,
-      });
-      console.log(`✉️ [EMAIL GMAIL ENVOYÉ RÉELLEMENT] à ${to} : "${subject}"`);
+      await transporter465.sendMail({ from: fromEmail, to, subject, html });
+      console.log(`✉️ [EMAIL GMAIL PORT 465 RÉELLEMENT ENVOYÉ] à ${to} : "${subject}"`);
       return true;
-    } catch (err) {
-      console.error(`❌ [EMAIL ERROR] Échec de l'envoi SMTP/Gmail à ${to} :`, err.message);
+    } catch (err465) {
+      console.warn(`⚠️ [GMAIL PORT 465 ÉCHEC sur Render]: ${err465.message}. Tentative sur Port 587 (TLS)...`);
+      // 2. Fallback Gmail Port 587 (TLS/STARTTLS) pour compatibilité Cloud Render/Railway
+      try {
+        const transporter587 = createGmailTransporter(587, false);
+        await transporter587.sendMail({ from: fromEmail, to, subject, html });
+        console.log(`✉️ [EMAIL GMAIL PORT 587 RÉELLEMENT ENVOYÉ] à ${to} : "${subject}"`);
+        return true;
+      } catch (err587) {
+        console.error(`❌ [GMAIL PORT 587 ÉCHEC sur Render]: ${err587.message}`);
+      }
     }
   }
 
-  // Fallback Dev / Console Logging
+  // 3. Essai via SMTP Générique (Brevo / Sendgrid / etc.)
+  const smtpTransporter = getSmtpTransporter();
+  if (smtpTransporter) {
+    try {
+      await smtpTransporter.sendMail({ from: fromEmail, to, subject, html });
+      console.log(`✉️ [EMAIL SMTP RÉELLEMENT ENVOYÉ] à ${to} : "${subject}"`);
+      return true;
+    } catch (errSmtp) {
+      console.error(`❌ [SMTP ERROR]: ${errSmtp.message}`);
+    }
+  }
+
+  // 4. Fallback Dev / Console Logging
   console.log("\n=================== ✉️ EMAIL TRANSACTIONNEL (DEV LOG) ===================");
   console.log(`Destinataire : ${to}`);
   console.log(`Sujet        : ${subject}`);
