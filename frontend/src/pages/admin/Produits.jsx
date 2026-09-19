@@ -132,6 +132,16 @@ export default function AdminProduits() {
     e.preventDefault();
     if (!form.nom || !form.categoryId) return;
 
+    if (form.dateExpiration) {
+      const selectedDate = new Date(form.dateExpiration);
+      const todayMidnight = new Date();
+      todayMidnight.setHours(0, 0, 0, 0);
+      if (selectedDate < todayMidnight) {
+        alert("Impossible d'ajouter un produit dont la date d'expiration est déjà dépassée ! Veuillez choisir une date valide.");
+        return;
+      }
+    }
+
     // Sanitize: empty string → 0 or null
     const payload = {
       ...form,

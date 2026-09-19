@@ -27,6 +27,14 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+
+  const url = new URL(event.request.url);
+
+  // Exclude real-time SSE streams and API endpoints from Service Worker caching
+  if (url.pathname.startsWith("/api/") || url.pathname.includes("/realtime/events") || url.pathname.includes("/events")) {
+    return;
+  }
+
   event.respondWith(
     fetch(event.request).catch(() => caches.match(event.request))
   );

@@ -281,6 +281,15 @@ router.get("/products", async (req, res, next) => {
 
 router.post("/products", async (req, res, next) => {
   try {
+    if (req.body.dateExpiration) {
+      const expDate = new Date(req.body.dateExpiration);
+      const todayMidnight = new Date();
+      todayMidnight.setHours(0, 0, 0, 0);
+      if (expDate < todayMidnight) {
+        return res.status(400).json({ message: "Impossible d'ajouter un produit dont la date d'expiration est déjà dépassée !" });
+      }
+    }
+
     const product = await Product.create({ ...req.body, boutiqueId: req.boutiqueId });
     await checkExpirationNotification(product, req.boutiqueId);
 
@@ -313,6 +322,16 @@ router.put("/products/:id", async (req, res, next) => {
   try {
     const product = await Product.findOne({ where: { id: req.params.id, boutiqueId: req.boutiqueId } });
     if (!product) return res.status(404).json({ message: "Produit introuvable." });
+
+    if (req.body.dateExpiration) {
+      const expDate = new Date(req.body.dateExpiration);
+      const todayMidnight = new Date();
+      todayMidnight.setHours(0, 0, 0, 0);
+      if (expDate < todayMidnight) {
+        return res.status(400).json({ message: "Impossible de régler la date d'expiration sur une date déjà dépassée !" });
+      }
+    }
+
     await product.update(req.body);
     await checkExpirationNotification(product, req.boutiqueId);
 
@@ -360,6 +379,11 @@ router.patch("/orders/:id/status", async (req, res, next) => {
   try {
     const order = await Order.findOne({ where: { id: req.params.id, boutiqueId: req.boutiqueId } });
     if (!order) return res.status(404).json({ message: "Commande introuvable." });
+
+    if (order.statut === "annulee") {
+      return res.status(400).json({ message: "Cette commande a été annulée. Son statut ne peut plus être modifié." });
+    }
+
     await order.update({ statut: req.body.statut });
 
     // Notifier le client de la mise à jour du statut

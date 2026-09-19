@@ -65,7 +65,7 @@ export default function ProductCard({ product, isFavorisPage }) {
     : "";
 
   return (
-    <div className="bs-card" onClick={() => navigate(`/produit/${product.id}`)} style={{ opacity: isOutOfStock ? 0.75 : 1, position: "relative" }}>
+    <div className="bs-card" onClick={() => navigate(`/produit/${product.id}`, { state: { product } })} style={{ opacity: isOutOfStock ? 0.75 : 1, position: "relative" }}>
       <div className="bs-thumb-container">
         <img 
           src={mainImage} 
@@ -176,9 +176,12 @@ export default function ProductCard({ product, isFavorisPage }) {
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
           <button 
             className="bs-add-btn" 
-            disabled={isOutOfStock}
             onClick={(e) => { 
               e.stopPropagation(); 
+              if (isOutOfStock) {
+                showToast(`Désolé, le produit "${product.nom}" est actuellement en rupture de stock. Il sera de nouveau disponible bientôt !`, "warning");
+                return;
+              }
               addToCart(product, 1); 
             }}
             style={{
@@ -187,7 +190,7 @@ export default function ProductCard({ product, isFavorisPage }) {
               background: isOutOfStock ? "var(--line)" : isMaxStockReached ? "#FEF3C7" : undefined,
               color: isOutOfStock ? "var(--muted)" : isMaxStockReached ? "#B45309" : undefined,
               borderColor: isMaxStockReached ? "#F59E0B" : undefined,
-              cursor: isOutOfStock ? "not-allowed" : "pointer"
+              cursor: isOutOfStock ? "pointer" : "pointer"
             }}
           >
             <ShoppingCart size={15} /> 

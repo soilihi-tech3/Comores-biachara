@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { ArrowLeft, Tag, Star, ShoppingBag, CheckCircle, Heart, Minus, Plus, Search, AlertTriangle } from "lucide-react";
 import api, { SLUG } from "../../api";
 import Stars from "../../components/Stars.jsx";
@@ -13,9 +13,12 @@ const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { cart, addToCart, showToast } = useCart();
   const { user } = useAuth();
-  const [product, setProduct] = useState(null);
+  
+  // Instant render using passed state from ProductCard, fallback to null
+  const [product, setProduct] = useState(() => location.state?.product || null);
   const [selectedImgIndex, setSelectedImgIndex] = useState(0);
   const [reviewDraft, setReviewDraft] = useState({ note: 5, commentaire: "" });
   const [erreur, setErreur] = useState("");
@@ -23,6 +26,11 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [related, setRelated] = useState([]);
   const [isFavorite, setIsFavorite] = useState(false);
+
+  // Scroll to top immediately on navigate
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
 
   // Hover zoom state
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
@@ -53,19 +61,17 @@ export default function ProductDetail() {
     window.dispatchEvent(new Event("favorites_updated"));
   }
 
-
   function load() {
-    window.scrollTo(0, 0);
     api.get(`/store/${SLUG}/products/${id}`).then((res) => {
       setProduct(res.data);
-      setQuantity(1);
       if (res.data.categoryId) {
         api.get(`/store/${SLUG}/products?categoryId=${res.data.categoryId}`).then(r => {
           setRelated(r.data.filter(p => p.id !== res.data.id).slice(0, 4));
         });
       }
-    });
+    }).catch(() => {});
   }
+
   useEffect(() => {
     load();
     const unsub = subscribeRealtime((detail) => {
@@ -94,7 +100,7 @@ export default function ProductDetail() {
     setZoomPos({ x, y });
   }
 
-  if (!product) return <div style={{ padding: 60, textAlign: "center" }}>Chargement...</div>;
+  if (!product) return <div style={{ minHeight: "75vh", padding: 60, textAlign: "center" }}>Chargement...</div>;
 
   // Cart quantity check
   const itemInCart = cart.find(l => l.product.id === product.id);
@@ -104,6 +110,10 @@ export default function ProductDetail() {
 
   function handleAddToCart() {
     if (!product) return;
+    if (product.stock <= 0) {
+      showToast(`Désolé, le produit "${product.nom}" est actuellement en rupture de stock. Il sera de nouveau disponible bientôt !`, "warning");
+      return;
+    }
     const ok = addToCart(product, quantity);
     if (ok) {
       setAdded(true);
@@ -131,7 +141,7 @@ export default function ProductDetail() {
     : 0;
 
   return (
-    <>
+    <div style={{ minHeight: "75vh" }}>
       <button className="bs-back" onClick={() => navigate("/catalogue")}>
         <ArrowLeft size={16} /> Retour au catalogue
       </button>
@@ -321,7 +331,7 @@ export default function ProductDetail() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 

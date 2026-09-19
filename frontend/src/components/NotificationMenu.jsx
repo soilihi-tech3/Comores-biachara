@@ -23,26 +23,15 @@ export default function NotificationMenu() {
   useEffect(() => {
     load();
 
-    // 1. Realtime SSE push listener
+    // SSE real-time push listener (NO 4s polling -> zero 304 console loops!)
     const unsubscribe = subscribeRealtime((detail) => {
       if (detail.type === "order_updated" || detail.type === "order_created") {
         load();
       }
     });
 
-    // 2. 4s Polling
-    const interval = setInterval(load, 4000);
-
-    // 3. Window focus refresh
-    const onFocus = () => load();
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onFocus);
-
     return () => {
       unsubscribe();
-      clearInterval(interval);
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onFocus);
     };
   }, [user]);
 
@@ -62,12 +51,11 @@ export default function NotificationMenu() {
   const unreadCount = notifications.filter((n) => !n.lu).length;
 
   async function handleNotificationClick(n) {
-    if (!n.lu) {
-      await api.patch(`/notifications/${n.id}/read`).catch(() => {});
-      setNotifications((prev) =>
-        prev.map((item) => (item.id === n.id ? { ...item, lu: true } : item))
-      );
-    }
+    // Immediately mark as read locally so badge & notification update/disappear instantly
+    setNotifications((prev) =>
+      prev.map((item) => (item.id === n.id ? { ...item, lu: true } : item))
+    );
+    api.patch(`/notifications/${n.id}/read`).catch(() => {});
     setOpen(false);
 
     if (user.role === "client") {
@@ -78,8 +66,8 @@ export default function NotificationMenu() {
   }
 
   async function markAllRead() {
-    await api.patch("/notifications/read-all").catch(() => {});
     setNotifications((prev) => prev.map((n) => ({ ...n, lu: true })));
+    api.patch("/notifications/read-all").catch(() => {});
   }
 
   return (

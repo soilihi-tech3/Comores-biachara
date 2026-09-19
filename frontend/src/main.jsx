@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { CartProvider } from "./context/CartContext.jsx";
+import { DataProvider } from "./context/DataContext.jsx";
 import { OfflineProvider } from "./context/OfflineContext.jsx";
 import OfflineBanner from "./components/OfflineBanner.jsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
@@ -15,10 +16,12 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <BrowserRouter>
         <OfflineProvider>
           <AuthProvider>
-            <CartProvider>
-              <OfflineBanner />
-              <App />
-            </CartProvider>
+            <DataProvider>
+              <CartProvider>
+                <OfflineBanner />
+                <App />
+              </CartProvider>
+            </DataProvider>
           </AuthProvider>
         </OfflineProvider>
       </BrowserRouter>

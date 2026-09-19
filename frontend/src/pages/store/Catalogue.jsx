@@ -5,12 +5,14 @@ import api, { SLUG } from "../../api";
 import ProductCard from "../../components/ProductCard.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useCart } from "../../context/CartContext.jsx";
+import { useData } from "../../context/DataContext.jsx";
 import { subscribeRealtime } from "../../utils/realtime.js";
 
 export default function Catalogue() {
   const [params, setParams] = useSearchParams();
   const { user } = useAuth();
   const { showToast } = useCart();
+  const { invalidate, getData, setData, isStale } = useData();
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,18 +40,34 @@ export default function Catalogue() {
     return () => window.removeEventListener("favorites_updated", updateFavs);
   }, [user?.id]);
 
-  function loadCategories() {
-    api.get(`/store/${SLUG}/categories`).then((res) => setCategories(res.data));
+  function loadCategories(force = false) {
+    const key = `categories:${SLUG}`;
+    if (!force && !isStale(key)) {
+      const cached = getData(key);
+      if (cached) { setCategories(cached); return; }
+    }
+    api.get(`/store/${SLUG}/categories`).then((res) => {
+      setData(key, res.data, 300000);
+      setCategories(res.data);
+    });
   }
 
-  function loadProducts() {
+  function loadProducts(force = false) {
+    const cacheKey = `products:${SLUG}:${categoryId}:${famille}:${search}`;
+    if (!force && !isStale(cacheKey)) {
+      const cached = getData(cacheKey);
+      if (cached) { setProducts(cached); setLoading(false); return; }
+    }
     setLoading(true);
     const query = {};
     if (categoryId) query.categoryId = categoryId;
     if (famille) query.famille = famille;
     if (search) query.search = search;
     api.get(`/store/${SLUG}/products`, { params: query })
-      .then((res) => setProducts(res.data))
+      .then((res) => {
+        setData(cacheKey, res.data, 120000);
+        setProducts(res.data);
+      })
       .finally(() => setLoading(false));
   }
 
@@ -64,13 +82,15 @@ export default function Catalogue() {
   useEffect(() => {
     const unsub = subscribeRealtime((detail) => {
       if (detail.type === "product_updated") {
-        loadProducts();
+        invalidate(`products:${SLUG}`);
+        loadProducts(true);
       } else if (detail.type === "category_updated") {
-        loadCategories();
+        invalidate(`categories:${SLUG}`);
+        loadCategories(true);
       }
     });
     return unsub;
-  }, [categoryId, famille, search]);
+  }, [categoryId, famille, search, invalidate]);
 
   const stripAccents = (str) => (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
