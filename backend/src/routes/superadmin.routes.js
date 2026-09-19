@@ -7,18 +7,99 @@ const { authenticate, requireRole } = require("../middleware/auth");
 const router = express.Router();
 router.use(authenticate, requireRole("super_admin"));
 
+const { clearCachePattern } = require("../config/cache");
+const { broadcast } = require("../utils/broadcaster");
+
+function purgeCache() {
+  clearCachePattern("cache:/api/store").catch(() => {});
+}
+
 // GET /api/superadmin/boutiques
 router.get("/boutiques", async (req, res, next) => {
   try {
     const boutiques = await Boutique.findAll({ order: [["createdAt", "DESC"]] });
     const withStats = await Promise.all(boutiques.map(async (b) => {
       const orders = await Order.findAll({ where: { boutiqueId: b.id, statut: { [Op.ne]: "annulee" } } });
+      const admins = await User.findAll({ 
+        where: { boutiqueId: b.id, role: { [Op.in]: ["admin", "employe"] } },
+        attributes: { exclude: ["motDePasseHash"] }
+      });
       const ca = orders.reduce((s, o) => s + Number(o.total), 0);
-      return { ...b.toJSON(), chiffreAffaires: ca, nbVentes: orders.length };
+      return { ...b.toJSON(), chiffreAffaires: ca, nbVentes: orders.length, admins };
     }));
     res.json(withStats);
   } catch (err) { next(err); }
 });
+
+// GET /api/superadmin/users -> Liste complète de tous les utilisateurs (admins, employés, clients) avec leur boutique
+router.get("/users", async (req, res, next) => {
+  try {
+    const users = await User.findAll({
+      attributes: { exclude: ["motDePasseHash"] },
+      include: [{ model: Boutique, attributes: ["id", "nom", "slug"] }],
+      order: [["createdAt", "DESC"]]
+    });
+    res.json(users.map(u => {
+      const plain = u.toJSON();
+      if (plain.Boutique) {
+        plain.boutique = plain.Boutique;
+        delete plain.Boutique;
+      }
+      return plain;
+    }));
+  } catch (err) { next(err); }
+});
+
+// PUT /api/superadmin/users/:id -> Modifier un utilisateur (nom, email, telephone, role, boutiqueId)
+router.put("/users/:id", async (req, res, next) => {
+  try {
+    const userToUpdate = await User.findByPk(req.params.id);
+    if (!userToUpdate) return res.status(404).json({ message: "Utilisateur introuvable." });
+    
+    const { nom, email, telephone, role, boutiqueId, motDePasse } = req.body;
+    
+    if (nom) userToUpdate.nom = nom;
+    if (email) userToUpdate.email = email;
+    if (telephone !== undefined) userToUpdate.telephone = telephone;
+    if (role) userToUpdate.role = role;
+    if (boutiqueId !== undefined) userToUpdate.boutiqueId = boutiqueId || null;
+    if (motDePasse && motDePasse.trim()) {
+      userToUpdate.motDePasseHash = await bcrypt.hash(motDePasse.trim(), 10);
+    }
+    
+    await userToUpdate.save();
+    res.json({ message: "Utilisateur mis à jour avec succès.", user: userToUpdate });
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/superadmin/users/:id/statut -> Suspendre / Réactiver un utilisateur
+router.patch("/users/:id/statut", async (req, res, next) => {
+  try {
+    const targetUser = await User.findByPk(req.params.id);
+    if (!targetUser) return res.status(404).json({ message: "Utilisateur introuvable." });
+
+    const newStatut = req.body.statut || (targetUser.statut === "actif" ? "suspendu" : "actif");
+    targetUser.statut = newStatut;
+    await targetUser.save();
+    
+    res.json({ message: `Compte ${newStatut === "actif" ? "réactivé" : "suspendu"} avec succès.`, statut: newStatut });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/superadmin/users/:id -> Supprimer un utilisateur
+router.delete("/users/:id", async (req, res, next) => {
+  try {
+    if (Number(req.params.id) === req.user.id) {
+      return res.status(400).json({ message: "Vous ne pouvez pas supprimer votre propre compte Super Admin." });
+    }
+    const targetUser = await User.findByPk(req.params.id);
+    if (!targetUser) return res.status(404).json({ message: "Utilisateur introuvable." });
+
+    await targetUser.destroy();
+    res.json({ message: "Utilisateur supprimé avec succès." });
+  } catch (err) { next(err); }
+});
+
 
 // POST /api/superadmin/boutiques -> crée une boutique + son compte Admin
 router.post("/boutiques", async (req, res, next) => {
@@ -32,6 +113,8 @@ router.post("/boutiques", async (req, res, next) => {
     const admin = await User.create({
       nom: nomAdmin, email: emailAdmin, motDePasseHash, role: "admin", boutiqueId: boutique.id,
     });
+    purgeCache();
+    broadcast("boutique_updated", { boutiqueId: boutique.id });
     res.status(201).json({ boutique, admin: { id: admin.id, nom: admin.nom, email: admin.email } });
   } catch (err) { next(err); }
 });
@@ -42,6 +125,8 @@ router.patch("/boutiques/:id/statut", async (req, res, next) => {
     const boutique = await Boutique.findByPk(req.params.id);
     if (!boutique) return res.status(404).json({ message: "Boutique introuvable." });
     await boutique.update({ statut: req.body.statut });
+    purgeCache();
+    broadcast("boutique_updated", { boutiqueId: boutique.id });
     res.json(boutique);
   } catch (err) { next(err); }
 });
@@ -61,7 +146,13 @@ router.put("/boutiques/:id", async (req, res, next) => {
       boutique.slug = slug;
     }
     if (formuleAbonnement) boutique.formuleAbonnement = formuleAbonnement;
-    if (modulesActifs) boutique.modulesActifs = modulesActifs;
+    if (modulesActifs && typeof modulesActifs === "object") {
+      let cleanModules = modulesActifs;
+      if (typeof cleanModules === "string") {
+        try { cleanModules = JSON.parse(cleanModules); } catch (e) {}
+      }
+      boutique.modulesActifs = cleanModules;
+    }
     await boutique.save();
 
     // Mettre à jour le mot de passe admin si fourni
@@ -73,21 +164,55 @@ router.put("/boutiques/:id", async (req, res, next) => {
       }
     }
 
+    purgeCache();
+    broadcast("boutique_updated", { boutiqueId: boutique.id });
     res.json({ message: "Boutique mise à jour avec succès", boutique });
   } catch (err) { next(err); }
 });
 
-// PUT /api/superadmin/boutiques/:id/modules -> Activer / Désactiver des modules pour une boutique
+// PUT /api/superadmin/boutiques/:id/modules -> Activer / Désactiver des modules pour une boutique spécifique
 router.put("/boutiques/:id/modules", async (req, res, next) => {
   try {
     const boutique = await Boutique.findByPk(req.params.id);
     if (!boutique) return res.status(404).json({ message: "Boutique introuvable." });
-    const { modulesActifs } = req.body;
+    let { modulesActifs } = req.body;
     if (modulesActifs) {
+      if (typeof modulesActifs === "string") {
+        try { modulesActifs = JSON.parse(modulesActifs); } catch (e) {}
+      }
       boutique.modulesActifs = modulesActifs;
       await boutique.save();
     }
+    purgeCache();
+    broadcast("boutique_updated", { boutiqueId: boutique.id });
     res.json({ message: "Modules de la boutique mis à jour avec succès", boutique });
+  } catch (err) { next(err); }
+});
+
+// PUT /api/superadmin/modules/global -> Activer / Désactiver une fonctionnalité pour TOUTES les boutiques de l'application
+router.put("/modules/global", async (req, res, next) => {
+  try {
+    const { moduleKey, active } = req.body;
+    if (!moduleKey) return res.status(400).json({ message: "Clé de module requise." });
+
+    const boutiques = await Boutique.findAll();
+    for (const b of boutiques) {
+      let current = b.modulesActifs || {};
+      if (typeof current === "string") {
+        try { current = JSON.parse(current); } catch (e) { current = {}; }
+      }
+      // Sanitisation en cas d'objet sérialisé de manière corrompue avec des clés d'index numérique
+      if (typeof current === "object" && current !== null && current["0"] !== undefined) {
+        current = {};
+      }
+      const updatedModules = { ...current, [moduleKey]: active };
+      b.modulesActifs = updatedModules;
+      await b.save();
+    }
+
+    purgeCache();
+    broadcast("boutique_updated", { global: true });
+    res.json({ message: `Le module "${moduleKey}" a été ${active ? "activé" : "désactivé"} pour TOUTES les boutiques.` });
   } catch (err) { next(err); }
 });
 
@@ -99,6 +224,8 @@ router.delete("/boutiques/:id", async (req, res, next) => {
     
     await User.destroy({ where: { boutiqueId: boutique.id } });
     await boutique.destroy();
+    purgeCache();
+    broadcast("boutique_updated", { boutiqueId: req.params.id });
     res.json({ message: "Boutique supprimée." });
   } catch (err) { next(err); }
 });
@@ -108,12 +235,16 @@ router.get("/stats", async (req, res, next) => {
   try {
     const boutiques = await Boutique.findAll();
     const orders = await Order.findAll({ where: { statut: { [Op.ne]: "annulee" } } });
+    const totalUsers = await User.count();
+    const totalAdmins = await User.count({ where: { role: { [Op.in]: ["admin", "employe"] } } });
     const chiffreAffairesCumule = orders.reduce((s, o) => s + Number(o.total), 0);
     res.json({
       nbBoutiques: boutiques.length,
       nbBoutiquesActives: boutiques.filter((b) => b.statut === "active").length,
       chiffreAffairesCumule,
       nbVentesCumulees: orders.length,
+      totalUsers,
+      totalAdmins
     });
   } catch (err) { next(err); }
 });

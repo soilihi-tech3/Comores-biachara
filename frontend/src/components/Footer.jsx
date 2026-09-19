@@ -4,6 +4,7 @@ import { MapPin, Phone, Mail, Store, Facebook, Instagram, MessageCircle, Info, P
 import api, { SLUG } from "../api";
 
 import { useAuth } from "../context/AuthContext.jsx";
+import { MvolaLogo, HoloLogo, VisaLogo, MastercardLogo, PaypalLogo, VirementLogo, CashLogo } from "./PaymentLogos";
 
 export default function Footer() {
   const { boutique: boutiqueContext } = useAuth();
@@ -179,6 +180,40 @@ export default function Footer() {
           </div>
         </div>
       )}
+
+      {/* MOYENS DE PAIEMENT ACCEPTÉS */}
+      <div style={{ maxWidth: 1280, margin: "0 auto 24px", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 20 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+          <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1, color: "#7B9686", fontWeight: 800 }}>
+            🔒 Paiement 100% Sécurisé & Modes de règlement acceptés :
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            {/* Espèces / Cash */}
+            <div style={{ background: "#fff", padding: "4px 10px", borderRadius: 8, display: "flex", alignItems: "center", gap: 6, boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}>
+              <CashLogo height={24} />
+              <span style={{ fontWeight: 800, fontSize: 11, color: "var(--forest-dark)" }}>Cash</span>
+            </div>
+
+            {/* MVola */}
+            <div style={{ background: "#fff", padding: "4px 10px", borderRadius: 8, display: "flex", alignItems: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}>
+              <MvolaLogo height={24} />
+            </div>
+
+            {/* HOLO */}
+            <div style={{ background: "#fff", padding: "4px 10px", borderRadius: 8, display: "flex", alignItems: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}>
+              <HoloLogo height={22} />
+            </div>
+
+            {/* Cartes / Paypal / Virement */}
+            <div style={{ background: "#fff", padding: "4px 8px", borderRadius: 8, display: "flex", alignItems: "center", gap: 6, boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}>
+              <VisaLogo height={18} />
+              <MastercardLogo height={18} />
+              <VirementLogo height={18} />
+              <PaypalLogo height={18} />
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* BOTTOM BAR */}
       <div style={{ maxWidth: 1280, margin: "0 auto", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 20, display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", color: "#7B9686", fontSize: 13, gap: 12 }}>

@@ -292,14 +292,17 @@ export default function AdminLayout() {
               <Clock size={40} />
             </div>
             <h2 style={{ fontSize: 26, fontWeight: 800, color: "var(--forest-dark)", margin: "0 0 12px" }}>
-              Fonctionnalité en cours de déploiement
+              Fonctionnalité en cours de mise à jour
             </h2>
             <div style={{
               background: "#fff", border: "1px solid var(--line)", borderRadius: 16,
-              padding: "22px 32px", maxWidth: 540, margin: "0 0 28px", boxShadow: "0 4px 20px rgba(0,0,0,0.04)"
+              padding: "24px 32px", maxWidth: 560, margin: "0 0 28px", boxShadow: "0 4px 20px rgba(0,0,0,0.04)"
             }}>
-              <p style={{ fontSize: 16, color: "var(--ink)", margin: 0, fontWeight: 600, lineHeight: 1.6 }}>
+              <p style={{ fontSize: 15.5, color: "var(--ink)", margin: "0 0 10px", fontWeight: 600, lineHeight: 1.6 }}>
                 Cette fonctionnalité sera disponible dans pas longtemps, veuillez patienter !
+              </p>
+              <p style={{ fontSize: 13, color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>
+                Notre équipe technique travaille actuellement à l'amélioration de ce service pour votre boutique. Nous vous remercions de votre confiance et de votre compréhension.
               </p>
             </div>
             <Link to="/admin" className="bs-btn-primary" style={{ textDecoration: "none", padding: "12px 28px", fontSize: 14 }}>

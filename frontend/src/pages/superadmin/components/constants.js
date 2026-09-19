@@ -1,0 +1,27 @@
+export const fcfa = (n) => Number(n || 0).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
+
+export const DEFAULT_MODULES = {
+  vente: true,
+  ventesHistorique: true,
+  achats: true,
+  fournisseurs: true,
+  unites: true,
+  homeBanners: true,
+  sideBanners: true,
+  commandes: true,
+  categories: true,
+  produits: true
+};
+
+export const MODULE_LABELS = [
+  { key: "vente", label: "Vente Directe (POS Caisse)", desc: "Gestion des ventes comptoir et encaissement direct" },
+  { key: "ventesHistorique", label: "Historique des Ventes", desc: "Consultation du journal des ventes et reçus" },
+  { key: "achats", label: "Achats & Stocks", desc: "Approvisionnements, entrées de stock et coût d'achat" },
+  { key: "fournisseurs", label: "Fournisseurs", desc: "Gestion des partenaires et fiches fournisseurs" },
+  { key: "unites", label: "Unités de vente", desc: "Configuration des unités (Kg, Litre, Pièce, Carton...)" },
+  { key: "homeBanners", label: "Home Banners (Slider)", desc: "Bannières principales défilantes de la page d'accueil" },
+  { key: "sideBanners", label: "Home Side Banners", desc: "Bannières promotionnelles secondaires" },
+  { key: "commandes", label: "Gestion des Commandes", desc: "Suivi, validation et attribution des commandes en ligne" },
+  { key: "categories", label: "Catégories", desc: "Gestion des rayons et catégories de produits" },
+  { key: "produits", label: "Catalogue Produits", desc: "Gestion des fiches produits, prix et stocks" }
+];

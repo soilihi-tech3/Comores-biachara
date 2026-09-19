@@ -15,7 +15,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
     setActiveTab(defaultTab);
   }, [defaultTab]);
 
-  useEffect(() => { 
+  useEffect(() => {
     api.get("/admin/boutique").then((res) => {
       const data = res.data;
       if (typeof data.bannerSlides === "string") {
@@ -33,9 +33,9 @@ export default function AdminSettings({ defaultTab = "general" }) {
       }
 
       setBoutique(data);
-    }); 
+    });
 
-    api.get("/admin/categories").then((res) => setCategories(res.data || [])).catch(() => {});
+    api.get("/admin/categories").then((res) => setCategories(res.data || [])).catch(() => { });
   }, []);
 
   async function save() {
@@ -183,7 +183,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
       {activeTab === "general" && (
         <div className="bs-panel">
           <h3 style={{ marginTop: 0, fontSize: 18, color: "var(--forest-dark)" }}>Identité & Informations de la Boutique</h3>
-          
+
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
             <div className="bs-field">
               <label>Nom de la boutique</label>
@@ -259,7 +259,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
               />
             </div>
             <div className="bs-field">
-              <label>Numéro WhatsApp Contact Direct (Ex: 2693300000 ou 33600000000)</label>
+              <label>Numéro WhatsApp Contact Direct </label>
               <input
                 className="bs-input"
                 value={boutique.whatsappNumber || ""}
@@ -373,9 +373,9 @@ export default function AdminSettings({ defaultTab = "general" }) {
 
                 <div className="bs-field">
                   <label>Associer à une Catégorie (Redirection au clic)</label>
-                  <select 
-                    className="bs-select" 
-                    value={slide.categoryId || ""} 
+                  <select
+                    className="bs-select"
+                    value={slide.categoryId || ""}
                     onChange={(e) => updateSlide(idx, "categoryId", e.target.value)}
                   >
                     <option value="">-- Toutes les catégories --</option>
@@ -448,9 +448,9 @@ export default function AdminSettings({ defaultTab = "general" }) {
 
                 <div className="bs-field">
                   <label>Associer à une Catégorie (Redirection au clic)</label>
-                  <select 
-                    className="bs-select" 
-                    value={side.categoryId || ""} 
+                  <select
+                    className="bs-select"
+                    value={side.categoryId || ""}
                     onChange={(e) => updateSideBanner(idx, "categoryId", e.target.value)}
                   >
                     <option value="">-- Toutes les catégories --</option>

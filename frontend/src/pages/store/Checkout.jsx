@@ -5,6 +5,8 @@ import api, { SLUG } from "../../api";
 import { useCart } from "../../context/CartContext.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 
+import { MvolaLogo, HoloLogo, OnlinePaymentBadges, CashLogo } from "../../components/PaymentLogos";
+
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 
 export default function Checkout() {
@@ -38,10 +40,22 @@ export default function Checkout() {
   const modesPaiement = boutique?.modesPaiement || { especes: true, mvola: true, holam: true, carte: false };
 
   const PAYMENT_OPTIONS = [
-    { id: "cash", key: "especes", label: "Espèces (Cash)", sub: "Paiement à la livraison / réception", Icon: Banknote, available: !!modesPaiement.especes },
-    { id: "mvola", key: "mvola", label: "Mvola", sub: "Paiement mobile", Icon: Smartphone, available: !!modesPaiement.mvola },
-    { id: "holam", key: "holam", label: "Holam", sub: "Paiement mobile", Icon: Smartphone, available: !!modesPaiement.holam },
-    { id: "carte", key: "carte", label: "Carte bancaire", sub: "Visa / Mastercard", Icon: CreditCard, available: !!modesPaiement.carte },
+    { 
+      id: "cash", key: "especes", label: "Espèces (Cash)", sub: "Paiement à la livraison / réception", Icon: Banknote, available: !!modesPaiement.especes,
+      renderLogo: () => <CashLogo height={32} />
+    },
+    { 
+      id: "mvola", key: "mvola", label: "MVola", sub: "Paiement mobile sécurisé", Icon: Smartphone, available: !!modesPaiement.mvola,
+      renderLogo: () => <MvolaLogo height={32} />
+    },
+    { 
+      id: "holam", key: "holam", label: "HOLO Mobile", sub: "BDC – Mobile Banking", Icon: Smartphone, available: !!modesPaiement.holam,
+      renderLogo: () => <HoloLogo height={28} />
+    },
+    { 
+      id: "carte", key: "carte", label: "Paiement en ligne sécurisé", sub: "Visa / MasterCard / PayPal / Virement", Icon: CreditCard, available: !!modesPaiement.carte,
+      renderLogo: () => <OnlinePaymentBadges />
+    },
   ];
 
   useEffect(() => {
@@ -349,19 +363,20 @@ export default function Checkout() {
                     }}
                   >
                     <div style={{
-                      width: 42,
-                      height: 42,
+                      height: 48,
+                      padding: "0 8px",
                       borderRadius: 10,
-                      background: isSelected ? "var(--forest)" : "var(--paper)",
+                      background: "#fff",
+                      border: "1px solid var(--line)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       flexShrink: 0
                     }}>
-                      <m.Icon size={20} color={isSelected ? "#fff" : "var(--forest)"} />
+                      {m.renderLogo ? m.renderLogo() : <m.Icon size={20} color="var(--forest)" />}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                         <span style={{ fontWeight: 700, fontSize: 14, color: isSelected ? "var(--forest-dark)" : "var(--ink)" }}>
                           {m.label}
                         </span>
