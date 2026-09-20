@@ -102,6 +102,7 @@ export default function SuperAdmin() {
       await api.put(`/superadmin/boutiques/${editForm.id}`, {
         nom: editForm.nom,
         slug: editForm.slug,
+        customDomain: editForm.customDomain,
         formuleAbonnement: editForm.formuleAbonnement,
         motDePasseAdmin: editForm.motDePasseAdmin
       });

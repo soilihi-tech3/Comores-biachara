@@ -104,11 +104,17 @@ router.delete("/users/:id", async (req, res, next) => {
 // POST /api/superadmin/boutiques -> crée une boutique + son compte Admin
 router.post("/boutiques", async (req, res, next) => {
   try {
-    const { nomBoutique, slug, formuleAbonnement, nomAdmin, emailAdmin, motDePasseAdmin } = req.body;
+    const { nomBoutique, slug, customDomain, formuleAbonnement, nomAdmin, emailAdmin, motDePasseAdmin } = req.body;
     const existant = await Boutique.findOne({ where: { slug } });
     if (existant) return res.status(409).json({ message: "Ce slug de boutique est déjà utilisé." });
 
-    const boutique = await Boutique.create({ nom: nomBoutique, slug, formuleAbonnement });
+    const formattedDomain = customDomain ? customDomain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '') : null;
+    if (formattedDomain) {
+      const existantDomain = await Boutique.findOne({ where: { customDomain: formattedDomain } });
+      if (existantDomain) return res.status(409).json({ message: "Ce domaine personnalisé est déjà utilisé par une autre boutique." });
+    }
+
+    const boutique = await Boutique.create({ nom: nomBoutique, slug, customDomain: formattedDomain || null, formuleAbonnement });
     const motDePasseHash = await bcrypt.hash(motDePasseAdmin || "changeme123", 10);
     const admin = await User.create({
       nom: nomAdmin, email: emailAdmin, motDePasseHash, role: "admin", boutiqueId: boutique.id,
