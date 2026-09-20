@@ -28,56 +28,30 @@ app.set("trust proxy", 1);
 // High Performance Compression (GZIP/Brotli)
 app.use(compression());
 
-// CORS Configuration supporting custom domains (comoresbiachara.site, vercel.app, etc.)
-const defaultAllowedOrigins = [
-  "https://comoresbiachara.site",
-  "https://www.comoresbiachara.site",
-  "https://comores-biachara.vercel.app",
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "http://localhost:4000"
-];
+// Universal CORS Configuration supporting custom domains (comoresbiachara.site, vercel.app, custom domains)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  } else {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+  }
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Requested-With, x-boutique-slug, x-slug, x-boutique-domain, Cache-Control, Pragma"
+  );
 
-const envOrigins = (process.env.CORS_ORIGIN || process.env.ALLOWED_ORIGINS || "")
-  .split(",")
-  .map(s => s.trim())
-  .filter(Boolean);
-
-const ALLOWED_ORIGINS = Array.from(new Set([...defaultAllowedOrigins, ...envOrigins]));
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-
-    if (ALLOWED_ORIGINS.includes(origin)) {
-      return callback(null, true);
-    }
-
-    if (
-      origin.endsWith(".comoresbiachara.site") ||
-      origin.endsWith(".vercel.app") ||
-      origin.endsWith(".onrender.com")
-    ) {
-      return callback(null, true);
-    }
-
-    // Allow requests from all origins to prevent breaking custom tenant domains
-    return callback(null, true);
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "X-Requested-With",
-    "x-boutique-slug",
-    "x-slug",
-    "x-boutique-domain"
-  ]
-};
-
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
+  next();
+});
 app.use(express.json({ limit: "10mb" }));
 app.use(morgan("dev"));
 app.use(resolveBoutique);
