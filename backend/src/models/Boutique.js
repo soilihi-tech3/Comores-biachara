@@ -7,8 +7,8 @@ const Boutique = sequelize.define("Boutique", {
   logoUrl: { type: DataTypes.TEXT("long") },
   couleurPrincipale: { type: DataTypes.STRING(20), defaultValue: "#1F4D3A" },
   formuleAbonnement: {
-    type: DataTypes.ENUM("essai_gratuit", "forfait_mensuel", "commission"),
-    defaultValue: "essai_gratuit",
+    type: DataTypes.STRING(50),
+    defaultValue: "standard",
   },
   statut: { type: DataTypes.ENUM("active", "suspendue"), defaultValue: "active" },
   fraisLivraison: { type: DataTypes.DECIMAL(10, 2), defaultValue: 1000 },

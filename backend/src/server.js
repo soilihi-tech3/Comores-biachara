@@ -245,14 +245,15 @@ async function ensureColumns() {
       }
     }
 
-    // Upgrade image columns to LONGTEXT to support Base64 images without "Data Too Long" errors
+    // Upgrade image columns and enum columns to flexible types to avoid "Data Truncated" errors
     const alterQueries = [
       "ALTER TABLE products MODIFY COLUMN image_url LONGTEXT NULL;",
       "ALTER TABLE products MODIFY COLUMN image_url2 LONGTEXT NULL;",
       "ALTER TABLE categories MODIFY COLUMN image_url LONGTEXT NULL;",
       "ALTER TABLE boutiques MODIFY COLUMN logo_url LONGTEXT NULL;",
       "ALTER TABLE boutiques MODIFY COLUMN banner_slides LONGTEXT NULL;",
-      "ALTER TABLE boutiques MODIFY COLUMN side_banners LONGTEXT NULL;"
+      "ALTER TABLE boutiques MODIFY COLUMN side_banners LONGTEXT NULL;",
+      "ALTER TABLE boutiques MODIFY COLUMN formule_abonnement VARCHAR(50) DEFAULT 'standard';"
     ];
 
     for (const q of alterQueries) {
