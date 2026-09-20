@@ -79,7 +79,7 @@ app.use("/uploads", express.static(uploadsPath, {
 
 // Root Endpoint Health Check
 app.get("/", (req, res) => res.json({ message: "API Boutique SaaS Comores Biachara en ligne.", status: "ok" }));
-app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+app.get("/api/health", (req, res) => res.json({ status: "ok", version: "2.0.0-cors-fix" }));
 
 // Public current boutique resolver endpoint (subdomain / header multi-tenant)
 app.get("/api/boutique/current", (req, res) => {
