@@ -3,6 +3,16 @@ import { saveCache, getCache, enqueueAction } from "./utils/offlineStorage";
 
 const getBaseUrl = () => {
   let url = import.meta.env.VITE_API_URL;
+  
+  if (typeof window !== "undefined") {
+    if (!url || url === "/" || url === "/api") {
+      return "/api";
+    }
+    if (url.startsWith("/")) {
+      return url.endsWith("/api") ? url : `${url}/api`.replace(/\/+/g, "/");
+    }
+  }
+
   if (!url) {
     const host = typeof window !== "undefined" && window.location.hostname ? window.location.hostname : "localhost";
     url = `http://${host}:4000/api`;
@@ -20,6 +30,10 @@ const api = axios.create({ baseURL: getBaseUrl() });
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  if (typeof window !== "undefined" && window.location && window.location.hostname) {
+    config.headers["x-boutique-domain"] = window.location.hostname;
+  }
   return config;
 });
 

@@ -49,6 +49,11 @@ const Boutique = sequelize.define("Boutique", {
       carte: false
     }
   },
+  customDomain: { type: DataTypes.STRING(255), allowNull: true },
+  stripePublishableKey: { type: DataTypes.STRING(255), allowNull: true },
+  stripeSecretKey: { type: DataTypes.STRING(255), allowNull: true },
+  stripeAccountId: { type: DataTypes.STRING(255), allowNull: true },
+  stripeOnboardingComplete: { type: DataTypes.BOOLEAN, defaultValue: false }
 }, { tableName: "boutiques" });
 
 module.exports = Boutique;

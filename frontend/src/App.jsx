@@ -39,25 +39,30 @@ import SalesHistory from "./pages/admin/SalesHistory.jsx";
 
 import SuperAdmin from "./pages/superadmin/SuperAdmin.jsx";
 
+import BoutiqueGuard from "./components/BoutiqueGuard.jsx";
 import Footer from "./components/Footer.jsx";
 
 function StoreLayout({ children }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      <Header />
-      <div className="bs-shell" style={{ flex: 1 }}>{children}</div>
-      <Footer />
-    </div>
+    <BoutiqueGuard>
+      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+        <Header />
+        <div className="bs-shell" style={{ flex: 1 }}>{children}</div>
+        <Footer />
+      </div>
+    </BoutiqueGuard>
   );
 }
 
 function WideLayout({ children }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      <Header />
-      <div style={{ flex: 1, width: "100%", display: "flex", flexDirection: "column" }}>{children}</div>
-      <Footer />
-    </div>
+    <BoutiqueGuard>
+      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+        <Header />
+        <div style={{ flex: 1, width: "100%", display: "flex", flexDirection: "column" }}>{children}</div>
+        <Footer />
+      </div>
+    </BoutiqueGuard>
   );
 }
 

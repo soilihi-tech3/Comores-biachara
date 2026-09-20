@@ -88,9 +88,16 @@ export default function BoutiquesTab({
                   </td>
 
                   <td style={{ padding: "14px 16px", fontSize: 13, color: "var(--muted)" }}>
-                    <code style={{ background: "#EAEFEA", padding: "2px 6px", borderRadius: 4, fontSize: 12, color: "var(--ink)" }}>
-                      /{b.slug}
-                    </code>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                      <code style={{ background: "#EAEFEA", padding: "2px 6px", borderRadius: 4, fontSize: 12, color: "var(--ink)", width: "fit-content" }}>
+                        /{b.slug}
+                      </code>
+                      {b.customDomain && (
+                        <span style={{ fontSize: 11, color: "var(--forest)", fontWeight: 600 }}>
+                          🌐 {b.customDomain}
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   <td style={{ padding: "14px 16px", fontSize: 13 }}>

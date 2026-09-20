@@ -701,13 +701,31 @@ router.put("/boutique", requireRole("admin"), async (req, res, next) => {
       nom, logoUrl, couleurPrincipale, fraisLivraison, zonesLivraison, 
       bannerSlides, sideBanners, telephone, telephone2, adresse, adresse2, adresseRetrait, 
       emailContact, aProposText, horairesOuverture, facebookUrl, instagramUrl, 
-      tiktokUrl, whatsappNumber, modesPaiement, modulesActifs 
+      tiktokUrl, whatsappNumber, modesPaiement, modulesActifs,
+      customDomain, stripePublishableKey, stripeSecretKey, stripeAccountId
     } = req.body;
+
+    let targetCustomDomain = boutique.customDomain;
+    if (customDomain !== undefined) {
+      const formattedDomain = customDomain ? customDomain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '') : null;
+      if (formattedDomain && formattedDomain !== boutique.customDomain) {
+        const existant = await Boutique.findOne({ where: { customDomain: formattedDomain, id: { [Op.ne]: boutique.id } } });
+        if (existant) {
+          return res.status(409).json({ message: "Ce nom de domaine personnalisé est déjà utilisé par une autre boutique." });
+        }
+      }
+      targetCustomDomain = formattedDomain || null;
+    }
+
     await boutique.update({ 
       nom, logoUrl, couleurPrincipale, fraisLivraison, zonesLivraison, 
       bannerSlides, sideBanners, telephone, telephone2, adresse, adresse2, adresseRetrait, 
       emailContact, aProposText, horairesOuverture, facebookUrl, instagramUrl, 
-      tiktokUrl, whatsappNumber, modesPaiement, modulesActifs 
+      tiktokUrl, whatsappNumber, modesPaiement, modulesActifs,
+      customDomain: targetCustomDomain,
+      ...(stripePublishableKey !== undefined && { stripePublishableKey }),
+      ...(stripeSecretKey !== undefined && { stripeSecretKey }),
+      ...(stripeAccountId !== undefined && { stripeAccountId })
     });
     purgeCache();
     broadcast("boutique_updated", { boutiqueId: req.boutiqueId });

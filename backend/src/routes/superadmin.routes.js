@@ -137,7 +137,7 @@ router.put("/boutiques/:id", async (req, res, next) => {
     const boutique = await Boutique.findByPk(req.params.id);
     if (!boutique) return res.status(404).json({ message: "Boutique introuvable." });
     
-    const { nom, slug, formuleAbonnement, motDePasseAdmin, modulesActifs } = req.body;
+    const { nom, slug, customDomain, stripePublishableKey, stripeSecretKey, stripeAccountId, formuleAbonnement, motDePasseAdmin, modulesActifs } = req.body;
     
     if (nom) boutique.nom = nom;
     if (slug && slug !== boutique.slug) {
@@ -145,6 +145,20 @@ router.put("/boutiques/:id", async (req, res, next) => {
       if (existant) return res.status(409).json({ message: "Ce slug de boutique est déjà utilisé." });
       boutique.slug = slug;
     }
+
+    if (customDomain !== undefined) {
+      const formattedDomain = customDomain ? customDomain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '') : null;
+      if (formattedDomain && formattedDomain !== boutique.customDomain) {
+        const existantDomain = await Boutique.findOne({ where: { customDomain: formattedDomain, id: { [Op.ne]: boutique.id } } });
+        if (existantDomain) return res.status(409).json({ message: "Ce domaine personnalisé est déjà utilisé par une autre boutique." });
+      }
+      boutique.customDomain = formattedDomain || null;
+    }
+
+    if (stripePublishableKey !== undefined) boutique.stripePublishableKey = stripePublishableKey;
+    if (stripeSecretKey !== undefined) boutique.stripeSecretKey = stripeSecretKey;
+    if (stripeAccountId !== undefined) boutique.stripeAccountId = stripeAccountId;
+
     if (formuleAbonnement) boutique.formuleAbonnement = formuleAbonnement;
     if (modulesActifs && typeof modulesActifs === "object") {
       let cleanModules = modulesActifs;

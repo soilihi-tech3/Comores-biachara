@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, Image, Layers, LayoutGrid, Store, Phone, MapPin, Mail, Info, Save, CreditCard, ToggleLeft, ToggleRight, Banknote, Smartphone } from "lucide-react";
+import { Plus, Trash2, Image, Layers, LayoutGrid, Store, Phone, MapPin, Mail, Info, Save, CreditCard, ToggleLeft, ToggleRight, Banknote, Smartphone, Globe, Key, CheckCircle2, HelpCircle } from "lucide-react";
 import api from "../../api";
 import ImageUploader from "../../components/ImageUploader.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -108,9 +108,9 @@ export default function AdminSettings({ defaultTab = "general" }) {
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 24, margin: 0, color: "var(--forest-dark)" }}>Paramètres & Bannières</h1>
+          <h1 style={{ fontSize: 24, margin: 0, color: "var(--forest-dark)" }}>Paramètres & Configuration</h1>
           <p style={{ margin: "4px 0 0", color: "var(--muted)", fontSize: 13.5 }}>
-            Gérez l'identité de l'application, les bannières de la page d'accueil et les informations de contact.
+            Gérez l'identité de l'application, votre domaine personnalisé, les bannières et les moyens de paiement.
           </p>
         </div>
         <button className="bs-btn-primary" onClick={save} style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -125,7 +125,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
       )}
 
       {/* TAB NAVIGATION BAR */}
-      <div style={{ display: "flex", gap: 10, borderBottom: "2px solid var(--line)", marginBottom: 24 }}>
+      <div style={{ display: "flex", gap: 10, borderBottom: "2px solid var(--line)", marginBottom: 24, flexWrap: "wrap" }}>
         <button
           onClick={() => setActiveTab("general")}
           style={{
@@ -140,6 +140,19 @@ export default function AdminSettings({ defaultTab = "general" }) {
         </button>
 
         <button
+          onClick={() => setActiveTab("domain")}
+          style={{
+            padding: "10px 18px", border: "none", background: "none", cursor: "pointer",
+            fontWeight: 700, fontSize: 13.5,
+            color: activeTab === "domain" ? "var(--forest)" : "var(--muted)",
+            borderBottom: activeTab === "domain" ? "3px solid var(--forest)" : "3px solid transparent",
+            marginBottom: -2, display: "flex", alignItems: "center", gap: 8
+          }}
+        >
+          <Globe size={17} /> Domaine Personnalisé
+        </button>
+
+        <button
           onClick={() => setActiveTab("home_banners")}
           style={{
             padding: "10px 18px", border: "none", background: "none", cursor: "pointer",
@@ -149,7 +162,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
             marginBottom: -2, display: "flex", alignItems: "center", gap: 8
           }}
         >
-          <Image size={17} /> Home Banners (Slider)
+          <Image size={17} /> Bannières Slider
         </button>
 
         <button
@@ -162,7 +175,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
             marginBottom: -2, display: "flex", alignItems: "center", gap: 8
           }}
         >
-          <LayoutGrid size={17} /> Home Side Banners
+          <LayoutGrid size={17} /> Bannières Latérales
         </button>
 
         <button
@@ -175,7 +188,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
             marginBottom: -2, display: "flex", alignItems: "center", gap: 8
           }}
         >
-          <CreditCard size={17} /> Modes de Paiement
+          <CreditCard size={17} /> Paiement & Stripe
         </button>
       </div>
 
@@ -311,6 +324,79 @@ export default function AdminSettings({ defaultTab = "general" }) {
               placeholder="Présentez votre entreprise, vos valeurs, vos produits frais et bio..."
               style={{ padding: 12 }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* TAB DOMAINE PERSONNALISÉ */}
+      {activeTab === "domain" && (
+        <div className="bs-panel">
+          <div style={{ marginBottom: 20 }}>
+            <h3 style={{ margin: "0 0 6px", fontSize: 18, color: "var(--forest-dark)", display: "flex", alignItems: "center", gap: 8 }}>
+              <Globe size={20} /> Nom de Domaine Personnalisé
+            </h3>
+            <div style={{ fontSize: 13.5, color: "var(--muted)" }}>
+              Liez votre propre nom de domaine (ex: <code>abdou.com</code> ou <code>boutique.abdou.com</code>) à votre storefront.
+            </div>
+          </div>
+
+          <div style={{ background: "#F8FAF9", border: "1px solid var(--line)", borderRadius: 14, padding: 20, marginBottom: 24 }}>
+            <div className="bs-field">
+              <label style={{ fontWeight: 700, fontSize: 14, color: "var(--forest-dark)" }}>
+                Domaine personnalisé de votre boutique
+              </label>
+              <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+                <input
+                  className="bs-input"
+                  style={{ flex: 1, fontFamily: "monospace", fontSize: 15 }}
+                  value={boutique.customDomain || ""}
+                  onChange={(e) => set("customDomain", e.target.value)}
+                  placeholder="ex: abdou.com ou store.abdou.com"
+                />
+              </div>
+              <p style={{ margin: "6px 0 0", fontSize: 12.5, color: "var(--muted)" }}>
+                Saisissez votre nom de domaine sans <code>https://</code> ni <code>www.</code>
+              </p>
+            </div>
+          </div>
+
+          <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 14, padding: 20 }}>
+            <h4 style={{ margin: "0 0 12px", fontSize: 15, color: "#1E40AF", display: "flex", alignItems: "center", gap: 8 }}>
+              <HelpCircle size={18} /> Instructions de configuration DNS chez votre Registrar (Namecheap, GoDaddy, OVH, etc.)
+            </h4>
+            
+            <p style={{ fontSize: 13.5, color: "#1E3A8A", lineHeight: 1.5, margin: "0 0 14px" }}>
+              Pour que votre domaine personnalisé pointe vers votre boutique Render, ajoutez les enregistrements DNS suivants dans l'espace client de votre registrar :
+            </p>
+
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, background: "#FFFFFF", borderRadius: 8, overflow: "hidden", border: "1px solid #DBEAFE" }}>
+              <thead>
+                <tr style={{ background: "#DBEAFE", textAlign: "left", color: "#1E40AF" }}>
+                  <th style={{ padding: "10px 14px" }}>Type</th>
+                  <th style={{ padding: "10px 14px" }}>Nom / Hôte</th>
+                  <th style={{ padding: "10px 14px" }}>Valeur / Cible</th>
+                  <th style={{ padding: "10px 14px" }}>Utilité</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: "1px solid #EFF6FF" }}>
+                  <td style={{ padding: "10px 14px", fontWeight: 700 }}>CNAME</td>
+                  <td style={{ padding: "10px 14px", fontFamily: "monospace" }}>@ ou store</td>
+                  <td style={{ padding: "10px 14px", fontFamily: "monospace", color: "#2563EB" }}>votre-app.onrender.com</td>
+                  <td style={{ padding: "10px 14px", color: "var(--muted)" }}>Redirige le trafic vers Render</td>
+                </tr>
+                <tr>
+                  <td style={{ padding: "10px 14px", fontWeight: 700 }}>CNAME</td>
+                  <td style={{ padding: "10px 14px", fontFamily: "monospace" }}>www</td>
+                  <td style={{ padding: "10px 14px", fontFamily: "monospace", color: "#2563EB" }}>votre-app.onrender.com</td>
+                  <td style={{ padding: "10px 14px", color: "var(--muted)" }}>Redirige les visites www</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div style={{ marginTop: 14, fontSize: 12.5, color: "#1E40AF", display: "flex", alignItems: "center", gap: 6 }}>
+              <CheckCircle2 size={16} color="#2563EB" /> Render émettra automatiquement un certificat SSL/TLS gratuit dès la validation DNS.
+            </div>
           </div>
         </div>
       )}
@@ -465,7 +551,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
         </div>
       )}
 
-      {/* TAB 4: MODES DE PAIEMENT */}
+      {/* TAB 4: MODES DE PAIEMENT & STRIPE */}
       {activeTab === "payment_modes" && (
         <div className="bs-panel">
           <div style={{ marginBottom: 20 }}>
@@ -477,12 +563,12 @@ export default function AdminSettings({ defaultTab = "general" }) {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 28 }}>
             {[
               { key: "especes", label: "Espèces (Cash)", sub: "Paiement à la livraison / réception au comptoir", Icon: Banknote },
               { key: "mvola", label: "Mvola", sub: "Paiement mobile Money Mvola", Icon: Smartphone },
               { key: "holam", label: "Holam", sub: "Paiement mobile Money Holam", Icon: Smartphone },
-              { key: "carte", label: "Carte Bancaire", sub: "Paiement en ligne Visa / Mastercard", Icon: CreditCard },
+              { key: "carte", label: "Carte Bancaire (Stripe)", sub: "Paiement en ligne Visa / Mastercard", Icon: CreditCard },
             ].map((item) => {
               const isEnabled = !!modesPaiement[item.key];
               return (
@@ -530,6 +616,58 @@ export default function AdminSettings({ defaultTab = "general" }) {
               );
             })}
           </div>
+
+          {/* STRIPE CREDENTIALS SECTION */}
+          {modesPaiement.carte && (
+            <div style={{ background: "#F8FAF9", border: "1px solid var(--forest)", borderRadius: 16, padding: 22, marginTop: 20 }}>
+              <h4 style={{ margin: "0 0 8px", fontSize: 16, color: "var(--forest-dark)", display: "flex", alignItems: "center", gap: 8 }}>
+                <Key size={18} /> Clés API & Compte Stripe de la Boutique
+              </h4>
+              <p style={{ margin: "0 0 16px", fontSize: 13, color: "var(--muted)" }}>
+                Renseignez vos clés d'API Stripe pour recevoir directement les paiements en carte bancaire sur votre propre compte Stripe d'entreprise.
+              </p>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div className="bs-field">
+                  <label>Clé Publique Stripe (Publishable Key)</label>
+                  <input
+                    className="bs-input"
+                    style={{ fontFamily: "monospace", fontSize: 13.5 }}
+                    value={boutique.stripePublishableKey || ""}
+                    onChange={(e) => set("stripePublishableKey", e.target.value)}
+                    placeholder="pk_live_..."
+                  />
+                </div>
+
+                <div className="bs-field">
+                  <label>Clé Secrète Stripe (Secret Key)</label>
+                  <input
+                    className="bs-input"
+                    type="password"
+                    style={{ fontFamily: "monospace", fontSize: 13.5 }}
+                    value={boutique.stripeSecretKey || ""}
+                    onChange={(e) => set("stripeSecretKey", e.target.value)}
+                    placeholder="sk_live_..."
+                  />
+                </div>
+              </div>
+
+              <div className="bs-field" style={{ marginTop: 14 }}>
+                <label>ID de compte Stripe Connect (Facultatif - ex: acct_1N...)</label>
+                <input
+                  className="bs-input"
+                  style={{ fontFamily: "monospace", fontSize: 13.5 }}
+                  value={boutique.stripeAccountId || ""}
+                  onChange={(e) => set("stripeAccountId", e.target.value)}
+                  placeholder="acct_..."
+                />
+              </div>
+
+              <div style={{ marginTop: 16, background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 10, padding: 12, fontSize: 12.5, color: "#92400E" }}>
+                <strong>Note d'éligibilité Stripe :</strong> Stripe requiert que le compte d'entreprise soit enregistré dans un pays pris en charge (ex: États-Unis via une LLC US, France, Émirats Arabes Unis). Les paiements seront directement versés sur votre compte bancaire rattaché.
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -539,4 +677,5 @@ export default function AdminSettings({ defaultTab = "general" }) {
     </>
   );
 }
+
 

@@ -54,9 +54,16 @@ async function loadBoutique(req, res, next) {
 
 /** Pour les routes admin : s'assure que l'admin/employé agit uniquement sur SA boutique */
 function requireOwnBoutique(req, res, next) {
+  if (req.user.role === "super_admin") {
+    req.boutiqueId = req.boutique?.id || req.user.boutiqueId || 1;
+    return next();
+  }
+
   if (!req.user.boutiqueId) {
     return res.status(403).json({ message: "Ce compte n'est rattaché à aucune boutique." });
   }
+
+  // L'administrateur ou l'employé agit sur la boutique qui lui a été attribuée dans son compte
   req.boutiqueId = req.user.boutiqueId;
   next();
 }

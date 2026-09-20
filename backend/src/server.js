@@ -28,7 +28,56 @@ app.set("trust proxy", 1);
 // High Performance Compression (GZIP/Brotli)
 app.use(compression());
 
-app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
+// CORS Configuration supporting custom domains (comoresbiachara.site, vercel.app, etc.)
+const defaultAllowedOrigins = [
+  "https://comoresbiachara.site",
+  "https://www.comoresbiachara.site",
+  "https://comores-biachara.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://localhost:4000"
+];
+
+const envOrigins = (process.env.CORS_ORIGIN || process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map(s => s.trim())
+  .filter(Boolean);
+
+const ALLOWED_ORIGINS = Array.from(new Set([...defaultAllowedOrigins, ...envOrigins]));
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+
+    if (
+      origin.endsWith(".comoresbiachara.site") ||
+      origin.endsWith(".vercel.app") ||
+      origin.endsWith(".onrender.com")
+    ) {
+      return callback(null, true);
+    }
+
+    // Allow requests from all origins to prevent breaking custom tenant domains
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "x-boutique-slug",
+    "x-slug",
+    "x-boutique-domain"
+  ]
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json({ limit: "10mb" }));
 app.use(morgan("dev"));
 app.use(resolveBoutique);
@@ -57,6 +106,43 @@ app.use("/uploads", express.static(uploadsPath, {
 // Root Endpoint Health Check
 app.get("/", (req, res) => res.json({ message: "API Boutique SaaS Comores Biachara en ligne.", status: "ok" }));
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+
+// Public current boutique resolver endpoint (subdomain / header multi-tenant)
+app.get("/api/boutique/current", (req, res) => {
+  if (!req.boutique) {
+    return res.status(404).json({ message: "Boutique introuvable pour ce sous-domaine." });
+  }
+  const b = req.boutique.toJSON ? req.boutique.toJSON() : req.boutique;
+  return res.json({
+    id: b.id,
+    nom: b.nom,
+    slug: b.slug,
+    logoUrl: b.logoUrl,
+    couleurPrincipale: b.couleurPrincipale,
+    formuleAbonnement: b.formuleAbonnement,
+    statut: b.statut,
+    fraisLivraison: b.fraisLivraison,
+    zonesLivraison: b.zonesLivraison,
+    telephone: b.telephone,
+    telephone2: b.telephone2,
+    adresse: b.adresse,
+    adresse2: b.adresse2,
+    adresseRetrait: b.adresseRetrait,
+    emailContact: b.emailContact,
+    aProposText: b.aProposText,
+    horairesOuverture: b.horairesOuverture,
+    facebookUrl: b.facebookUrl,
+    instagramUrl: b.instagramUrl,
+    tiktokUrl: b.tiktokUrl,
+    whatsappNumber: b.whatsappNumber,
+    bannerSlides: b.bannerSlides,
+    sideBanners: b.sideBanners,
+    modulesActifs: b.modulesActifs,
+    modesPaiement: b.modesPaiement,
+    stripeAccountId: b.stripeAccountId || null,
+    stripeOnboardingComplete: b.stripeOnboardingComplete || false,
+  });
+});
 
 // Dynamic PWA Manifest Route fetching custom Boutique Name & Logo directly from DB
 app.get(["/manifest.json", "/api/manifest.json"], async (req, res) => {

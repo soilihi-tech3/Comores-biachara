@@ -2,6 +2,14 @@ import { SLUG } from "../api";
 
 const getBaseUrl = () => {
   let url = import.meta.env.VITE_API_URL;
+  if (typeof window !== "undefined") {
+    if (!url || url === "/" || url === "/api") {
+      return "/api";
+    }
+    if (url.startsWith("/")) {
+      return url.endsWith("/api") ? url : `${url}/api`.replace(/\/+/g, "/");
+    }
+  }
   if (!url) {
     const host = typeof window !== "undefined" && window.location.hostname ? window.location.hostname : "localhost";
     url = `http://${host}:4000/api`;

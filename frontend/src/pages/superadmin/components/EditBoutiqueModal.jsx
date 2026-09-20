@@ -56,6 +56,19 @@ export default function EditBoutiqueModal({ form, setForm, onSubmit, onClose }) 
 
           <div>
             <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "var(--ink)", marginBottom: 6 }}>
+              Domaine Personnalisé (ex: abdou.com)
+            </label>
+            <input
+              type="text"
+              placeholder="ex: abdou.com"
+              value={form.customDomain || ""}
+              onChange={(e) => setForm({ ...form, customDomain: e.target.value.toLowerCase() })}
+              style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid var(--border)", fontSize: 14, outline: "none", fontFamily: "monospace" }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "var(--ink)", marginBottom: 6 }}>
               Formule d'Abonnement
             </label>
             <select
