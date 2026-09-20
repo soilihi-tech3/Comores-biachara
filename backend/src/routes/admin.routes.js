@@ -707,7 +707,7 @@ router.put("/boutique", requireRole("admin"), async (req, res, next) => {
 
     let targetCustomDomain = boutique.customDomain;
     if (customDomain !== undefined) {
-      const formattedDomain = customDomain ? customDomain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '') : null;
+      const formattedDomain = customDomain ? customDomain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '') : null;
       if (formattedDomain && formattedDomain !== boutique.customDomain) {
         const existant = await Boutique.findOne({ where: { customDomain: formattedDomain, id: { [Op.ne]: boutique.id } } });
         if (existant) {

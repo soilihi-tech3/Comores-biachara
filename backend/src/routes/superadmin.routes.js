@@ -153,7 +153,7 @@ router.put("/boutiques/:id", async (req, res, next) => {
     }
 
     if (customDomain !== undefined) {
-      const formattedDomain = customDomain ? customDomain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '') : null;
+      const formattedDomain = customDomain ? customDomain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '') : null;
       if (formattedDomain && formattedDomain !== boutique.customDomain) {
         const existantDomain = await Boutique.findOne({ where: { customDomain: formattedDomain, id: { [Op.ne]: boutique.id } } });
         if (existantDomain) return res.status(409).json({ message: "Ce domaine personnalisé est déjà utilisé par une autre boutique." });

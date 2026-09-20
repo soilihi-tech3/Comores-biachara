@@ -9,25 +9,22 @@ const MAIN_DOMAINS = ['easymarket.com', 'www.easymarket.com', 'localhost', '127.
 async function resolveBoutique(req, res, next) {
   try {
     const customHeaderDomain = req.headers['x-boutique-domain'] 
-      ? req.headers['x-boutique-domain'].split(':')[0].toLowerCase() 
+      ? req.headers['x-boutique-domain'].split(':')[0].toLowerCase().replace(/^www\./, '')
       : null;
 
     const rawHost = req.headers['x-forwarded-host'] || req.hostname || 'localhost';
-    const hostname = rawHost.split(':')[0].toLowerCase();
+    const hostname = rawHost.split(':')[0].toLowerCase().replace(/^www\./, '');
 
     req.boutiqueSlug = req.headers['x-boutique-slug'] || req.headers['x-slug'] || req.query.slug || null;
     req.boutique = null;
 
-    // Domaines à tester (avec et sans www)
-    const domainsToTest = [];
-    if (customHeaderDomain) {
-      domainsToTest.push(customHeaderDomain);
-      if (customHeaderDomain.startsWith('www.')) domainsToTest.push(customHeaderDomain.replace(/^www\./, ''));
-      else domainsToTest.push(`www.${customHeaderDomain}`);
-    }
-    domainsToTest.push(hostname);
-    if (hostname.startsWith('www.')) domainsToTest.push(hostname.replace(/^www\./, ''));
-    else domainsToTest.push(`www.${hostname}`);
+    // Domaines à tester (variantes apex et www)
+    const domainsToTest = Array.from(new Set([
+      customHeaderDomain,
+      customHeaderDomain ? `www.${customHeaderDomain}` : null,
+      hostname,
+      `www.${hostname}`
+    ].filter(Boolean)));
 
     // 1. Recherche prioritaire par Domaine Personnalisé (ex: comoresbiachara.site, abdou.com)
     let boutique = await Boutique.findOne({
