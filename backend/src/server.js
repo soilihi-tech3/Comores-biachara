@@ -182,14 +182,19 @@ async function ensureColumns() {
     const tableBoutiques = await queryInterface.describeTable("boutiques");
 
     const columnsToAddBoutique = [
-      { name: "adresse_retrait", type: 'TEXT' },
+      { name: "adresse_retrait", type: "TEXT" },
       { name: "horaires_ouverture", type: 'VARCHAR(255) DEFAULT "Tous les jours de 08h30 à 23h00"' },
       { name: "facebook_url", type: 'VARCHAR(255) DEFAULT ""' },
       { name: "instagram_url", type: 'VARCHAR(255) DEFAULT ""' },
       { name: "tiktok_url", type: 'VARCHAR(255) DEFAULT ""' },
       { name: "whatsapp_number", type: 'VARCHAR(50) DEFAULT ""' },
-      { name: "modules_actifs", type: 'JSON' },
-      { name: "modes_paiement", type: 'JSON' }
+      { name: "modules_actifs", type: "JSON" },
+      { name: "modes_paiement", type: "JSON" },
+      { name: "custom_domain", type: "VARCHAR(255) NULL" },
+      { name: "stripe_publishable_key", type: "VARCHAR(255) NULL" },
+      { name: "stripe_secret_key", type: "VARCHAR(255) NULL" },
+      { name: "stripe_account_id", type: "VARCHAR(255) NULL" },
+      { name: "stripe_onboarding_complete", type: "TINYINT(1) DEFAULT 0" }
     ];
 
     for (const col of columnsToAddBoutique) {
