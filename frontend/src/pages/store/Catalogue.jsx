@@ -98,11 +98,11 @@ export default function Catalogue() {
   }
 
   useEffect(() => {
-    loadCategories();
+    loadCategories(true);
   }, []);
 
   useEffect(() => {
-    loadProducts();
+    loadProducts(true);
   }, [categoryId, famille, search]);
 
   useEffect(() => {

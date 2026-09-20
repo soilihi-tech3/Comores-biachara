@@ -10,7 +10,9 @@ const { sendOrderStatusEmail } = require("../services/email.service");
 const router = express.Router();
 
 function purgeCache() {
-  clearCachePattern("cache:/api/store").catch(() => {});
+  clearCachePattern("/api/store").catch(() => {});
+  clearCachePattern("store").catch(() => {});
+  clearCachePattern("/api/boutique").catch(() => {});
 }
 
 router.use(authenticate, requireRole("admin", "employe"), requireOwnBoutique);

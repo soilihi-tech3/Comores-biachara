@@ -209,7 +209,7 @@ export default function Home() {
   }
 
   useEffect(() => {
-    loadData();
+    loadData(true);
     const unsub = subscribeRealtime((detail) => {
       if (
         detail.type === "product_updated" ||
