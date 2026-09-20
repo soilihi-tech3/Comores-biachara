@@ -232,7 +232,9 @@ async function ensureColumns() {
       "ALTER TABLE boutiques MODIFY COLUMN logo_url LONGTEXT NULL;",
       "ALTER TABLE boutiques MODIFY COLUMN banner_slides LONGTEXT NULL;",
       "ALTER TABLE boutiques MODIFY COLUMN side_banners LONGTEXT NULL;",
-      "ALTER TABLE boutiques MODIFY COLUMN formule_abonnement VARCHAR(50) DEFAULT 'standard';"
+      "ALTER TABLE boutiques MODIFY COLUMN formule_abonnement VARCHAR(50) DEFAULT 'standard';",
+      "ALTER TABLE orders MODIFY COLUMN moyen_paiement VARCHAR(50) DEFAULT 'cash';",
+      "ALTER TABLE orders MODIFY COLUMN mode_livraison VARCHAR(50) DEFAULT 'domicile';"
     ];
 
     for (const q of alterQueries) {

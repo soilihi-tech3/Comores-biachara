@@ -10,7 +10,7 @@ const Order = sequelize.define("Order", {
   },
   modeLivraison: { type: DataTypes.ENUM("domicile", "retrait"), defaultValue: "domicile" },
   adresseLivraison: { type: DataTypes.STRING(255), allowNull: true },
-  moyenPaiement: { type: DataTypes.ENUM("orange_money", "wave", "carte", "cash"), allowNull: false },
+  moyenPaiement: { type: DataTypes.STRING(50), defaultValue: "cash" },
   typeVente: { type: DataTypes.STRING(30), defaultValue: "commande_enligne" },
   employeAssigneId: { type: DataTypes.INTEGER, allowNull: true },
   sousTotal: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
