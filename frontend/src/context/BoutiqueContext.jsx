@@ -26,32 +26,41 @@ export function BoutiqueProvider({ children }) {
       if (res.data) {
         setBoutique(res.data);
         try { localStorage.setItem("cached_boutique", JSON.stringify(res.data)); } catch (e) {}
-        // Mettre à jour le titre HTML du document dynamiquement avec le nom de la boutique
         if (res.data.nom) {
           document.title = `${res.data.nom} | E-commerce & Vente Directe`;
         }
-      } else {
-        setError("Boutique introuvable.");
+        setLoading(false);
+        return;
       }
-    } catch (err) {
-      // 2. Fallback via le slug du store si la route relative échoue
-      try {
-        const fallbackRes = await api.get(`/store/${SLUG}?t=${timestamp}`);
-        if (fallbackRes.data) {
-          setBoutique(fallbackRes.data);
-          try { localStorage.setItem("cached_boutique", JSON.stringify(fallbackRes.data)); } catch (e) {}
-          if (fallbackRes.data.nom) {
-            document.title = `${fallbackRes.data.nom} | E-commerce & Vente Directe`;
-          }
-        } else {
-          setError("Boutique introuvable.");
+    } catch (err) {}
+
+    try {
+      // 2. Fallback via le slug du store si la route de domaine échoue
+      const fallbackRes = await api.get(`/store/${SLUG}?t=${timestamp}`);
+      if (fallbackRes.data) {
+        setBoutique(fallbackRes.data);
+        try { localStorage.setItem("cached_boutique", JSON.stringify(fallbackRes.data)); } catch (e) {}
+        if (fallbackRes.data.nom) {
+          document.title = `${fallbackRes.data.nom} | E-commerce & Vente Directe`;
         }
-      } catch (e) {
-        setError("Cette boutique est introuvable ou indisponible.");
+        setLoading(false);
+        return;
       }
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) {}
+
+    // 3. Si les requêtes réseau ont échoué, vérifier si on a une boutique en cache local
+    try {
+      const cached = localStorage.getItem("cached_boutique");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setBoutique(parsed);
+        setLoading(false);
+        return;
+      }
+    } catch (e) {}
+
+    setError("Cette boutique est introuvable ou indisponible.");
+    setLoading(false);
   };
 
   useEffect(() => {

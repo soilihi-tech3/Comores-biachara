@@ -36,23 +36,34 @@ async function resolveBoutique(req, res, next) {
       }
     });
 
-    // 2. Sinon, vérifier par slug depuis le sous-domaine ou le header
+    // 2. Sinon, vérifier par slug depuis le sous-domaine, le header ou la première partie du domaine
     if (!boutique) {
-      if (!req.boutiqueSlug && !MAIN_DOMAINS.includes(hostname) && !hostname.endsWith('.onrender.com') && !hostname.endsWith('.vercel.app')) {
-        const parts = hostname.split('.');
-        if (parts.length >= 3 && !['www', 'app', 'api', 'admin'].includes(parts[0])) {
-          req.boutiqueSlug = parts[0].toLowerCase();
+      const potentialSlugs = [];
+      if (req.boutiqueSlug) potentialSlugs.push(req.boutiqueSlug);
+      
+      for (const d of domainsToTest) {
+        const firstPart = d.split('.')[0];
+        if (firstPart && !['www', 'app', 'api', 'admin', 'localhost', '127'].includes(firstPart)) {
+          potentialSlugs.push(firstPart);
         }
       }
 
-      if (req.boutiqueSlug) {
-        boutique = await Boutique.findOne({ where: { slug: req.boutiqueSlug } });
+      if (potentialSlugs.length > 0) {
+        boutique = await Boutique.findOne({
+          where: {
+            slug: { [Op.in]: potentialSlugs }
+          }
+        });
       }
     }
 
-    // 3. Fallback sur la première boutique par défaut si aucune résolution spécifique
+    // 3. Fallback sur la première boutique active par défaut si aucune résolution spécifique
     if (!boutique) {
-      boutique = await Boutique.findOne({ order: [['createdAt', 'ASC']] });
+      boutique = await Boutique.findOne({ where: { statut: 'active' }, order: [['id', 'ASC']] });
+    }
+
+    if (!boutique) {
+      boutique = await Boutique.findOne({ order: [['id', 'ASC']] });
     }
 
     if (boutique) {
