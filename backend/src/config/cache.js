@@ -98,7 +98,8 @@ function cacheMiddleware(durationSeconds = 120) {
   return async (req, res, next) => {
     if (req.method !== "GET") return next();
 
-    const cacheKey = `cache:${req.originalUrl || req.url}`;
+    const boutiqueId = req.boutique ? req.boutique.id : "default";
+    const cacheKey = `cache:b${boutiqueId}:${req.originalUrl || req.url}`;
     const cachedData = await getCache(cacheKey);
 
     if (cachedData) {

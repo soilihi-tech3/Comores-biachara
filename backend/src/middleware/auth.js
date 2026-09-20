@@ -33,7 +33,15 @@ function requireRole(...roles) {
 /** Vérifie que la boutique existe via le slug de l'URL et l'attache à req.boutique */
 async function loadBoutique(req, res, next) {
   try {
-    let boutique = await Boutique.findOne({ where: { slug: req.params.slug } });
+    let boutique = req.boutique;
+
+    // Si pas de boutique résolue par domaine/header, ou si un slug spécifique valide est fourni
+    if (!boutique || (req.params.slug && req.params.slug !== boutique.slug && req.params.slug !== "current" && req.params.slug !== "marche-vert")) {
+      const foundBySlug = await Boutique.findOne({ where: { slug: req.params.slug } });
+      if (foundBySlug) {
+        boutique = foundBySlug;
+      }
+    }
     if (!boutique) {
       // Fallback sur la première boutique active si le slug a été modifié
       boutique = await Boutique.findOne({ where: { statut: "active" } });
