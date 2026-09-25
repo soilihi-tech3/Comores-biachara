@@ -466,17 +466,21 @@ router.post("/:slug/create-checkout-session", loadBoutique, authenticate, async 
     const originUrl = req.headers.origin || process.env.FRONTEND_URL || "http://localhost:5173";
 
     // Préparer les articles pour Stripe
-    const line_items = order.items.map(item => ({
-      price_data: {
-        currency: "eur", // Wero nécessite obligatoirement de l'Euro
-        product_data: {
-          name: item.product.nom,
-          images: item.product.imageUrl ? [item.product.imageUrl] : [],
+    const line_items = order.items.map(item => {
+      const img = item.product?.imageUrl;
+      const validImage = (img && typeof img === "string" && img.startsWith("http") && img.length <= 2048) ? [img] : [];
+      return {
+        price_data: {
+          currency: "eur", // Wero / Stripe nécessite obligatoirement de l'Euro
+          product_data: {
+            name: item.product.nom,
+            images: validImage,
+          },
+          unit_amount: Math.round(Number(item.prixUnitaire) * 100),
         },
-        unit_amount: Math.round(Number(item.prixUnitaire) * 100),
-      },
-      quantity: item.quantite,
-    }));
+        quantity: item.quantite,
+      };
+    });
 
     if (Number(order.fraisLivraison) > 0) {
       line_items.push({
