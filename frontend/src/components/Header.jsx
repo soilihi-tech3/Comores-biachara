@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { ShoppingCart, Search, User, LogOut, Store, X, Home, Grid, Package, Shield, Menu, ChevronDown, Info, Heart, Sun, Moon } from "lucide-react";
+import { ShoppingCart, Search, User, LogOut, Store, X, Home, Grid, Package, Shield, Menu, ChevronDown, Info, Heart, Sun, Moon, Smartphone } from "lucide-react";
 
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -146,6 +146,16 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
               }}
             >
               <Info size={16} /> À propos
+            </Link>
+
+            <Link
+              to="/recharge-mobile"
+              style={{
+                fontSize: 14.5, fontWeight: 700, color: location.pathname === "/recharge-mobile" ? "var(--forest)" : "var(--ink)",
+                textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease"
+              }}
+            >
+              <Smartphone size={16} /> Recharge Crédit
             </Link>
 
             <Link
@@ -508,6 +518,10 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
         <Link to="/" className={`bs-mobile-nav-item ${location.pathname === "/" ? "active" : ""}`}>
           <Home size={19} />
           <span>Accueil</span>
+        </Link>
+        <Link to="/recharge-mobile" className={`bs-mobile-nav-item ${location.pathname === "/recharge-mobile" ? "active" : ""}`}>
+          <Smartphone size={19} />
+          <span>Recharge</span>
         </Link>
         <Link to="/catalogue" className={`bs-mobile-nav-item ${location.pathname === "/catalogue" && !location.search.includes("favoris=1") ? "active" : ""}`}>
           <Grid size={19} />

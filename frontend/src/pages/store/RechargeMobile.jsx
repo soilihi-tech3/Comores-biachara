@@ -1,0 +1,440 @@
+import React, { useState, useEffect } from "react";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
+import { Zap, CheckCircle2, CreditCard, Lock, AlertCircle, Info, ArrowRight, UserCheck } from "lucide-react";
+import api, { SLUG } from "../../api";
+import { useCart } from "../../context/CartContext.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
+
+const OPERATORS = [
+  {
+    id: "comores_telecom",
+    name: "Comores Telecom (Huri)",
+    color: "#0284C7",
+    bg: "#E0F2FE",
+    prefixDigit: "3",
+    sampleNumber: "3326532",
+    logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRwXCzHPxEU7yFGviVbPuXzSwtISwrgUsYltf6K2OdEbg&s=10",
+    description: "Puces Huri Comores Telecom (numéros commençant par 3)",
+    recharges: [
+      { eur: 2.70, kmf: 1000, label: "1 000 KMF (~2.70 €)", popular: false },
+      { eur: 5.40, kmf: 2000, label: "2 000 KMF (~5.40 €)", popular: true },
+      { eur: 13.50, kmf: 5000, label: "5 000 KMF (~13.50 €)", popular: true },
+      { eur: 1.35, kmf: 500, label: "500 KMF (~1.35 €)", popular: false },
+      { eur: 27.00, kmf: 10000, label: "10 000 KMF (~27.00 €)", popular: false },
+      { eur: 40.50, kmf: 15000, label: "15 000 KMF (~40.50 €)", popular: false }
+    ]
+  },
+  {
+    id: "yas",
+    name: "YAS (Telma) Comores",
+    color: "#E11D48",
+    bg: "#FFE4E6",
+    prefixDigit: "4",
+    sampleNumber: "4326532",
+    logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRHntdwTjQynlyFFXrmTp9qv9tpNuYIARtdazD377Rv4g&s=10",
+    description: "Puces Yas Telma (numéros commençant par 4)",
+    recharges: [
+      { eur: 9.00, kmf: 3288, label: "3 288 KMF (9.00 €)", popular: false },
+      { eur: 13.50, kmf: 4955, label: "4 955 KMF (13.50 €)", popular: true },
+      { eur: 18.00, kmf: 6583, label: "6 583 KMF (18.00 €)", popular: true },
+      { eur: 4.50, kmf: 1649, label: "1 649 KMF (4.50 €)", popular: false },
+      { eur: 11.25, kmf: 4117, label: "4 117 KMF (11.25 €)", popular: false },
+      { eur: 22.50, kmf: 8241, label: "8 241 KMF (22.50 €)", popular: false },
+      { eur: 33.75, kmf: 12392, label: "12 392 KMF (33.75 €)", popular: false },
+      { eur: 78.75, kmf: 27283, label: "27 283 KMF (78.75 €)", popular: false }
+    ]
+  }
+];
+
+export default function RechargeMobile() {
+  const { showToast } = useCart();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const statusParam = searchParams.get("status");
+  const phoneParam = searchParams.get("phone");
+
+  const [operator, setOperator] = useState(OPERATORS[0]); // Comores Telecom par défaut
+  const [phone, setPhone] = useState("");
+
+  // Selection
+  const [selectedRecharge, setSelectedRecharge] = useState(OPERATORS[0].recharges[0]); // 1000 KMF par défaut
+
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    if (statusParam === "success") {
+      showToast(`Paiement réussi ! Crédit envoyé direct au +269 ${phoneParam || ""}`, "success", "Félicitations");
+    } else if (statusParam === "canceled") {
+      showToast("Paiement de la recharge annulé.", "info");
+    }
+  }, [statusParam, phoneParam, showToast]);
+
+  const handlePhoneChange = (e) => {
+    const rawVal = e.target.value.replace(/\D/g, "");
+    if (rawVal.length > 7) return; // BLOQUER STRICTEMENT À 7 CHIFFRES
+
+    setPhone(rawVal);
+    setErrorMsg("");
+
+    // Auto-sélection opérateur selon le 1er chiffre
+    if (rawVal.startsWith("3")) {
+      setOperator(OPERATORS[0]); // Comores Telecom (3)
+    } else if (rawVal.startsWith("4")) {
+      setOperator(OPERATORS[1]); // Yas (4)
+    }
+  };
+
+  const handleOperatorSelect = (op) => {
+    setOperator(op);
+    setSelectedRecharge(op.recharges[0]);
+    if (phone && !phone.startsWith(op.prefixDigit)) {
+      setPhone(op.prefixDigit);
+    }
+  };
+
+  const currentTotalEur = selectedRecharge?.eur || 2.70;
+  const currentSummaryTitle = `Recharge ${selectedRecharge?.kmf?.toLocaleString("fr-FR")} KMF`;
+
+  const handleProceed = async (e) => {
+    e.preventDefault();
+    setErrorMsg("");
+
+    if (!user) {
+      showToast("Veuillez vous connecter pour recharger du crédit.", "info");
+      navigate(`/connexion?redirect=${encodeURIComponent(location.pathname)}`);
+      return;
+    }
+
+    if (!phone || phone.length !== 7) {
+      const msg = `Le numéro aux Comores doit comporter exactement 7 chiffres (ex: ${operator.sampleNumber}).`;
+      setErrorMsg(msg);
+      showToast(msg, "error");
+      return;
+    }
+
+    if (operator.id === "comores_telecom" && !phone.startsWith("3")) {
+      const msg = "Pour Comores Telecom (Huri), le numéro doit commencer par le chiffre 3.";
+      setErrorMsg(msg);
+      showToast(msg, "error");
+      return;
+    }
+
+    if (operator.id === "yas" && !phone.startsWith("4")) {
+      const msg = "Pour YAS (Telma), le numéro doit commencer par le chiffre 4.";
+      setErrorMsg(msg);
+      showToast(msg, "error");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const titleItem = `Recharge Crédit ${selectedRecharge.kmf} KMF`;
+
+      const res = await api.post(`/store/${SLUG}/create-recharge-session`, {
+        operatorName: `${operator.name} - ${titleItem}`,
+        phone: `+269${phone}`,
+        amountEur: currentTotalEur
+      });
+
+      if (res.data.url) {
+        window.location.href = res.data.url;
+        return;
+      }
+    } catch (err) {
+      console.warn("Fallback paiement recharge", err);
+      const fallbackUrl = `https://www.ding.com/fr/topup?countryIso=KM&z=KzI2OT${phone}&operatorCode=${operator.id === "yas" ? "YAS" : "CT"}`;
+      window.open(fallbackUrl, "_blank", "noopener,noreferrer");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ maxWidth: 860, margin: "24px auto 60px", padding: "0 16px" }}>
+      {/* HEADER HERO SECTION */}
+      <div style={{
+        background: "linear-gradient(135deg, #163424 0%, #224B35 100%)",
+        borderRadius: 24,
+        padding: "36px 28px",
+        color: "#ffffff",
+        textAlign: "center",
+        boxShadow: "0 12px 32px rgba(22, 52, 36, 0.18)",
+        marginBottom: 28,
+        position: "relative",
+        overflow: "hidden"
+      }}>
+        <div style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          background: "rgba(255, 255, 255, 0.15)",
+          backdropFilter: "blur(6px)",
+          padding: "6px 16px",
+          borderRadius: 20,
+          fontSize: 12.5,
+          fontWeight: 700,
+          letterSpacing: "0.05em",
+          textTransform: "uppercase",
+          marginBottom: 14
+        }}>
+          <Zap size={15} color="#A7F3D0" /> Service Comores Telecom (Huri) & YAS (Telma)
+        </div>
+
+        <h1 style={{ fontSize: "clamp(24px, 5vw, 34px)", fontWeight: 900, margin: 0, letterSpacing: "-0.5px" }}>
+          Recharge Crédit Mobile Comores
+        </h1>
+        <p style={{ fontSize: 15, marginTop: 10, color: "#DDE8DF", maxWidth: 620, margin: "10px auto 0", lineHeight: 1.6 }}>
+          Envoyez du crédit d'appel instantanément pour vos proches aux Comores.
+        </p>
+      </div>
+
+      {errorMsg && (
+        <div style={{
+          background: "#FDF2F0", border: "1px solid #F8D7D2", color: "#B4483A",
+          padding: "14px 18px", borderRadius: 14, fontWeight: 700, fontSize: 14,
+          marginBottom: 20, display: "flex", alignItems: "center", gap: 10
+        }}>
+          <AlertCircle size={18} /> {errorMsg}
+        </div>
+      )}
+
+      {/* CARD PRINCIPALE DE RECHARGE */}
+      <div style={{
+        background: "#ffffff",
+        border: "1px solid var(--line)",
+        borderRadius: 20,
+        padding: "28px 24px",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.05)"
+      }}>
+        <form onSubmit={handleProceed}>
+          {/* STEP 1: CHOOSE OPERATOR */}
+          <div style={{ marginBottom: 24 }}>
+            <label style={{ display: "block", fontSize: 14, fontWeight: 800, color: "var(--forest-dark)", marginBottom: 12 }}>
+              1. Choisissez l'opérateur aux Comores
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
+              {OPERATORS.map((op) => {
+                const isSelected = operator.id === op.id;
+                return (
+                  <div
+                    key={op.id}
+                    onClick={() => handleOperatorSelect(op)}
+                    style={{
+                      border: `2.5px solid ${isSelected ? op.color : "var(--line)"}`,
+                      background: isSelected ? op.bg : "var(--card)",
+                      borderRadius: 18,
+                      padding: 18,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 14,
+                      transition: "all 0.2s ease",
+                      boxShadow: isSelected ? `0 4px 14px ${op.color}25` : "none"
+                    }}
+                  >
+                    <div className="bs-operator-logo-box">
+                      <img
+                        src={op.logo}
+                        alt={op.name}
+                      />
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 800, fontSize: 15, color: "var(--ink)" }}>{op.name}</div>
+                      <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
+                        Numéros : <strong>{op.prefixDigit}XX XX XX</strong> (7 chiffres)
+                      </div>
+                    </div>
+                    {isSelected && <CheckCircle2 size={22} color={op.color} style={{ flexShrink: 0 }} />}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* STEP 2: ENTER PHONE NUMBER (7 DIGITS MAX) */}
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <label style={{ fontSize: 14, fontWeight: 800, color: "var(--forest-dark)" }}>
+                2. Numéro du destinataire aux Comores (+269)
+              </label>
+              <span style={{ fontSize: 12, fontWeight: 700, color: phone.length === 7 ? "#2D8653" : "var(--muted)" }}>
+                {phone.length} / 7 chiffres
+              </span>
+            </div>
+
+            <div style={{ position: "relative" }}>
+              <div style={{
+                position: "absolute",
+                left: 14,
+                top: "50%",
+                transform: "translateY(-50%)",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 15,
+                fontWeight: 900,
+                color: "var(--forest-dark)"
+              }}>
+                🇰🇲 +269
+              </div>
+              <input
+                type="tel"
+                className="bs-input"
+                placeholder={`Ex: ${operator.sampleNumber}`}
+                value={phone}
+                onChange={handlePhoneChange}
+                maxLength={7}
+                style={{
+                  paddingLeft: 96,
+                  borderRadius: 14,
+                  fontSize: 18,
+                  fontWeight: 800,
+                  letterSpacing: "1px",
+                  borderColor: phone.length === 7 ? "var(--forest)" : phone.length > 0 && !phone.startsWith(operator.prefixDigit) ? "#B4483A" : "var(--line)"
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--muted)", marginTop: 8 }}>
+              <Info size={14} color="var(--forest)" />
+              <span>
+                {operator.id === "comores_telecom"
+                  ? "Puce Huri Comores Telecom : le numéro commence par 3 (ex: 3XX XX XX)."
+                  : "Puce YAS (Telma) : le numéro commence par 4 (ex: 4XX XX XX )."
+                }
+              </span>
+            </div>
+          </div>
+
+          {/* OFFRES DE RECHARGE CRÉDIT */}
+          <div style={{ marginBottom: 24 }}>
+            <label style={{ display: "block", fontSize: 14, fontWeight: 800, color: "var(--forest-dark)", marginBottom: 12 }}>
+              3. Sélectionnez le montant du crédit :
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 14 }}>
+              {operator.recharges.map((rec) => {
+                const isSelected = selectedRecharge?.kmf === rec.kmf;
+                return (
+                  <div
+                    key={rec.kmf}
+                    onClick={() => setSelectedRecharge(rec)}
+                    style={{
+                      background: isSelected ? "var(--forest)" : "var(--card)",
+                      color: isSelected ? "#ffffff" : "var(--ink)",
+                      border: `2px solid ${isSelected ? "var(--forest)" : "var(--line)"}`,
+                      borderRadius: 16,
+                      padding: "16px 14px",
+                      cursor: "pointer",
+                      textAlign: "center",
+                      transition: "all 0.15s ease",
+                      position: "relative",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+                    }}
+                  >
+                    {rec.popular && (
+                      <span style={{
+                        position: "absolute", top: -9, right: 10, background: "#F59E0B", color: "#fff",
+                        fontSize: 9.5, fontWeight: 800, padding: "2px 6px", borderRadius: 8, textTransform: "uppercase"
+                      }}>
+                        🔥 Populaire
+                      </span>
+                    )}
+                    <div style={{ fontSize: 20, fontWeight: 900 }}>{rec.kmf.toLocaleString("fr-FR")} KMF</div>
+                    <div style={{ fontSize: 12.5, opacity: 0.9, marginTop: 4, fontWeight: 700 }}>
+                      Vous payez : {rec.eur.toFixed(2)} €
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* BOÎTE DE RÉSUMÉ FINANCIER EN EUROS */}
+          <div style={{
+            background: "var(--forest-light)",
+            border: "1.5px solid var(--forest)",
+            borderRadius: 16,
+            padding: "18px 20px",
+            marginBottom: 28,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12
+          }}>
+            <div>
+              <div style={{ fontSize: 11.5, fontWeight: 800, color: "var(--forest)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Récapitulatif de votre commande
+              </div>
+              <div style={{ fontSize: 17, fontWeight: 900, color: "var(--forest-dark)", marginTop: 2 }}>
+                {currentSummaryTitle}
+              </div>
+              <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>
+                Destinataire : <strong>+269 {phone || operator.sampleNumber}</strong> ({operator.name})
+              </div>
+            </div>
+
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 12, color: "var(--muted)" }}>Montant total en Euro</div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: "var(--forest-dark)" }}>{currentTotalEur.toFixed(2)} €</div>
+            </div>
+          </div>
+
+          {/* SUBMIT BUTTON */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="bs-btn-primary"
+            style={{
+              width: "100%",
+              padding: "18px 24px",
+              fontSize: 16,
+              borderRadius: 16,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              boxShadow: "0 6px 20px rgba(22, 52, 36, 0.2)"
+            }}
+          >
+            {loading ? (
+              <>
+                <span style={{ width: 20, height: 20, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />
+                <span>Ouverture de la caisse Stripe...</span>
+              </>
+            ) : (
+              <>
+                <CreditCard size={20} />
+                <span>Acheter maintenant par Carte ({currentTotalEur.toFixed(2)} €)</span>
+                <ArrowRight size={18} />
+              </>
+            )}
+          </button>
+        </form>
+
+        <div style={{
+          marginTop: 20,
+          padding: "14px 18px",
+          background: "var(--paper)",
+          borderRadius: 14,
+          border: "1px solid var(--line)",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          fontSize: 12.5,
+          color: "var(--muted)"
+        }}>
+          <Lock size={18} color="var(--forest)" style={{ flexShrink: 0 }} />
+          <span>
+            Paiement 100% sécurisé en Euro par Carte Bancaire (Visa, Mastercard). Crédit activé immédiatement aux Comores.
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+

@@ -7,6 +7,7 @@ import api from "../../api";
 import TablePagination from "../../components/TablePagination.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { subscribeRealtime } from "../../utils/realtime.js";
+import ReceiptModal from "../../components/ReceiptModal.jsx";
 
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 
@@ -72,9 +73,13 @@ export default function SalesHistory() {
 
   // Filter logic
   const filteredOrders = orders.filter((o) => {
-    // Type detection (backward compatibility)
-    const isPOS = o.typeVente === "vente_directe" || o.adresseLivraison?.includes("Achat direct") || o.modeLivraison === "retrait";
-    const saleType = isPOS ? "vente_directe" : "commande_enligne";
+    // Type detection
+    const isRecharge = o.typeVente === "recharge_mobile" || o.notes?.includes("recharge_mobile") || o.items?.some(it => it.product?.nom?.toLowerCase().includes("recharge"));
+    const isPOS = !isRecharge && (o.typeVente === "vente_directe" || o.adresseLivraison?.includes("Achat direct") || o.modeLivraison === "retrait");
+    
+    let saleType = "commande_enligne";
+    if (isRecharge) saleType = "recharge_mobile";
+    else if (isPOS) saleType = "vente_directe";
 
     if (filterType !== "tous" && saleType !== filterType) return false;
 
@@ -141,6 +146,10 @@ export default function SalesHistory() {
     .filter(o => o.moyenPaiement === "carte")
     .reduce((sum, o) => sum + Number(o.total || 0), 0);
 
+  const totalAchatCredit = filteredOrders
+    .filter(o => o.typeVente === "recharge_mobile" || o.notes?.includes("recharge_mobile") || o.items?.some(it => it.product?.nom?.toLowerCase().includes("recharge")))
+    .reduce((sum, o) => sum + Number(o.total || 0), 0);
+
   const totalGlobal = filteredOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
 
   // Reset page
@@ -156,9 +165,10 @@ export default function SalesHistory() {
   function handleExportExcel() {
     const headers = ["ID Vente", "Date", "Client", "Téléphone", "Type", "Employé", "Mode Paiement", "Total (€)"];
     const rows = filteredOrders.map(o => {
-      const isPOS = o.typeVente === "vente_directe" || o.adresseLivraison?.includes("Achat direct");
+      const isRecharge = o.typeVente === "recharge_mobile" || o.notes?.includes("recharge_mobile") || o.items?.some(it => it.product?.nom?.toLowerCase().includes("recharge"));
+      const isPOS = !isRecharge && (o.typeVente === "vente_directe" || o.adresseLivraison?.includes("Achat direct"));
       const dateStr = new Date(o.createdAt).toLocaleString("fr-FR");
-      const typeStr = isPOS ? "Vente Directe (POS)" : "Commande en Ligne";
+      const typeStr = isRecharge ? "Recharge Crédit Mobile" : isPOS ? "Vente Directe (POS)" : "Commande en Ligne";
       const empStr = o.employeAssigne?.nom || "Admin / Système";
       const payStr = (o.moyenPaiement === "cash" || o.moyenPaiement === "especes") ? "Cash / Espèces"
         : o.moyenPaiement === "mvola" ? "MVola"
@@ -197,7 +207,7 @@ export default function SalesHistory() {
         <div>
           <h1 style={{ fontSize: 26, margin: 0, color: "var(--forest-dark)" }}>Historique des Ventes</h1>
           <p style={{ margin: "4px 0 0", color: "var(--muted)", fontSize: 14 }}>
-            Consultez, filtrez et analysez toutes les ventes directes et commandes en ligne.
+            Consultez, filtrez et analysez toutes les ventes directes, recharges mobile et commandes en ligne.
           </p>
         </div>
 
@@ -237,13 +247,14 @@ export default function SalesHistory() {
           {/* FILTER: TYPE VENTE */}
           <select
             className="bs-select"
-            style={{ flex: 1, minWidth: 150, height: 40 }}
+            style={{ flex: 1, minWidth: 160, height: 40 }}
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
           >
             <option value="tous">Tout type de vente</option>
             <option value="vente_directe">Vente Directe (POS)</option>
             <option value="commande_enligne">Commande en Ligne</option>
+            <option value="recharge_mobile">📲 Recharge Crédit Mobile</option>
           </select>
 
           {/* FILTER: PAIEMENT */}
@@ -313,8 +324,8 @@ export default function SalesHistory() {
         </div>
       </div>
 
-      {/* KPI SUMMARY CARDS (5 CARDS) */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginBottom: 20 }}>
+      {/* KPI SUMMARY CARDS (6 CARDS) */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 14, marginBottom: 20 }}>
         {/* TOTAL CASH */}
         <div className="bs-panel" style={{ padding: 16, background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#166534", fontSize: 11.5, fontWeight: 800, textTransform: "uppercase" }}>
@@ -352,6 +363,16 @@ export default function SalesHistory() {
           </div>
           <div style={{ fontSize: 22, fontWeight: 900, color: "#7C3AED", marginTop: 6 }}>
             {fcfa(totalCarte)}
+          </div>
+        </div>
+
+        {/* TOTAL ACHAT CRÉDIT */}
+        <div className="bs-panel" style={{ padding: 16, background: "#E0F2FE", border: "1px solid #BAE6FD", borderRadius: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#0369A1", fontSize: 11.5, fontWeight: 800, textTransform: "uppercase" }}>
+            <Smartphone size={15} color="#0284C7" /> ACHAT CRÉDIT
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: "#0284C7", marginTop: 6 }}>
+            {fcfa(totalAchatCredit)}
           </div>
         </div>
 
@@ -397,7 +418,8 @@ export default function SalesHistory() {
               </tr>
             )}
             {!loading && paginatedOrders.map((o) => {
-              const isPOS = o.typeVente === "vente_directe" || o.adresseLivraison?.includes("Achat direct") || o.modeLivraison === "retrait";
+              const isRecharge = o.typeVente === "recharge_mobile" || o.notes?.includes("recharge_mobile") || o.items?.some(it => it.product?.nom?.toLowerCase().includes("recharge"));
+              const isPOS = !isRecharge && (o.typeVente === "vente_directe" || o.adresseLivraison?.includes("Achat direct") || o.modeLivraison === "retrait");
               const dateFormatted = new Date(o.createdAt).toLocaleDateString("fr-FR", {
                 day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
               });
@@ -439,7 +461,11 @@ export default function SalesHistory() {
                     </div>
                   </td>
                   <td>
-                    {isPOS ? (
+                    {isRecharge ? (
+                      <span style={{ background: "#E0F2FE", color: "#0284C7", padding: "4px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, whiteSpace: "nowrap" }}>
+                        📲 Recharge Mobile
+                      </span>
+                    ) : isPOS ? (
                       <span style={{ background: "#DCFCE7", color: "#166534", padding: "4px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, whiteSpace: "nowrap" }}>
                         Vente Directe (POS)
                       </span>
@@ -493,115 +519,11 @@ export default function SalesHistory() {
 
       {/* MODAL REÇU / TICKET DE CAISSE AUTHENTIQUE */}
       {selectedOrder && (
-        <div
-          onClick={() => setSelectedOrder(null)}
-          style={{
-            position: "fixed", inset: 0, zIndex: 9999,
-            background: "rgba(15, 23, 42, 0.75)", backdropFilter: "blur(4px)",
-            display: "flex", alignItems: "center", justifyContent: "center", padding: 16
-          }}
-        >
-          <div
-            className="bs-receipt-paper"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "#FFFFFF", color: "#0F172A", borderRadius: 16, padding: 24,
-              maxWidth: 420, width: "100%", boxShadow: "0 20px 30px rgba(0,0,0,0.4)",
-              fontFamily: "Courier, monospace, sans-serif", border: "1px solid #CBD5E1"
-            }}
-          >
-            {/* TICKET HEADER */}
-            <div style={{ textAlign: "center", borderBottom: "1px dashed #64748B", paddingBottom: 12, marginBottom: 12 }}>
-              <div style={{ fontSize: 20, fontWeight: 900, color: "#0F172A", letterSpacing: 1 }}>{storeName.toUpperCase()}</div>
-              <div style={{ fontSize: 11, color: "#475569", marginTop: 2, fontWeight: 600 }}>BOUTIQUE & COMMERCE EN LIGNE</div>
-              <div style={{ fontSize: 11, color: "#475569", marginTop: 4, fontWeight: 700 }}>
-                REÇU N° #COM-B{String(selectedOrder.id).padStart(3, "0")}
-              </div>
-              <div style={{ fontSize: 11, color: "#64748B", marginTop: 2 }}>
-                {new Date(selectedOrder.createdAt).toLocaleString("fr-FR")}
-              </div>
-            </div>
-
-            {/* METADATA */}
-            <div style={{ fontSize: 12, color: "#1E293B", marginBottom: 12, lineHeight: 1.6 }}>
-              <div><strong style={{ color: "#0F172A" }}>Client:</strong> {selectedOrder.client?.nom || "Client comptoir"}</div>
-              {selectedOrder.client?.telephone && selectedOrder.client.telephone !== "non_renseigne" && (
-                <div><strong style={{ color: "#0F172A" }}>Téléphone:</strong> {selectedOrder.client.telephone}</div>
-              )}
-              <div><strong style={{ color: "#0F172A" }}>Caissier:</strong> {selectedOrder.employeAssigne?.nom || "Admin / Système"}</div>
-              <div><strong style={{ color: "#0F172A" }}>Type:</strong> {selectedOrder.typeVente === "vente_directe" ? "Vente Directe POS" : "Commande en Ligne"}</div>
-            </div>
-
-            {/* ITEMS TABLE */}
-            <div style={{ borderTop: "1px dashed #64748B", borderBottom: "1px dashed #64748B", padding: "10px 0", marginBottom: 12 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "2.2fr 0.6fr 1fr 1fr", fontSize: 11, fontWeight: 800, color: "#0F172A", borderBottom: "1px solid #E2E8F0", paddingBottom: 4, marginBottom: 6 }}>
-                <span>ARTICLE</span>
-                <span style={{ textAlign: "center" }}>QTÉ</span>
-                <span style={{ textAlign: "right" }}>PRIX U.</span>
-                <span style={{ textAlign: "right" }}>TOTAL</span>
-              </div>
-
-              {selectedOrder.items?.map((it, idx) => {
-                const pu = Number(it.prixUnitaire || it.product?.prix || 0);
-                const totLine = pu * it.quantite;
-
-                return (
-                  <div key={idx} style={{ display: "grid", gridTemplateColumns: "2.2fr 0.6fr 1fr 1fr", fontSize: 11.5, color: "#0F172A", marginBottom: 5, fontWeight: 600 }}>
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {it.product?.nom || "Produit"}
-                    </span>
-                    <span style={{ textAlign: "center" }}>{it.quantite}</span>
-                    <span style={{ textAlign: "right" }}>{pu.toFixed(2)} €</span>
-                    <span style={{ textAlign: "right", fontWeight: 800 }}>{totLine.toFixed(2)} €</span>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* TOTALS SUMMARY */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#0F172A", marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#475569" }}>Sous-Total:</span>
-                <span style={{ fontWeight: 700 }}>{fcfa(selectedOrder.sousTotal || selectedOrder.total)}</span>
-              </div>
-              {Number(selectedOrder.fraisLivraison || 0) > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "#475569" }}>Frais de livraison:</span>
-                  <span style={{ fontWeight: 700 }}>{fcfa(selectedOrder.fraisLivraison)}</span>
-                </div>
-              )}
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 900, color: "#0F172A", borderTop: "1px dashed #64748B", paddingTop: 8, marginTop: 4 }}>
-                <span>TOTAL RÉGLÉ:</span>
-                <span style={{ color: "#15803D" }}>{fcfa(selectedOrder.total)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#475569", marginTop: 4 }}>
-                <span>Paiement:</span>
-                <span style={{ fontWeight: 800, textTransform: "uppercase", color: "#0F172A" }}>{selectedOrder.moyenPaiement?.replace("_", " ")}</span>
-              </div>
-            </div>
-
-            {/* FOOTER MESSAGE */}
-            <div style={{ textAlign: "center", fontSize: 11, color: "#475569", borderTop: "1px dashed #64748B", paddingTop: 10, marginBottom: 16, fontWeight: 600 }}>
-              Merci pour votre confiance !<br />À très bientôt chez {storeName}.
-            </div>
-
-            {/* ACTION BUTTONS */}
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                onClick={() => window.print()}
-                style={{ flex: 1, padding: "10px", borderRadius: 8, background: "var(--forest)", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "sans-serif" }}
-              >
-                <Printer size={16} /> Imprimer Reçu
-              </button>
-              <button
-                onClick={() => setSelectedOrder(null)}
-                style={{ flex: 1, padding: "10px", borderRadius: 8, background: "#F1F5F9", border: "1px solid #CBD5E1", color: "#334155", fontWeight: 700, cursor: "pointer", fontFamily: "sans-serif" }}
-              >
-                Fermer
-              </button>
-            </div>
-          </div>
-        </div>
+        <ReceiptModal
+          order={selectedOrder}
+          boutique={boutique}
+          onClose={() => setSelectedOrder(null)}
+        />
       )}
     </>
   );

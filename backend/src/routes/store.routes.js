@@ -515,6 +515,59 @@ router.post("/:slug/create-checkout-session", loadBoutique, authenticate, async 
   } catch (err) { next(err); }
 });
 
+// POST /api/store/:slug/create-recharge-session (Paiement direct carte Stripe pour Recharge Crédit Mobile - Authentifié)
+router.post("/:slug/create-recharge-session", loadBoutique, authenticate, async (req, res, next) => {
+  try {
+    const { operatorName, phone, amountEur } = req.body;
+    if (!phone || !amountEur) {
+      return res.status(400).json({ message: "Numéro de téléphone et montant requis." });
+    }
+
+    const cleanPhone = String(phone).replace(/\D/g, "");
+    if (cleanPhone.length !== 10 || !cleanPhone.startsWith("269")) {
+      return res.status(400).json({ message: "Numéro invalide. Format attendu: 7 chiffres aux Comores (ex: +2693326532)." });
+    }
+
+    const stripeSecretKey = getStripeSecretKey(req.boutique);
+    if (!stripeSecretKey || (!stripeSecretKey.startsWith("sk_") && !stripeSecretKey.startsWith("rk_"))) {
+      return res.status(400).json({ message: "La boutique n'a pas configuré son paiement Stripe." });
+    }
+
+    const stripe = require("stripe")(stripeSecretKey);
+    const originUrl = req.headers.origin || process.env.FRONTEND_URL || "http://localhost:5173";
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      customer_email: req.user?.email || undefined,
+      line_items: [
+        {
+          price_data: {
+            currency: "eur",
+            product_data: {
+              name: `Recharge Crédit Mobile - ${operatorName || 'Comores'} (+${cleanPhone})`,
+              description: `Envoi direct de crédit mobile à destination EXCLUSIVE du numéro +${cleanPhone}.`,
+            },
+            unit_amount: Math.round(Number(amountEur) * 100),
+          },
+          quantity: 1,
+        }
+      ],
+      mode: "payment",
+      success_url: `${originUrl}/recharge-mobile?status=success&phone=${encodeURIComponent(cleanPhone.replace(/^269/, ''))}`,
+      cancel_url: `${originUrl}/recharge-mobile?status=canceled`,
+      metadata: { 
+        boutiqueId: req.boutique.id, 
+        userId: req.user ? req.user.id : null,
+        type: "recharge_mobile", 
+        phone: `+${cleanPhone}`, 
+        operatorName 
+      }
+    });
+
+    res.json({ url: session.url });
+  } catch (err) { next(err); }
+});
+
 // GET /api/store/:slug/orders/mine  (client connecté)
 router.get("/:slug/orders/mine", loadBoutique, authenticate, requireRole("client"), async (req, res, next) => {
   try {

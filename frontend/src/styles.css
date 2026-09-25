@@ -113,14 +113,17 @@ html[data-theme="dark"] [style*="color: var(--ink)"] {
   color: #F8FAFC !important;
 }
 
-/* SuperAdmin Header Buttons & User Links in Dark Mode */
+/* Header Buttons & User Links in Dark Mode */
 html[data-theme="dark"] header button,
-html[data-theme="dark"] header a,
-html[data-theme="dark"] .bs-admin-topbar button,
-html[data-theme="dark"] .bs-admin-topbar a {
+html[data-theme="dark"] .bs-admin-topbar button {
   color: #F8FAFC !important;
-  background-color: #1E293B !important;
   border-color: #334155 !important;
+}
+
+html[data-theme="dark"] header a.bs-nav-link,
+html[data-theme="dark"] .bs-desktop-nav a {
+  color: #F8FAFC !important;
+  background-color: transparent !important;
 }
 
 /* Role & Access Pills contrast in Dark Mode */
@@ -248,8 +251,40 @@ a { text-decoration: none; color: inherit; }
 .bs-desktop-nav {
   display: flex;
   align-items: center;
-  gap: 26px;
-  margin: 0 8px;
+  gap: 16px;
+  margin: 0 4px;
+}
+
+.bs-desktop-nav a {
+  white-space: nowrap;
+}
+
+.bs-operator-logo-box {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: #ffffff !important;
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  padding: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.bs-operator-logo-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #ffffff !important;
+}
+
+html[data-theme="dark"] .bs-operator-logo-box,
+html[data-theme="dark"] .bs-operator-logo-box img {
+  background-color: #ffffff !important;
+  border-color: #475569 !important;
 }
 
 .bs-mobile-drawer-backdrop {

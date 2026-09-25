@@ -52,6 +52,7 @@ const FILTERS = [
 
 
 import { subscribeRealtime } from "../../utils/realtime.js";
+import ReceiptModal from "../../components/ReceiptModal.jsx";
 
 export default function MyOrders() {
   const { boutique } = useAuth();
@@ -63,6 +64,7 @@ export default function MyOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [receiptOrder, setReceiptOrder] = useState(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
 
@@ -547,9 +549,25 @@ export default function MyOrders() {
               <span style={{ color: "#fff", fontWeight: 900, fontSize: 20 }}>{fcfa(selected.total)}</span>
             </div>
 
+            {/* REÇU / FACTURE BOUTON CLIENT */}
+            {selected.statut !== "annulee" && (
+              <button
+                type="button"
+                onClick={() => setReceiptOrder(selected)}
+                style={{
+                  display: "flex", justifyContent: "center", alignItems: "center", gap: 8,
+                  marginTop: 16, width: "100%", background: "#F1F5F9", border: "1.5px solid #CBD5E1",
+                  borderRadius: 12, padding: "12px", color: "#0F172A", fontWeight: 800, fontSize: 13.5,
+                  cursor: "pointer"
+                }}
+              >
+                <Receipt size={18} color="#0284C7" /> Voir / Imprimer mon reçu officiel
+              </button>
+            )}
+
             {selected.receiptUrl && (
-              <a href={selected.receiptUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 16, background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 12, padding: "12px", textDecoration: "none", color: "var(--forest-dark)", fontWeight: 700, fontSize: 13.5 }}>
-                <Receipt size={18} /> Voir mon reçu
+              <a href={selected.receiptUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 10, background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 12, padding: "12px", textDecoration: "none", color: "var(--forest-dark)", fontWeight: 700, fontSize: 13.5 }}>
+                <Receipt size={18} /> Reçu Stripe sécurisé
               </a>
             )}
 
@@ -723,6 +741,15 @@ export default function MyOrders() {
             )}
           </div>
         </div>
+      )}
+
+      {/* REÇU FACTURE MODAL */}
+      {receiptOrder && (
+        <ReceiptModal
+          order={receiptOrder}
+          boutique={boutique}
+          onClose={() => setReceiptOrder(null)}
+        />
       )}
     </>
   );

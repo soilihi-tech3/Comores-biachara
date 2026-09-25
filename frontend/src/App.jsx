@@ -3,6 +3,8 @@ import { Routes, Route, useLocation } from "react-router-dom";
 import Header from "./components/Header.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
+import RechargeMobile from "./pages/store/RechargeMobile.jsx";
+
 function ScrollToTop() {
   const { pathname } = useLocation();
   React.useEffect(() => {
@@ -113,6 +115,7 @@ export default function App() {
         {/* --- Boutique (front-office) --- */}
         <Route path="/" element={<StoreLayout><Home /></StoreLayout>} />
         <Route path="/a-propos" element={<StoreLayout><About /></StoreLayout>} />
+        <Route path="/recharge-mobile" element={<StoreLayout><RechargeMobile /></StoreLayout>} />
         <Route path="/catalogue" element={<StoreLayout><Catalogue /></StoreLayout>} />
         <Route path="/produit/:id" element={<StoreLayout><ProductDetail /></StoreLayout>} />
         <Route path="/connexion" element={<StoreLayout><Login /></StoreLayout>} />
