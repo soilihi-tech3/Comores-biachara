@@ -184,13 +184,20 @@ app.use("/api/notifications", notificationRoutes);
 
 // Gestion d'erreurs centralisée sécurisée
 app.use((err, req, res, next) => {
-  console.error("[SERVER ERROR]", err);
+  console.error("[SERVER ERROR DETAILS]:", {
+    name: err.name,
+    message: err.message,
+    type: err.type,
+    code: err.code,
+    statusCode: err.statusCode || err.status,
+    param: err.param,
+    rawMessage: err.raw?.message,
+    stack: err.stack
+  });
   const status = err.status || err.statusCode || 500;
-  const isProd = process.env.NODE_ENV === "production";
-  const message = (isProd && status === 500) 
-    ? "Une erreur interne du serveur est survenue." 
-    : (err.message || "Erreur serveur interne.");
-  res.status(status).json({ message });
+  // Transmettre le message d'erreur clair si Stripe ou erreur client / métier
+  const message = err.raw?.message || err.message || "Erreur serveur interne.";
+  res.status(status).json({ message, type: err.type || err.name });
 });
 
 const PORT = process.env.PORT || 4000;
