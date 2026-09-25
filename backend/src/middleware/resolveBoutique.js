@@ -1,7 +1,7 @@
 const { Boutique } = require('../models');
 const { Op } = require('sequelize');
 
-const MAIN_DOMAINS = ['easymarket.com', 'www.easymarket.com', 'localhost', '127.0.0.1', 'comores-biachara.onrender.com'];
+const MAIN_DOMAINS = ['easymarket.com', 'www.easymarket.com', 'localhost', '127.0.0.1', 'onrender.com'];
 
 /**
  * Middleware de résolution de boutique multi-tenant (Custom Domain, Subdomain, Header, or Fallback)
@@ -19,22 +19,26 @@ async function resolveBoutique(req, res, next) {
     req.boutique = null;
     req.isCustomDomainResolved = false;
 
-    // Domaines nettoyés à tester (ex: comoresbiachara.site, www.comoresbiachara.site)
-    const rawDomains = [customHeaderDomain, hostname].filter(Boolean);
+    // Collect candidates (custom header domain first, hostname second)
+    const rawCandidates = [customHeaderDomain, hostname].filter(Boolean);
+
+    // Keep candidates that are NOT internal API platform domains (like onrender.com, localhost)
+    const externalDomains = rawCandidates.filter(d => 
+      !MAIN_DOMAINS.some(m => d.includes(m))
+    );
+
+    // Clean domains (remove http://, https://, www., trailing slashes)
     const cleanedDomains = Array.from(new Set(
-      rawDomains.flatMap(d => {
+      externalDomains.flatMap(d => {
         const clean = d.replace(/^(https?:\/\/)?(www\.)?/, '').replace(/\/$/, '').toLowerCase();
         return [clean, `www.${clean}`, `http://${clean}`, `https://${clean}`, `http://www.${clean}`, `https://www.${clean}`];
       })
     ));
 
-    // Ne cherche par domaine personnalisé que si le domaine n'est pas un domaine principal de la plateforme
-    const isMainPlatformDomain = rawDomains.some(d => MAIN_DOMAINS.some(m => d.includes(m)));
-
     let boutique = null;
 
-    // 1. Recherche prioritaire par Domaine Personnalisé
-    if (!isMainPlatformDomain) {
+    // 1. Recherche prioritaire par Domaine Personnalisé (ex: comoresbiachara.site)
+    if (cleanedDomains.length > 0) {
       boutique = await Boutique.findOne({
         where: {
           [Op.or]: [
@@ -48,11 +52,11 @@ async function resolveBoutique(req, res, next) {
       }
     }
 
-    // 2. Sinon, rechercher par slug dans l'en-tête ou le sous-domaine
+    // 2. Sinon, rechercher par slug (si un slug est spécifié dans l'en-tête ou le domaine)
     if (!boutique) {
       const potentialSlugs = [];
-      if (req.boutiqueSlug) potentialSlugs.push(req.boutiqueSlug);
-      
+      if (req.boutiqueSlug && req.boutiqueSlug !== "marche-vert") potentialSlugs.push(req.boutiqueSlug);
+
       for (const d of cleanedDomains) {
         const firstPart = d.split('.')[0];
         if (firstPart && !['www', 'app', 'api', 'admin', 'localhost', '127'].includes(firstPart)) {
