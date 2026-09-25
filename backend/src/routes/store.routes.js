@@ -8,6 +8,14 @@ const { broadcast, addClient, removeClient } = require("../utils/broadcaster");
 
 const router = express.Router({ mergeParams: true });
 
+function getStripeSecretKey(boutique) {
+  const bKey = boutique?.stripeSecretKey;
+  if (bKey && (bKey.startsWith("sk_") || bKey.startsWith("rk_"))) {
+    return bKey;
+  }
+  return process.env.STRIPE_SECRET_KEY;
+}
+
 // GET /api/store/:slug/realtime/events - SSE Stream for real-time app updates
 router.get("/:slug/realtime/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
@@ -257,14 +265,6 @@ router.post("/:slug/orders", loadBoutique, authenticate, requireRole("client"), 
     
     // Si paiement par carte ou wero (via Stripe), on met en attente de paiement
     const statutInit = (moyenPaiement === "carte" || moyenPaiement === "wero") ? "en_attente_paiement" : "en_attente";
-
-function getStripeSecretKey(boutique) {
-  const bKey = boutique?.stripeSecretKey;
-  if (bKey && (bKey.startsWith("sk_") || bKey.startsWith("rk_"))) {
-    return bKey;
-  }
-  return process.env.STRIPE_SECRET_KEY;
-}
 
     if (moyenPaiement === "carte" || moyenPaiement === "wero") {
       const stripeSecretKey = getStripeSecretKey(req.boutique);
