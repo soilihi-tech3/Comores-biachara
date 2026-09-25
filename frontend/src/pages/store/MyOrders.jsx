@@ -352,7 +352,20 @@ export default function MyOrders() {
                 <h1 style={{ fontFamily: "var(--font-heading)", fontSize: 26, color: "var(--forest-dark)", margin: "0 0 6px" }}>Commande #{selected.id}</h1>
                 <p style={{ color: "var(--muted)", fontSize: 13, margin: 0 }}>Passée le {new Date(selected.createdAt).toLocaleDateString("fr-FR", { dateStyle: "long" })}</p>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                {["en_attente", "en_attente_paiement"].includes(selected.statut) && (
+                  <button
+                    onClick={() => reorder(selected)}
+                    style={{
+                      background: "var(--forest-light)", color: "var(--forest-dark)", border: "1px solid var(--forest)",
+                      padding: "8px 16px", borderRadius: 20, fontWeight: 700, fontSize: 13,
+                      cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6
+                    }}
+                    title="Remettre les articles au panier pour modifier la commande"
+                  >
+                    <RefreshCw size={15} /> Modifier ma commande
+                  </button>
+                )}
                 {!["livree", "recuperee", "en_livraison", "annulee"].includes(selected.statut) && (
                   <button
                     onClick={() => cancelOrder(selected.id)}
