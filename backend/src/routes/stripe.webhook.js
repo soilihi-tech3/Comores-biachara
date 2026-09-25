@@ -49,8 +49,8 @@ router.post("/", async (req, res) => {
       });
 
       if (order && order.statut === "en_attente_paiement") {
-        boutique = await Boutique.findByPk(order.boutiqueId);
-        const specificStripeSecret = boutique.stripeSecretKey || stripeSecretKey;
+        const bKey = boutique?.stripeSecretKey;
+        const specificStripeSecret = (bKey && (bKey.startsWith("sk_") || bKey.startsWith("rk_"))) ? bKey : stripeSecretKey;
         const tenantStripe = require("stripe")(specificStripeSecret);
 
         let receiptUrl = null;

@@ -258,9 +258,17 @@ router.post("/:slug/orders", loadBoutique, authenticate, requireRole("client"), 
     // Si paiement par carte ou wero (via Stripe), on met en attente de paiement
     const statutInit = (moyenPaiement === "carte" || moyenPaiement === "wero") ? "en_attente_paiement" : "en_attente";
 
+function getStripeSecretKey(boutique) {
+  const bKey = boutique?.stripeSecretKey;
+  if (bKey && (bKey.startsWith("sk_") || bKey.startsWith("rk_"))) {
+    return bKey;
+  }
+  return process.env.STRIPE_SECRET_KEY;
+}
+
     if (moyenPaiement === "carte" || moyenPaiement === "wero") {
-      const stripeSecretKey = req.boutique.stripeSecretKey || process.env.STRIPE_SECRET_KEY;
-      if (!stripeSecretKey) {
+      const stripeSecretKey = getStripeSecretKey(req.boutique);
+      if (!stripeSecretKey || (!stripeSecretKey.startsWith("sk_") && !stripeSecretKey.startsWith("rk_"))) {
         await t.rollback();
         return res.status(400).json({ message: "Ce mode de paiement n'est pas encore configuré par la boutique. Veuillez en choisir un autre." });
       }
@@ -341,7 +349,7 @@ router.post("/:slug/orders/:id/verify-payment", loadBoutique, authenticate, asyn
       return res.status(400).json({ message: "Pas de session Stripe associée" });
     }
 
-    const stripeSecretKey = req.boutique.stripeSecretKey || process.env.STRIPE_SECRET_KEY;
+    const stripeSecretKey = getStripeSecretKey(req.boutique);
     const stripe = require("stripe")(stripeSecretKey);
 
     const session = await stripe.checkout.sessions.retrieve(order.stripeSessionId);
@@ -449,8 +457,8 @@ router.post("/:slug/create-checkout-session", loadBoutique, authenticate, async 
 
     if (!order) return res.status(404).json({ message: "Commande introuvable ou déjà payée." });
 
-    const stripeSecretKey = req.boutique.stripeSecretKey || process.env.STRIPE_SECRET_KEY;
-    if (!stripeSecretKey) {
+    const stripeSecretKey = getStripeSecretKey(req.boutique);
+    if (!stripeSecretKey || (!stripeSecretKey.startsWith("sk_") && !stripeSecretKey.startsWith("rk_"))) {
       return res.status(400).json({ message: "La boutique n'a pas configuré ses paiements par carte/wero." });
     }
 
