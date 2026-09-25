@@ -1638,6 +1638,31 @@ html[data-theme="dark"] .bs-side-btn.active .bs-side-label {
   }
 }
 
+/* About page responsive grid */
+.bs-about-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 40px;
+  align-items: center;
+}
+
+.bs-about-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 860px) {
+  .bs-about-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+  .bs-about-cards-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+}
+
 /* ===================================================
    IMAGE ZOOM ON HOVER & TOAST NOTIFICATIONS
    =================================================== */
@@ -2044,7 +2069,8 @@ html[data-theme="dark"] .bs-side-btn.active .bs-side-label {
 
   .bs-desktop-nav,
   .bs-desktop-user-menu,
-  .bs-desktop-auth-btn {
+  .bs-desktop-auth-btn,
+  .bs-cart-btn {
     display: none !important;
   }
 
