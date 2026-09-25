@@ -6,7 +6,7 @@ import {
 export default function SuperAdminSidebar({ activeTab, setActiveTab, boutiquesCount, usersCount, user, logout, onNewBoutique }) {
   return (
     <aside style={{
-      background: "var(--forest-dark)",
+      background: "#163424",
       color: "#fff",
       display: "flex",
       flexDirection: "column",

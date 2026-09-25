@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Truck, Store, CreditCard, Banknote, Smartphone, ArrowLeft, Minus, Plus, Trash2, CheckCircle, MapPin, ShoppingBag, ArrowRight, Lock, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Truck, Store, CreditCard, Banknote, Smartphone, ArrowLeft, Minus, Plus, Trash2, CheckCircle, MapPin, ShoppingBag, ArrowRight, Lock, AlertCircle, ChevronDown, ChevronUp, MessageCircle } from "lucide-react";
 import api, { SLUG } from "../../api";
 import { useCart } from "../../context/CartContext.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { processWhatsAppOrder } from "../../utils/whatsappOrder.js";
 
 import { MvolaLogo, WeroLogo, OnlinePaymentBadges, CashLogo } from "../../components/PaymentLogos";
 
@@ -13,6 +14,8 @@ export default function Checkout() {
   const { cart, subtotal, updateQuantite, removeFromCart, clearCart, showToast } = useCart();
   const { boutique, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isWhatsAppFocus = location.search.includes("whatsapp=true");
 
   const [form, setForm] = useState({
     modeLivraison: "domicile",
@@ -38,10 +41,11 @@ export default function Checkout() {
   }, [user]);
 
   const modesPaiement = boutique?.modesPaiement || { especes: true, mvola: true, holam: true, carte: false };
+  const isWhatsAppEnabled = boutique?.modulesActifs?.commanderWhatsapp !== false;
 
   const PAYMENT_OPTIONS = [
     { 
-      id: "cash", key: "especes", label: "Espèces (Cash)", sub: "Paiement à la livraison / réception", Icon: Banknote, available: !!modesPaiement.especes,
+      id: "cash", key: "especes", label: "Paiement à la livraison", sub: "Paiement en espèces à la livraison / réception", Icon: Banknote, available: !!modesPaiement.especes,
       renderLogo: () => <CashLogo height={32} />
     },
     { 
@@ -49,7 +53,7 @@ export default function Checkout() {
       renderLogo: () => <MvolaLogo height={32} />
     },
     { 
-      id: "wero", key: "holam", label: "Wero", sub: "Paiement mobile sécurisé", Icon: Smartphone, available: !!modesPaiement.holam,
+      id: "wero", key: "holam", label: "Wero", sub: "Paiement instantané européen Wero", Icon: Smartphone, available: !!modesPaiement.holam,
       renderLogo: () => <WeroLogo height={28} />
     },
     { 
@@ -101,10 +105,40 @@ export default function Checkout() {
       showToast(msg, "error", "Adresse manquante");
       return;
     }
+
+    if (form.moyenPaiement === "whatsapp") {
+      setLoading(true);
+      await processWhatsAppOrder({
+        boutique,
+        user,
+        cart,
+        subtotal,
+        fraisLivraison,
+        total,
+        form,
+        clearCart,
+        showToast,
+        navigate
+      });
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const items = cart.map((l) => ({ productId: l.product.id, quantite: l.quantite }));
       const res = await api.post(`/store/${SLUG}/orders`, { items, ...form });
+      
+      // Si le paiement est via Stripe (Carte ou Wero), rediriger vers Checkout
+      if (form.moyenPaiement === "carte" || form.moyenPaiement === "wero") {
+        const sessionRes = await api.post(`/store/${SLUG}/create-checkout-session`, { orderId: res.data.id });
+        if (sessionRes.data.url) {
+          clearCart();
+          window.location.href = sessionRes.data.url;
+          return; // Stop here, user is redirected
+        }
+      }
+
       clearCart();
       showToast("Commande validée avec succès !", "success", "Félicitations");
       navigate(`/confirmation/${res.data.id}`);
@@ -133,7 +167,7 @@ export default function Checkout() {
   return (
     <div style={{ minHeight: "calc(100vh - 70px)", background: "var(--paper)", display: "flex", flexDirection: "column" }}>
       {/* TOP BAR */}
-      <div style={{ background: "#fff", borderBottom: "1px solid var(--line)", padding: "12px 24px", display: "flex", alignItems: "center", gap: 20 }}>
+      <div style={{ background: "var(--card)", borderBottom: "1px solid var(--line)", padding: "12px 24px", display: "flex", alignItems: "center", gap: 20 }}>
         <button onClick={() => navigate("/catalogue")} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 13, fontWeight: 600 }}>
           <ArrowLeft size={15} /> Continuer les achats
         </button>
@@ -166,7 +200,7 @@ export default function Checkout() {
               onClick={() => toggleStep(1)}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "12px 16px", background: "#fff", border: "1px solid var(--line)",
+                padding: "12px 16px", background: "var(--card)", border: "1px solid var(--line)",
                 borderRadius: 14, cursor: "pointer", marginBottom: openSteps[1] ? 12 : 0,
                 boxShadow: "0 2px 6px rgba(0,0,0,0.03)"
               }}
@@ -187,7 +221,7 @@ export default function Checkout() {
             </div>
 
             {openSteps[1] && (
-              <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", width: "100%", boxSizing: "border-box" }}>
+              <div style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", width: "100%", boxSizing: "border-box" }}>
                 {cart.map((l, idx) => {
                   const prix = l.product.prixPromo || l.product.prix;
                   return (
@@ -226,7 +260,7 @@ export default function Checkout() {
               onClick={() => toggleStep(2)}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "12px 16px", background: "#fff", border: "1px solid var(--line)",
+                padding: "12px 16px", background: "var(--card)", border: "1px solid var(--line)",
                 borderRadius: 14, cursor: "pointer", marginBottom: openSteps[2] ? 12 : 0,
                 boxShadow: "0 2px 6px rgba(0,0,0,0.03)"
               }}
@@ -255,7 +289,7 @@ export default function Checkout() {
                   <div key={opt.id} onClick={() => setForm(f => ({ ...f, modeLivraison: opt.id }))} style={{
                     display: "flex", alignItems: "center", gap: 16, padding: "18px 20px", borderRadius: 14,
                     border: `2px solid ${form.modeLivraison === opt.id ? "var(--forest)" : "var(--line)"}`,
-                    background: form.modeLivraison === opt.id ? "var(--forest-light)" : "#fff",
+                    background: form.modeLivraison === opt.id ? "var(--forest-light)" : "var(--card)",
                     cursor: "pointer", transition: "all 0.2s"
                   }}>
                     <div style={{ width: 48, height: 48, borderRadius: 12, background: form.modeLivraison === opt.id ? "var(--forest)" : "var(--paper)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.2s" }}>
@@ -270,7 +304,7 @@ export default function Checkout() {
                       <div style={{
                         width: 22, height: 22, borderRadius: "50%",
                         border: `2.5px solid ${form.modeLivraison === opt.id ? "var(--forest)" : "var(--line)"}`,
-                        background: form.modeLivraison === opt.id ? "var(--forest)" : "#fff",
+                        background: form.modeLivraison === opt.id ? "var(--forest)" : "var(--card)",
                         display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s"
                       }}>
                         {form.modeLivraison === opt.id && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff" }} />}
@@ -293,19 +327,19 @@ export default function Checkout() {
                     marginTop: 6,
                     padding: "16px 18px",
                     borderRadius: 14,
-                    background: "#F4F0FF",
-                    border: "1px solid #D8CFFC",
-                    color: "#3B2595"
+                    background: "var(--card)",
+                    border: "1.5px solid var(--forest)",
+                    color: "var(--ink)"
                   }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: 14, marginBottom: 4 }}>
-                      <MapPin size={18} color="#6C47FF" />
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: 14, marginBottom: 6, color: "var(--forest-dark)" }}>
+                      <MapPin size={18} color="var(--forest)" />
                       <span>Adresse & Emplacement du point de retrait :</span>
                     </div>
-                    <div style={{ fontSize: 13.5, lineHeight: "1.5", color: "#4A399F", whiteSpace: "pre-wrap", fontWeight: 500 }}>
+                    <div style={{ fontSize: 14, lineHeight: "1.5", color: "var(--forest)", whiteSpace: "pre-wrap", fontWeight: 700 }}>
                       {boutique?.adresseRetrait || boutique?.adresse || "Adresse du point de retrait en boutique non renseignée par l'administrateur."}
                     </div>
                     {boutique?.horairesOuverture && (
-                      <div style={{ fontSize: 12, marginTop: 8, color: "#6C47FF", fontWeight: 600 }}>
+                      <div style={{ fontSize: 13, marginTop: 8, color: "var(--sage)", fontWeight: 600 }}>
                         🕒 Horaires : {boutique.horairesOuverture}
                       </div>
                     )}
@@ -321,7 +355,7 @@ export default function Checkout() {
               onClick={() => toggleStep(3)}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "12px 16px", background: "#fff", border: "1px solid var(--line)",
+                padding: "12px 16px", background: "var(--card)", border: "1px solid var(--line)",
                 borderRadius: 14, cursor: "pointer", marginBottom: openSteps[3] ? 12 : 0,
                 boxShadow: "0 2px 6px rgba(0,0,0,0.03)"
               }}
@@ -356,7 +390,7 @@ export default function Checkout() {
                       padding: "16px 18px",
                       borderRadius: 14,
                       border: `2px solid ${isSelected ? "var(--forest)" : "var(--line)"}`,
-                      background: isSelected ? "var(--forest-light)" : m.available ? "#fff" : "#FAFAFA",
+                      background: isSelected ? "var(--forest-light)" : m.available ? "var(--card)" : "var(--paper)",
                       cursor: "pointer",
                       transition: "all 0.2s",
                       position: "relative"
@@ -364,9 +398,9 @@ export default function Checkout() {
                   >
                     <div style={{
                       height: 48,
-                      padding: "0 8px",
+                      padding: "0 10px",
                       borderRadius: 10,
-                      background: "#fff",
+                      background: "#FFFFFF",
                       border: "1px solid var(--line)",
                       display: "flex",
                       alignItems: "center",
@@ -381,7 +415,7 @@ export default function Checkout() {
                           {m.label}
                         </span>
                         {!m.available && (
-                          <span style={{ fontSize: 10, fontWeight: 700, background: "#E2E8F0", color: "#475569", padding: "2px 6px", borderRadius: 10 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, background: "var(--line)", color: "var(--muted)", padding: "2px 6px", borderRadius: 10 }}>
                             Bientôt
                           </span>
                         )}
@@ -412,7 +446,7 @@ export default function Checkout() {
         </div>
 
         {/* ── RIGHT: SUMMARY PANEL ── */}
-        <div style={{ background: "#fff", borderLeft: "none", display: "flex", flexDirection: "column", height: "fit-content" }}>
+        <div style={{ background: "var(--card)", borderLeft: "none", display: "flex", flexDirection: "column", height: "fit-content" }}>
           <div style={{ padding: "32px 28px" }}>
             <h2 style={{ fontFamily: "var(--font-heading)", fontSize: 22, color: "var(--forest-dark)", margin: "0 0 24px" }}>Récapitulatif</h2>
 
@@ -467,6 +501,50 @@ export default function Checkout() {
                 <><CheckCircle size={20} /> Valider la commande <ArrowRight size={18} /></>
               )}
             </button>
+
+            {isWhatsAppEnabled && (
+              <button
+                type="button"
+                disabled={loading}
+                onClick={async () => {
+                  if (form.modeLivraison === "domicile" && !form.adresseLivraison.trim()) {
+                    const msg = "Veuillez indiquer votre adresse de livraison complète.";
+                    setErreur(msg);
+                    showToast(msg, "error", "Adresse manquante");
+                    return;
+                  }
+                  setLoading(true);
+                  await processWhatsAppOrder({
+                    boutique,
+                    user,
+                    cart,
+                    subtotal,
+                    fraisLivraison,
+                    total,
+                    form,
+                    clearCart,
+                    showToast,
+                    navigate
+                  });
+                  setLoading(false);
+                }}
+                style={{
+                  width: "100%", marginTop: 12, padding: "15px 20px", fontSize: 15, fontWeight: 800,
+                  background: "#25D366", color: "#ffffff", border: "none",
+                  borderRadius: 14, cursor: loading ? "not-allowed" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  boxShadow: isWhatsAppFocus 
+                    ? "0 0 0 4px #25D366, 0 6px 20px rgba(37, 211, 102, 0.5)" 
+                    : "0 4px 14px rgba(37, 211, 102, 0.35)",
+                  transform: isWhatsAppFocus ? "scale(1.02)" : "none",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                <MessageCircle size={20} fill="#ffffff" color="#25D366" />
+                Envoyer la commande via WhatsApp
+              </button>
+            )}
+
             <div style={{ textAlign: "center", marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12, color: "var(--muted)" }}>
               <Lock size={12} /> Paiement 100% sécurisé · Conditions générales de vente
             </div>

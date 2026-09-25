@@ -36,14 +36,14 @@ async function loadBoutique(req, res, next) {
     let boutique = req.boutique;
 
     // Si pas de boutique résolue par domaine/header, ou si un slug spécifique valide est fourni
-    if (!boutique || (req.params.slug && req.params.slug !== boutique.slug && req.params.slug !== "current" && req.params.slug !== "marche-vert")) {
+    if (!boutique || (req.params.slug && req.params.slug !== boutique.slug && req.params.slug !== "current")) {
       const foundBySlug = await Boutique.findOne({ where: { slug: req.params.slug } });
       if (foundBySlug) {
         boutique = foundBySlug;
       }
     }
     if (!boutique) {
-      // Fallback sur la première boutique active si le slug a été modifié
+      // Fallback sur la première boutique active
       boutique = await Boutique.findOne({ where: { statut: "active" } });
     }
     if (!boutique) {

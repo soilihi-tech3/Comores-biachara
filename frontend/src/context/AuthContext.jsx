@@ -13,22 +13,74 @@ export function AuthProvider({ children }) {
       return null;
     }
   });
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("app_theme") || "light";
+  });
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("app_theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === "dark" ? "light" : "dark"));
+  };
+
+  const sanitizeBoutique = (data) => {
+    if (!data) return data;
+    // modesPaiement
+    if (typeof data.modesPaiement === "string") {
+      try { data.modesPaiement = JSON.parse(data.modesPaiement); } catch (e) { data.modesPaiement = null; }
+    }
+    const sanitizedModes = { especes: true, mvola: true, holam: true, carte: false };
+    if (data.modesPaiement && typeof data.modesPaiement === "object" && !data.modesPaiement["0"]) {
+      if (typeof data.modesPaiement.especes === "boolean") sanitizedModes.especes = data.modesPaiement.especes;
+      if (typeof data.modesPaiement.mvola === "boolean") sanitizedModes.mvola = data.modesPaiement.mvola;
+      if (typeof data.modesPaiement.holam === "boolean") sanitizedModes.holam = data.modesPaiement.holam;
+      if (typeof data.modesPaiement.carte === "boolean") sanitizedModes.carte = data.modesPaiement.carte;
+    }
+    data.modesPaiement = sanitizedModes;
+
+    // modulesActifs
+    if (typeof data.modulesActifs === "string") {
+      try { data.modulesActifs = JSON.parse(data.modulesActifs); } catch (e) { data.modulesActifs = null; }
+    }
+    if (!data.modulesActifs || typeof data.modulesActifs !== "object" || data.modulesActifs["0"]) {
+      data.modulesActifs = { vente: true, ventesHistorique: true, achats: true, fournisseurs: true, unites: true, homeBanners: true, sideBanners: true, commandes: true, categories: true, produits: true, employes: true, parametres: true, commanderWhatsapp: true };
+    }
+
+    // bannerSlides
+    if (typeof data.bannerSlides === "string") {
+      try { data.bannerSlides = JSON.parse(data.bannerSlides); } catch (e) { data.bannerSlides = []; }
+    }
+    if (!Array.isArray(data.bannerSlides)) data.bannerSlides = [];
+
+    // sideBanners
+    if (typeof data.sideBanners === "string") {
+      try { data.sideBanners = JSON.parse(data.sideBanners); } catch (e) { data.sideBanners = []; }
+    }
+    if (!Array.isArray(data.sideBanners)) data.sideBanners = [];
+
+    return data;
+  };
 
   const refreshBoutique = () => {
     const timestamp = Date.now();
     api.get(`/admin/boutique?t=${timestamp}`)
       .then((res) => {
         if (res.data) {
-          setBoutique(res.data);
-          try { localStorage.setItem("cached_boutique", JSON.stringify(res.data)); } catch (e) {}
+          const b = sanitizeBoutique(res.data);
+          setBoutique(b);
+          try { localStorage.setItem("cached_boutique", JSON.stringify(b)); } catch (e) {}
         }
       })
       .catch(() => {
         api.get(`/store/${SLUG}?t=${timestamp}`).then((res) => {
           if (res.data) {
-            setBoutique(res.data);
-            try { localStorage.setItem("cached_boutique", JSON.stringify(res.data)); } catch (e) {}
+            const b = sanitizeBoutique(res.data);
+            setBoutique(b);
+            try { localStorage.setItem("cached_boutique", JSON.stringify(b)); } catch (e) {}
           }
         }).catch(() => {});
       });
@@ -91,7 +143,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, boutique, refreshBoutique, loading, login, register, verifyOtp, resendOtp, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, boutique, refreshBoutique, loading, login, register, verifyOtp, resendOtp, logout, updateUser, theme, toggleTheme }}>
       {children}
     </AuthContext.Provider>
   );

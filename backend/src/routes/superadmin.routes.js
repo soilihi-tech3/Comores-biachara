@@ -50,6 +50,67 @@ router.get("/users", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /api/superadmin/users -> Créer un utilisateur (Super Admin, Admin, Employé, Client) avec génération de mot de passe et email
+router.post("/users", async (req, res, next) => {
+  try {
+    const { nom, email, telephone, role, boutiqueId, motDePasse } = req.body;
+    const cleanEmail = email ? String(email).trim().toLowerCase() : null;
+    const cleanPhone = telephone ? String(telephone).trim() : null;
+
+    if (!nom || (!cleanEmail && !cleanPhone)) {
+      return res.status(400).json({ message: "Le nom et au moins un email ou téléphone sont requis." });
+    }
+
+    const { Op } = require("sequelize");
+    const whereCond = [];
+    if (cleanEmail) whereCond.push({ email: cleanEmail });
+    if (cleanPhone) whereCond.push({ telephone: cleanPhone });
+
+    const existant = await User.findOne({ where: { [Op.or]: whereCond } });
+    if (existant) return res.status(409).json({ message: "Un compte existe déjà avec cet email ou téléphone." });
+
+    const targetRole = role || "super_admin";
+    const rawPassword = motDePasse && motDePasse.trim() ? motDePasse.trim() : Math.random().toString(36).slice(-8) + "A1!";
+    const motDePasseHash = await bcrypt.hash(rawPassword, 10);
+
+    const newUser = await User.create({
+      nom: nom.trim(),
+      email: cleanEmail,
+      telephone: cleanPhone,
+      motDePasseHash,
+      role: targetRole,
+      boutiqueId: boutiqueId ? Number(boutiqueId) : null,
+      statut: "actif",
+      mustChangePassword: true,
+      isEmailVerified: true
+    });
+
+    if (cleanEmail) {
+      const { envoyerEmailCreationCompte } = require("../services/emailService");
+      let storeName = "Plateforme EasyMarket (Super Admin)";
+      if (boutiqueId) {
+        const b = await Boutique.findByPk(boutiqueId);
+        if (b) storeName = b.nom;
+      }
+      envoyerEmailCreationCompte(cleanEmail, newUser.nom, cleanEmail || cleanPhone, cleanPhone, rawPassword, targetRole, storeName).catch(() => {});
+    }
+
+    res.status(201).json({
+      user: {
+        id: newUser.id,
+        nom: newUser.nom,
+        email: newUser.email,
+        telephone: newUser.telephone,
+        role: newUser.role,
+        boutiqueId: newUser.boutiqueId,
+        statut: newUser.statut,
+        generatedPassword: rawPassword,
+        mustChangePassword: true
+      }
+    });
+  } catch (err) { next(err); }
+});
+
 // PUT /api/superadmin/users/:id -> Modifier un utilisateur (nom, email, telephone, role, boutiqueId)
 router.put("/users/:id", async (req, res, next) => {
   try {
@@ -95,6 +156,17 @@ router.delete("/users/:id", async (req, res, next) => {
     const targetUser = await User.findByPk(req.params.id);
     if (!targetUser) return res.status(404).json({ message: "Utilisateur introuvable." });
 
+    // Vérifier si l'utilisateur possède des opérations enregistrées
+    const hasClientOrders = await Order.count({ where: { clientId: targetUser.id } });
+    const hasAssignedOrders = await Order.count({ where: { employeAssigneId: targetUser.id } });
+
+    if (hasClientOrders > 0 || hasAssignedOrders > 0) {
+      return res.status(400).json({ 
+        message: "Impossible de supprimer cet utilisateur car il possède déjà des opérations enregistrées. Vous devez plutôt le suspendre.",
+        canSuspend: true
+      });
+    }
+
     await targetUser.destroy();
     res.json({ message: "Utilisateur supprimé avec succès." });
   } catch (err) { next(err); }
@@ -104,7 +176,7 @@ router.delete("/users/:id", async (req, res, next) => {
 // POST /api/superadmin/boutiques -> crée une boutique + son compte Admin
 router.post("/boutiques", async (req, res, next) => {
   try {
-    const { nomBoutique, slug, customDomain, formuleAbonnement, nomAdmin, emailAdmin, motDePasseAdmin } = req.body;
+    const { nomBoutique, slug, customDomain, formuleAbonnement, nomAdmin, emailAdmin, telephoneAdmin, motDePasseAdmin } = req.body;
     const existant = await Boutique.findOne({ where: { slug } });
     if (existant) return res.status(409).json({ message: "Ce slug de boutique est déjà utilisé." });
 
@@ -115,13 +187,43 @@ router.post("/boutiques", async (req, res, next) => {
     }
 
     const boutique = await Boutique.create({ nom: nomBoutique, slug, customDomain: formattedDomain || null, formuleAbonnement });
-    const motDePasseHash = await bcrypt.hash(motDePasseAdmin || "changeme123", 10);
+    
+    const rawPassword = motDePasseAdmin && motDePasseAdmin.trim() ? motDePasseAdmin.trim() : Math.random().toString(36).slice(-8) + "A1!";
+    const motDePasseHash = await bcrypt.hash(rawPassword, 10);
+    
+    const cleanEmail = emailAdmin ? String(emailAdmin).trim().toLowerCase() : null;
+    const cleanPhone = telephoneAdmin ? String(telephoneAdmin).trim() : null;
+
     const admin = await User.create({
-      nom: nomAdmin, email: emailAdmin, motDePasseHash, role: "admin", boutiqueId: boutique.id,
+      nom: nomAdmin ? nomAdmin.trim() : "Administrateur",
+      email: cleanEmail,
+      telephone: cleanPhone,
+      motDePasseHash,
+      role: "admin",
+      boutiqueId: boutique.id,
+      statut: "actif",
+      mustChangePassword: true,
+      isEmailVerified: true
     });
+
+    if (cleanEmail) {
+      const { envoyerEmailCreationCompte } = require("../services/emailService");
+      envoyerEmailCreationCompte(cleanEmail, admin.nom, cleanEmail || cleanPhone, cleanPhone, rawPassword, "admin", nomBoutique).catch(() => {});
+    }
+
     purgeCache();
     broadcast("boutique_updated", { boutiqueId: boutique.id });
-    res.status(201).json({ boutique, admin: { id: admin.id, nom: admin.nom, email: admin.email } });
+    res.status(201).json({ 
+      boutique, 
+      admin: { 
+        id: admin.id, 
+        nom: admin.nom, 
+        email: admin.email, 
+        telephone: admin.telephone,
+        generatedPassword: rawPassword,
+        mustChangePassword: true 
+      } 
+    });
   } catch (err) { next(err); }
 });
 

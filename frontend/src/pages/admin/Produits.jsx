@@ -192,11 +192,13 @@ export default function AdminProduits() {
   async function deleteProduct(id) {
     if (!confirm("Voulez-vous vraiment supprimer ce produit ?")) return;
     setProducts((prev) => prev.filter((p) => p.id !== id));
-    showToast("Produit supprimé.");
     try {
       await api.delete(`/admin/products/${id}`);
+      showToast("Produit supprimé.");
       silentSyncProducts();
     } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Erreur inconnue.";
+      showToast("Erreur lors de la suppression : " + msg);
       load(); // Revert on failure
     }
   }
@@ -442,7 +444,7 @@ export default function AdminProduits() {
                     </td>
                     <td style={{ fontWeight: 700, color: "var(--ink)" }}>{p.nom}</td>
                     <td>
-                      <span style={{ background: "var(--forest-light)", color: "var(--forest-dark)", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                      <span style={{ background: "var(--forest-light)", color: "var(--forest-dark)", padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700, border: "1px solid var(--line)" }}>
                         {p.Category?.nom || "Non classé"}
                       </span>
                       {supplierName && (

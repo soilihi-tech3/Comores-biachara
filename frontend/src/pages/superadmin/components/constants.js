@@ -10,7 +10,10 @@ export const DEFAULT_MODULES = {
   sideBanners: true,
   commandes: true,
   categories: true,
-  produits: true
+  produits: true,
+  employes: true,
+  parametres: true,
+  commanderWhatsapp: true
 };
 
 export const MODULE_LABELS = [
@@ -23,5 +26,8 @@ export const MODULE_LABELS = [
   { key: "sideBanners", label: "Home Side Banners", desc: "Bannières promotionnelles secondaires" },
   { key: "commandes", label: "Gestion des Commandes", desc: "Suivi, validation et attribution des commandes en ligne" },
   { key: "categories", label: "Catégories", desc: "Gestion des rayons et catégories de produits" },
-  { key: "produits", label: "Catalogue Produits", desc: "Gestion des fiches produits, prix et stocks" }
+  { key: "produits", label: "Catalogue Produits", desc: "Gestion des fiches produits, prix et stocks" },
+  { key: "employes", label: "Équipe & Rôles", desc: "Gestion des comptes administrateurs, employés et des droits d'accès" },
+  { key: "parametres", label: "Paramètres Boutique", desc: "Configuration générale, logos, bannières et informations de la boutique" },
+  { key: "commanderWhatsapp", label: "Commander via WhatsApp", desc: "Permet aux clients d'envoyer l'intégralité de leur panier via WhatsApp tout en enregistrant la commande dans la base de données" }
 ];

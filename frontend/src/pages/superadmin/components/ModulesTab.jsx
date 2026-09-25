@@ -108,15 +108,15 @@ export default function ModulesTab({
             <div
               key={mod.key}
               style={{
-                border: `2px solid ${isActive ? "var(--forest)" : "#E2E8F0"}`,
+                border: `2px solid ${isActive ? "var(--forest)" : "var(--line)"}`,
                 borderRadius: 14, padding: 18,
-                background: isActive ? "#FAFDFB" : "#F8FAFC",
+                background: isActive ? "var(--card)" : "var(--paper)",
                 transition: "all 0.2s ease", display: "flex", flexDirection: "column", justifyContent: "space-between"
               }}
             >
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 8 }}>
-                  <div style={{ fontWeight: 800, fontSize: 15, color: isActive ? "var(--ink)" : "#64748B" }}>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: "var(--ink)" }}>
                     {mod.label}
                   </div>
 

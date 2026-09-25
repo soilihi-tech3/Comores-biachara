@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { PlusCircle, Edit, Trash2, Shield, Lock, CheckCircle, Ban, User, AlertCircle, X, ShieldCheck, UserCheck, Key, Settings, Layers, Package, ShoppingCart, Image } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Shield, Lock, CheckCircle, Ban, User, AlertCircle, X, ShieldCheck, UserCheck, Key, Settings, Layers, Package, ShoppingCart, Image, Eye, EyeOff, Copy, RefreshCw, Send } from "lucide-react";
 import api from "../../api";
 import TablePagination from "../../components/TablePagination";
-
 import { useAuth } from "../../context/AuthContext.jsx";
 
 const PERMISSIONS_LIST = [
@@ -17,11 +16,16 @@ const PERMISSIONS_LIST = [
 export default function AdminEmployees() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
-  const [modalType, setModalType] = useState(null); // 'create' | 'edit' | 'permissions' | null
+  const [modalType, setModalType] = useState(null); // 'create' | 'edit' | 'permissions' | 'credentials' | null
   const [selectedUser, setSelectedUser] = useState(null);
+  const [createdCredentials, setCreatedCredentials] = useState(null);
+
   const [form, setForm] = useState({ 
     nom: "", email: "", telephone: "", motDePasse: "", role: "employe", permissions: ["voir_dashboard", "gerer_commandes"] 
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [copied, setCopied] = useState(false);
+
   const [erreur, setErreur] = useState("");
   const [succes, setSucces] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -35,15 +39,27 @@ export default function AdminEmployees() {
   
   useEffect(load, []);
 
+  function generateRandomPassword() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$";
+    let pwd = "";
+    for (let i = 0; i < 10; i++) {
+      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setForm((f) => ({ ...f, motDePasse: pwd }));
+    setShowPassword(true);
+  }
+
   function openCreateModal() {
+    const randomPwd = Math.random().toString(36).slice(-8) + "A1!";
     setForm({ 
       nom: "", 
       email: "", 
       telephone: "", 
-      motDePasse: "changeme123", 
+      motDePasse: randomPwd, 
       role: "employe", 
       permissions: ["voir_dashboard", "gerer_commandes"] 
     });
+    setShowPassword(true);
     setErreur("");
     setSucces("");
     setModalType("create");
@@ -59,6 +75,7 @@ export default function AdminEmployees() {
       role: u.role || "employe",
       permissions: Array.isArray(u.permissions) ? u.permissions : []
     });
+    setShowPassword(false);
     setErreur("");
     setSucces("");
     setModalType("edit");
@@ -81,9 +98,20 @@ export default function AdminEmployees() {
     setErreur("");
     setSucces("");
     try {
-      await api.post("/admin/employees", form);
-      setSucces("Utilisateur créé avec succès !");
-      setTimeout(() => { setModalType(null); load(); }, 900);
+      const res = await api.post("/admin/employees", form);
+      const createdData = res.data;
+      
+      setCreatedCredentials({
+        nom: createdData.nom,
+        identifiant: createdData.email || createdData.telephone,
+        email: createdData.email,
+        telephone: createdData.telephone,
+        motDePasse: createdData.generatedPassword || form.motDePasse,
+        role: createdData.role === "admin" ? "Administrateur" : "Employé"
+      });
+
+      setModalType("credentials");
+      load();
     } catch (err) {
       setErreur(err.response?.data?.message || "Impossible de créer l'utilisateur.");
     }
@@ -95,7 +123,7 @@ export default function AdminEmployees() {
     setSucces("");
     try {
       await api.put(`/admin/employees/${selectedUser.id}`, form);
-      setSucces("Utilisateur mis à jour !");
+      setSucces("Utilisateur mis à jour avec succès !");
       setTimeout(() => { setModalType(null); load(); }, 900);
     } catch (err) {
       setErreur(err.response?.data?.message || "Impossible de mettre à jour l'utilisateur.");
@@ -140,6 +168,14 @@ export default function AdminEmployees() {
         return { ...prev, permissions: [...currentPerms, key] };
       }
     });
+  }
+
+  function copyCredentialsToClipboard() {
+    if (!createdCredentials) return;
+    const textToCopy = `Compte ${createdCredentials.role} créé avec succès !\nNom: ${createdCredentials.nom}\nIdentifiant: ${createdCredentials.identifiant}\nMot de passe temporaire: ${createdCredentials.motDePasse}\n\nNote: Le mot de passe devra être changé lors de la première connexion.`;
+    navigator.clipboard.writeText(textToCopy);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
   }
 
   return (
@@ -207,7 +243,7 @@ export default function AdminEmployees() {
                     </td>
 
                     <td style={{ padding: "14px 18px" }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{u.email}</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{u.email || "—"}</div>
                       <div style={{ fontSize: 12, color: "var(--muted)" }}>{u.telephone || "Sans téléphone"}</div>
                     </td>
 
@@ -315,7 +351,7 @@ export default function AdminEmployees() {
             onClick={(e) => e.stopPropagation()}
             style={{
               background: "#fff", borderRadius: 20, padding: 32,
-              maxWidth: 620, width: "90%", maxHeight: "90vh", overflowY: "auto",
+              maxWidth: 640, width: "90%", maxHeight: "90vh", overflowY: "auto",
               boxShadow: "0 12px 40px rgba(0,0,0,0.2)"
             }}
           >
@@ -354,8 +390,8 @@ export default function AdminEmployees() {
                 </div>
 
                 <div className="bs-field">
-                  <label style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)", display: "block", marginBottom: 4 }}>Adresse Email *</label>
-                  <input className="bs-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="ex: ousmane@marche-vert.com" required />
+                  <label style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)", display: "block", marginBottom: 4 }}>Adresse Email</label>
+                  <input className="bs-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="ex: ousmane@marche-vert.com" />
                 </div>
               </div>
 
@@ -365,11 +401,42 @@ export default function AdminEmployees() {
                   <input className="bs-input" value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} placeholder="ex: +221 77 123 45 67" />
                 </div>
 
-                <div className="bs-field">
-                  <label style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)", display: "block", marginBottom: 4 }}>
-                    {modalType === "create" ? "Mot de passe initial *" : "Mot de passe (facultatif)"}
-                  </label>
-                  <input className="bs-input" type="password" placeholder={modalType === "create" ? "ex: MotDePasse123" : "Laisser vide pour ne pas changer"} value={form.motDePasse} onChange={(e) => setForm({ ...form, motDePasse: e.target.value })} required={modalType === "create"} />
+                <div className="bs-field" style={{ position: "relative" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <label style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)" }}>
+                      {modalType === "create" ? "Mot de passe généré *" : "Mot de passe (facultatif)"}
+                    </label>
+                    {modalType === "create" && (
+                      <button
+                        type="button"
+                        onClick={generateRandomPassword}
+                        style={{ background: "none", border: "none", color: "var(--forest)", fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                      >
+                        <RefreshCw size={12} /> Régénérer
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ position: "relative" }}>
+                    <input 
+                      className="bs-input" 
+                      type={showPassword ? "text" : "password"} 
+                      style={{ paddingRight: 40 }}
+                      placeholder={modalType === "create" ? "Mot de passe" : "Laisser vide si inchangé"} 
+                      value={form.motDePasse} 
+                      onChange={(e) => setForm({ ...form, motDePasse: e.target.value })} 
+                      required={modalType === "create"} 
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+                        background: "none", border: "none", cursor: "pointer", color: "var(--muted)"
+                      }}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -474,10 +541,80 @@ export default function AdminEmployees() {
                   Annuler
                 </button>
                 <button type="submit" className="bs-btn-primary" style={{ flex: 1, borderRadius: 12 }}>
-                  {modalType === "create" ? "Créer l'utilisateur" : "Enregistrer les modifications"}
+                  {modalType === "create" ? "Créer l'utilisateur & envoyer identifiants" : "Enregistrer les modifications"}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: CONFIRMATION IDENTIFIANTS APRÈS CRÉATION ── */}
+      {modalType === "credentials" && createdCredentials && (
+        <div 
+          onClick={() => setModalType(null)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(22,52,36,0.5)", backdropFilter: "blur(4px)",
+            display: "flex", alignItems: "center", justifyContent: "center"
+          }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#fff", borderRadius: 20, padding: 32,
+              maxWidth: 520, width: "90%",
+              boxShadow: "0 12px 40px rgba(0,0,0,0.2)",
+              textAlign: "center"
+            }}
+          >
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#EBF7F0", color: "#1F4D3A", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <CheckCircle size={32} />
+            </div>
+
+            <h2 style={{ margin: "0 0 8px", fontSize: 20, color: "var(--forest-dark)" }}>Compte créé avec succès !</h2>
+            <p style={{ fontSize: 13.5, color: "var(--muted)", margin: "0 0 20px" }}>
+              Un e-mail d'accueil avec ces identifiants a été envoyé {createdCredentials.email ? `à ${createdCredentials.email}` : "à l'utilisateur"}.
+            </p>
+
+            <div style={{ background: "var(--paper)", padding: 20, borderRadius: 14, border: "1px solid var(--line)", textAlign: "left", marginBottom: 20 }}>
+              <div style={{ fontSize: 13, marginBottom: 8, color: "var(--ink)" }}>
+                <strong>Nom complet :</strong> {createdCredentials.nom}
+              </div>
+              <div style={{ fontSize: 13, marginBottom: 8, color: "var(--ink)" }}>
+                <strong>Identifiant :</strong> <span style={{ fontFamily: "monospace", color: "var(--forest-dark)", fontWeight: 700 }}>{createdCredentials.identifiant}</span>
+              </div>
+              <div style={{ fontSize: 13, color: "var(--ink)" }}>
+                <strong>Mot de passe générique :</strong> <span style={{ fontFamily: "monospace", color: "#163424", fontWeight: 800, background: "#E2E8F0", padding: "2px 8px", borderRadius: 6 }}>{createdCredentials.motDePasse}</span>
+              </div>
+            </div>
+
+            <div style={{ fontSize: 12.5, color: "#D97706", background: "#FEF3C7", padding: "10px 14px", borderRadius: 10, marginBottom: 20, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, textAlign: "left" }}>
+              <Key size={16} /> À la 1ère connexion, cet utilisateur devra obligatoirement modifier son mot de passe.
+            </div>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                type="button"
+                onClick={copyCredentialsToClipboard}
+                style={{
+                  flex: 1, padding: "12px", borderRadius: 12, border: "1px solid var(--forest)",
+                  background: copied ? "var(--forest)" : "#fff", color: copied ? "#fff" : "var(--forest)",
+                  fontWeight: 700, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8
+                }}
+              >
+                {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
+                {copied ? "Copié !" : "Copier les identifiants"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalType(null)}
+                className="bs-btn-primary"
+                style={{ flex: 1, borderRadius: 12 }}
+              >
+                Terminer
+              </button>
+            </div>
           </div>
         </div>
       )}

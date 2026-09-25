@@ -364,7 +364,12 @@ router.delete("/products/:id", async (req, res, next) => {
     purgeCache();
     broadcast("product_updated", { productId: req.params.id, boutiqueId: req.boutiqueId });
     res.json({ message: "Produit supprimé." });
-  } catch (err) { next(err); }
+  } catch (err) { 
+    if (err.name === 'SequelizeForeignKeyConstraintError') {
+      return res.status(400).json({ message: "Impossible de supprimer ce produit car il est lié à des commandes, des achats ou des avis existants. Veuillez plutôt le modifier pour le rendre indisponible ou masquer." });
+    }
+    next(err); 
+  }
 });
 
 /* ---------------------- COMMANDES ---------------------- */
@@ -504,23 +509,54 @@ router.get("/employees", requireRole("admin"), async (req, res, next) => {
 router.post("/employees", requireRole("admin"), async (req, res, next) => {
   try {
     const { nom, email, telephone, motDePasse, role, permissions } = req.body;
-    const existant = await User.findOne({ where: { email } });
-    if (existant) return res.status(409).json({ message: "Un compte existe déjà avec cet email." });
+    const cleanEmail = email ? String(email).trim().toLowerCase() : null;
+    const cleanPhone = telephone ? String(telephone).trim() : null;
+
+    if (!nom || (!cleanEmail && !cleanPhone)) {
+      return res.status(400).json({ message: "Le nom et au moins un email ou téléphone sont requis." });
+    }
+
+    const { Op } = require("sequelize");
+    const whereCond = [];
+    if (cleanEmail) whereCond.push({ email: cleanEmail });
+    if (cleanPhone) whereCond.push({ telephone: cleanPhone });
+
+    const existant = await User.findOne({ where: { [Op.or]: whereCond } });
+    if (existant) return res.status(409).json({ message: "Un compte existe déjà avec cet email ou téléphone." });
 
     const userRole = role === "admin" ? "admin" : "employe";
     const userPermissions = userRole === "admin" 
       ? ["voir_dashboard", "gerer_banners", "gerer_categories", "gerer_produits", "gerer_commandes", "gerer_parametres", "gerer_utilisateurs"]
       : (permissions || []);
 
-    const motDePasseHash = await bcrypt.hash(motDePasse || "changeme123", 10);
+    const rawPassword = motDePasse && motDePasse.trim() ? motDePasse.trim() : Math.random().toString(36).slice(-8) + "A1!";
+    const motDePasseHash = await bcrypt.hash(rawPassword, 10);
+
     const user = await User.create({
-      nom, email, telephone, motDePasseHash, permissions: userPermissions,
-      role: userRole, boutiqueId: req.boutiqueId, statut: "actif"
+      nom: nom.trim(),
+      email: cleanEmail,
+      telephone: cleanPhone,
+      motDePasseHash,
+      permissions: userPermissions,
+      role: userRole,
+      boutiqueId: req.boutiqueId,
+      statut: "actif",
+      mustChangePassword: true,
+      isEmailVerified: true
     });
+
+    if (cleanEmail) {
+      const { envoyerEmailCreationCompte } = require("../services/emailService");
+      Boutique.findByPk(req.boutiqueId).then(b => {
+        envoyerEmailCreationCompte(cleanEmail, user.nom, cleanEmail || cleanPhone, cleanPhone, rawPassword, userRole, b?.nom || "Marché Vert").catch(() => {});
+      }).catch(() => {});
+    }
 
     res.status(201).json({ 
       id: user.id, nom: user.nom, email: user.email, telephone: user.telephone, 
-      role: user.role, permissions: user.permissions, statut: user.statut 
+      role: user.role, permissions: user.permissions, statut: user.statut,
+      generatedPassword: rawPassword,
+      mustChangePassword: true
     });
   } catch (err) { next(err); }
 });
@@ -590,6 +626,17 @@ router.delete("/employees/:id", requireRole("admin"), async (req, res, next) => 
 
     if (targetUser.id === req.user.id) {
       return res.status(400).json({ message: "Vous ne pouvez pas supprimer votre propre compte." });
+    }
+
+    // Vérifier si l'utilisateur possède des opérations (commandes passées ou assignées)
+    const hasClientOrders = await Order.count({ where: { clientId: targetUser.id } });
+    const hasAssignedOrders = await Order.count({ where: { employeAssigneId: targetUser.id } });
+
+    if (hasClientOrders > 0 || hasAssignedOrders > 0) {
+      return res.status(400).json({ 
+        message: "Impossible de supprimer cet utilisateur car il possède déjà des opérations enregistrées (commandes passées ou ventes gérées). Vous devez plutôt le suspendre.",
+        canSuspend: true
+      });
     }
 
     await targetUser.destroy();
@@ -681,6 +728,15 @@ router.delete("/clients/:id", async (req, res, next) => {
   try {
     const client = await User.findOne({ where: { id: req.params.id, role: "client" } });
     if (!client) return res.status(404).json({ message: "Client introuvable." });
+
+    // Vérifier si le client possède des commandes enregistrées
+    const hasOrders = await Order.count({ where: { clientId: client.id } });
+    if (hasOrders > 0) {
+      return res.status(400).json({ 
+        message: "Impossible de supprimer ce client car il possède déjà des commandes enregistrées. Vous devez plutôt le suspendre.",
+        canSuspend: true
+      });
+    }
 
     await client.destroy();
     res.json({ message: "Compte client supprimé avec succès." });

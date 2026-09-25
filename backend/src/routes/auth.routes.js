@@ -18,7 +18,7 @@ function publicUser(user) {
   return {
     id: user.id, nom: user.nom, email: user.email, telephone: user.telephone,
     adresse: user.adresse, role: user.role, boutiqueId: user.boutiqueId, permissions: user.permissions,
-    isEmailVerified: user.isEmailVerified,
+    isEmailVerified: user.isEmailVerified, mustChangePassword: user.mustChangePassword,
   };
 }
 
@@ -303,6 +303,7 @@ router.post("/reset-password", async (req, res, next) => {
     }
 
     user.motDePasseHash = await bcrypt.hash(cleanPass, 10);
+    user.mustChangePassword = false;
     await user.save();
 
     // Suppression du token Redis après utilisation unique
@@ -359,22 +360,37 @@ router.get("/me", authenticate, (req, res) => {
   res.json({ user: publicUser(req.user) });
 });
 
-// Mettre à jour son profil (nom, téléphone, adresse, mot de passe)
+// Mettre à jour son profil (nom, email, téléphone, adresse, mot de passe)
 router.put("/me", authenticate, async (req, res, next) => {
   try {
     const user = await User.findByPk(req.user.id);
-    const { nom, telephone, adresse, nouveauMotDePasse, ancienMotDePasse } = req.body;
+    const { nom, email, telephone, adresse, nouveauMotDePasse, ancienMotDePasse } = req.body;
 
     if (nom) user.nom = nom;
+    if (email !== undefined) {
+      const cleanEmail = email && String(email).trim() ? String(email).trim().toLowerCase() : null;
+      if (cleanEmail && cleanEmail !== user.email) {
+        const existing = await User.findOne({ where: { email: cleanEmail } });
+        if (existing && existing.id !== user.id) {
+          return res.status(409).json({ message: "Cette adresse e-mail est déjà utilisée par un autre compte." });
+        }
+        user.email = cleanEmail;
+      } else if (!cleanEmail) {
+        user.email = null;
+      }
+    }
     if (telephone !== undefined) user.telephone = telephone;
     if (adresse !== undefined) user.adresse = adresse;
 
     if (nouveauMotDePasse && nouveauMotDePasse.trim()) {
-      if (ancienMotDePasse) {
+      if (user.mustChangePassword) {
+        // First login password change doesn't strictly require old password if provided or skipped
+      } else if (ancienMotDePasse) {
         const ok = await bcrypt.compare(ancienMotDePasse, user.motDePasseHash);
         if (!ok) return res.status(400).json({ message: "L'ancien mot de passe est incorrect." });
       }
       user.motDePasseHash = await bcrypt.hash(nouveauMotDePasse.trim(), 10);
+      user.mustChangePassword = false;
     }
 
     await user.save();

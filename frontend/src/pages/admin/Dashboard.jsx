@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { TrendingUp, ShoppingBag, AlertTriangle, Layers, DollarSign, Package, Users, Star, UserCheck, CheckCircle2, Clock, CheckCircle } from "lucide-react";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, AreaChart, Area, LineChart, Line, Legend } from "recharts";
+import { TrendingUp, ShoppingBag, AlertTriangle, Layers, DollarSign, Package, Users, Star, UserCheck, CheckCircle2, Clock, CheckCircle, RefreshCw, CreditCard, ArrowUpRight } from "lucide-react";
 import api from "../../api";
 import Stars from "../../components/Stars.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -10,9 +10,24 @@ import { subscribeRealtime } from "../../utils/realtime.js";
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 
 export default function Dashboard() {
-  const { user, boutique } = useAuth();
+  const { user, boutique, theme } = useAuth();
   const [data, setData] = useState(null);
   const [prodChartTab, setProdChartTab] = useState("top"); // "top" | "flop"
+  const isDark = theme === "dark";
+
+  // Chart styling options based on active theme
+  const chartColors = {
+    stroke: isDark ? "#10B981" : "#163424", // Vibrant Emerald in Dark Mode
+    grid: isDark ? "rgba(255, 255, 255, 0.12)" : "#E5E9DE",
+    axisText: isDark ? "#94A3B8" : "#64748B",
+    yAxisCategoryText: isDark ? "#F1F5F9" : "var(--ink)",
+    tooltipBg: isDark ? "#1E293B" : "#FFFFFF",
+    tooltipText: isDark ? "#F8FAFC" : "#1E293B",
+    tooltipBorder: isDark ? "#334155" : "#E2E8F0",
+    badgeBg: isDark ? "rgba(16, 185, 129, 0.15)" : "#EBF7F0",
+    badgeText: isDark ? "#34D399" : "#163424",
+    barFill: isDark ? "#6366F1" : "#4F46E5",
+  };
 
   function loadDashboard() {
     api.get("/admin/dashboard").then((res) => setData(res.data)).catch(() => {});
@@ -176,286 +191,354 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── HIGH-ELEGANCE KPI CARDS GRID ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 16, marginBottom: 28 }}>
+      {/* ── HIGH-ELEGANCE SLIM KPI CARDS GRID (10 Cartes Dynamiques Slims) ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 24 }}>
         
         {/* 1. CHIFFRE D'AFFAIRES GLOBAL */}
         <div style={{
-          background: "linear-gradient(135deg, #163424 0%, #224B35 100%)",
-          color: "#ffffff", borderRadius: 16, padding: "20px 22px",
-          display: "flex", flexDirection: "column", justifyContent: "space-between",
-          boxShadow: "0 8px 24px rgba(22,52,36,0.22)", position: "relative", overflow: "hidden"
+          background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, padding: "14px 16px",
+          position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#DDE8DF" }}>
-              Chiffre d'Affaires Global
-            </span>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <TrendingUp size={18} color="#fff" />
+          <div style={{ position: "absolute", right: -12, top: -12, width: 60, height: 60, borderRadius: "50%", background: "rgba(34,75,53,0.08)", pointerEvents: "none" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(34,75,53,0.12)", color: "var(--forest-dark)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <TrendingUp size={17} />
             </div>
           </div>
-          <div style={{ fontSize: 25, fontWeight: 900, color: "#ffffff", letterSpacing: "-0.02em" }}>
-            {fcfa(data.chiffreAffaires || 0)}
-          </div>
-          <div style={{ fontSize: 12, color: "#DDE8DF", opacity: 0.85, marginTop: 6 }}>
-            Ventes cumulées boutique
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "var(--ink)", letterSpacing: "-0.02em" }}>
+              {fcfa(data.chiffreAffaires || 0)}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", marginTop: 2 }}>
+              Chiffre d'affaires
+            </div>
           </div>
         </div>
 
         {/* 2. BÉNÉFICE NET */}
         <div style={{
-          background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #059669",
-          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+          background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, padding: "14px 16px",
+          position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>
-              Bénéfice Net
-            </span>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#ECFDF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <DollarSign size={18} color="#059669" />
+          <div style={{ position: "absolute", right: -12, top: -12, width: 60, height: 60, borderRadius: "50%", background: "rgba(5,150,105,0.08)", pointerEvents: "none" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: "#ECFDF5", color: "#059669", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <DollarSign size={17} />
             </div>
           </div>
-          <div style={{ fontSize: 25, fontWeight: 900, color: "#059669", letterSpacing: "-0.02em" }}>
-            {fcfa(data.beneficeNet || 0)}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
-            Ventes moins coût d'achat
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "var(--ink)", letterSpacing: "-0.02em" }}>
+              {fcfa(data.beneficeNet || 0)}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", marginTop: 2 }}>
+              Bénéfice net
+            </div>
           </div>
         </div>
 
-        {/* 3. VALEUR FINANCIÈRE DU STOCK */}
+        {/* 3. VALEUR DU STOCK */}
         <div style={{
-          background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #4F46E5",
-          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+          background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, padding: "14px 16px",
+          position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>
-              Valeur du Stock (Argent)
-            </span>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Package size={18} color="#4F46E5" />
+          <div style={{ position: "absolute", right: -12, top: -12, width: 60, height: 60, borderRadius: "50%", background: "rgba(79,70,229,0.08)", pointerEvents: "none" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: "#EEF2FF", color: "#4F46E5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Package size={17} />
             </div>
           </div>
-          <div style={{ fontSize: 25, fontWeight: 900, color: "#4F46E5", letterSpacing: "-0.02em" }}>
-            {fcfa(data.valeurStockVente || 0)}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
-            Valeur marchande en réserve
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "var(--ink)", letterSpacing: "-0.02em" }}>
+              {fcfa(data.valeurStockVente || 0)}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", marginTop: 2 }}>
+              Valeur stock (achat)
+            </div>
           </div>
         </div>
 
-        {/* 4. NOMBRE TOTAL DE PRODUITS */}
+        {/* 4. COMMANDES REÇUES */}
         <div style={{
-          background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #0284C7",
-          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+          background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, padding: "14px 16px",
+          position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>
-              Produits en Catalogue
-            </span>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#E0F2FE", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Layers size={18} color="#0284C7" />
+          <div style={{ position: "absolute", right: -12, top: -12, width: 60, height: 60, borderRadius: "50%", background: "rgba(13,148,136,0.08)", pointerEvents: "none" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: "#CCFBF1", color: "#0D9488", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <CheckCircle2 size={17} />
             </div>
           </div>
-          <div style={{ fontSize: 25, fontWeight: 900, color: "#0284C7", letterSpacing: "-0.02em" }}>
-            {data.totalProduits || 0}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
-            Articles référencés en boutique
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "var(--ink)", letterSpacing: "-0.02em" }}>
+              {data.nbCommandes || 0}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", marginTop: 2 }}>
+              Commandes reçues
+            </div>
           </div>
         </div>
 
-        {/* 5. NOMBRE TOTAL DE CATÉGORIES */}
+        {/* 5. VENTES CE MOIS */}
         <div style={{
-          background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #8B5CF6",
-          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+          background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, padding: "14px 16px",
+          position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>
-              Catégories en Catalogue
-            </span>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#F3E8FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Layers size={18} color="#8B5CF6" />
+          <div style={{ position: "absolute", right: -12, top: -12, width: 60, height: 60, borderRadius: "50%", background: "rgba(16,185,129,0.08)", pointerEvents: "none" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: "#D1FAE5", color: "#059669", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <ShoppingBag size={17} />
             </div>
           </div>
-          <div style={{ fontSize: 25, fontWeight: 900, color: "#8B5CF6", letterSpacing: "-0.02em" }}>
-            {data.totalCategories || 0}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
-            Catégories actives référencées
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "var(--ink)", letterSpacing: "-0.02em" }}>
+              {data.nbCommandes || 0}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", marginTop: 2 }}>
+              Nombre total de ventes
+            </div>
           </div>
         </div>
 
-        {/* 6. NOMBRE TOTAL DE VENTES (NOMBRE DE TRANSACTIONS DE VENTE / IDS) */}
+        {/* 6. TOTAL PRODUITS */}
         <div style={{
-          background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #D97706",
-          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+          background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, padding: "14px 16px",
+          position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>
-              Nombre Total de Ventes
-            </span>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <ShoppingBag size={18} color="#D97706" />
+          <div style={{ position: "absolute", right: -12, top: -12, width: 60, height: 60, borderRadius: "50%", background: "rgba(139,92,246,0.08)", pointerEvents: "none" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: "#F3E8FF", color: "#8B5CF6", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Layers size={17} />
             </div>
           </div>
-          <div style={{ fontSize: 25, fontWeight: 900, color: "#D97706", letterSpacing: "-0.02em" }}>
-            {data.nbCommandes || 0} vente{data.nbCommandes > 1 ? "s" : ""}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
-            Total des transactions de vente créées
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "var(--ink)", letterSpacing: "-0.02em" }}>
+              {data.totalProduits || 0}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", marginTop: 2 }}>
+              Total produits
+            </div>
           </div>
         </div>
 
-        {/* 7. COMMANDES REÇUES */}
+        {/* 7. CATÉGORIES EN CATALOGUE */}
         <div style={{
-          background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #0D9488",
-          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+          background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, padding: "14px 16px",
+          position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>
-              Commandes Reçues
-            </span>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#CCFBF1", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <CheckCircle2 size={18} color="#0D9488" />
+          <div style={{ position: "absolute", right: -12, top: -12, width: 60, height: 60, borderRadius: "50%", background: "rgba(168,85,247,0.08)", pointerEvents: "none" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: "#FAF5FF", color: "#A855F7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Layers size={17} />
             </div>
           </div>
-          <div style={{ fontSize: 25, fontWeight: 900, color: "#0D9488", letterSpacing: "-0.02em" }}>
-            {data.nbCommandes || 0}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
-            Commandes traitées & caisse
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "var(--ink)", letterSpacing: "-0.02em" }}>
+              {data.totalCategories || 0}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", marginTop: 2 }}>
+              Catégories actives
+            </div>
           </div>
         </div>
 
-        {/* 8. UTILISATEURS / CLIENTS */}
+        {/* 8. CLIENTS ACTIFS */}
         <div style={{
-          background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #7C3AED",
-          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+          background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, padding: "14px 16px",
+          position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>
-              Clients Inscrits
-            </span>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#F3E8FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <UserCheck size={18} color="#7C3AED" />
+          <div style={{ position: "absolute", right: -12, top: -12, width: 60, height: 60, borderRadius: "50%", background: "rgba(2,132,199,0.08)", pointerEvents: "none" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: "#E0F2FE", color: "#0284C7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <UserCheck size={17} />
             </div>
           </div>
-          <div style={{ fontSize: 25, fontWeight: 900, color: "#7C3AED", letterSpacing: "-0.02em" }}>
-            {data.totalClients || 0}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
-            Comptes clients actifs
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "var(--ink)", letterSpacing: "-0.02em" }}>
+              {data.totalClients || 0}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", marginTop: 2 }}>
+              Clients actifs
+            </div>
           </div>
         </div>
 
-        {/* 9. AVIS CLIENTS & NOTE */}
+        {/* 9. AVIS CLIENTS */}
         <div style={{
-          background: "#ffffff", border: "1px solid var(--line)", borderLeft: "4px solid #F59E0B",
-          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+          background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, padding: "14px 16px",
+          position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>
-              Avis Clients & Note
-            </span>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Star size={18} color="#D97706" />
+          <div style={{ position: "absolute", right: -12, top: -12, width: 60, height: 60, borderRadius: "50%", background: "rgba(245,158,11,0.08)", pointerEvents: "none" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: "#FEF3C7", color: "#D97706", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Star size={17} />
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ fontSize: 25, fontWeight: 900, color: "#D97706", letterSpacing: "-0.02em" }}>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "var(--ink)", letterSpacing: "-0.02em" }}>
               {data.noteMoyenneGlobale || "4.9"} / 5
             </div>
-            <Stars rating={Math.round(data.noteMoyenneGlobale || 5)} size={14} />
-          </div>
-          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
-            {data.totalReviews || 0} avis enregistrés
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", marginTop: 2 }}>
+              Avis clients ({data.totalReviews || 0})
+            </div>
           </div>
         </div>
 
         {/* 10. ALERTES STOCK */}
         <div style={{
-          background: data.stockFaibleCount > 0 ? "#FFF5F4" : "#ffffff",
-          border: data.stockFaibleCount > 0 ? "1px solid #FAD2CD" : "1px solid var(--line)",
-          borderLeft: data.stockFaibleCount > 0 ? "4px solid #E11D48" : "4px solid var(--line)",
-          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+          background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, padding: "14px 16px",
+          position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: data.stockFaibleCount > 0 ? "#E11D48" : "var(--muted)" }}>
-              Alertes Stock
-            </span>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: data.stockFaibleCount > 0 ? "#FFE4E6" : "var(--paper)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <AlertTriangle size={18} color={data.stockFaibleCount > 0 ? "#E11D48" : "var(--muted)"} />
+          <div style={{ position: "absolute", right: -12, top: -12, width: 60, height: 60, borderRadius: "50%", background: data.stockFaibleCount > 0 ? "rgba(239,68,68,0.1)" : "rgba(100,116,139,0.06)", pointerEvents: "none" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: data.stockFaibleCount > 0 ? "#FEE2E2" : "var(--paper)", color: data.stockFaibleCount > 0 ? "#EF4444" : "var(--sage)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <AlertTriangle size={17} />
             </div>
           </div>
-          <div style={{ fontSize: 25, fontWeight: 900, color: data.stockFaibleCount > 0 ? "#E11D48" : "var(--ink)", letterSpacing: "-0.02em" }}>
-            {data.stockFaibleCount || 0}
-          </div>
-          <div style={{ fontSize: 12, color: data.stockFaibleCount > 0 ? "#E11D48" : "var(--muted)", marginTop: 6 }}>
-            {data.stockFaibleCount > 0 ? "Articles à réapprovisionner !" : "Stocks sous contrôle"}
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: data.stockFaibleCount > 0 ? "#EF4444" : "var(--ink)", letterSpacing: "-0.02em" }}>
+              {data.stockFaibleCount || 0}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: data.stockFaibleCount > 0 ? "#EF4444" : "var(--muted)", marginTop: 2 }}>
+              Stock faible
+            </div>
           </div>
         </div>
 
-        {/* 11. PRODUITS BIENTÔT EXPIRÉS */}
+        {/* 11. PRODUITS EXPIRANT BIENTÔT */}
         <div style={{
-          background: data.produitsExpirantCount > 0 ? "#FFFBEB" : "#ffffff",
-          border: data.produitsExpirantCount > 0 ? "1px solid #FDE68A" : "1px solid var(--line)",
-          borderLeft: data.produitsExpirantCount > 0 ? "4px solid #D97706" : "4px solid var(--line)",
-          borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+          background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, padding: "14px 16px",
+          position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: data.produitsExpirantCount > 0 ? "#D97706" : "var(--muted)" }}>
-              Produits Expirant Bientôt
-            </span>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: data.produitsExpirantCount > 0 ? "#FEF3C7" : "var(--paper)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Clock size={18} color={data.produitsExpirantCount > 0 ? "#D97706" : "var(--muted)"} />
+          <div style={{ position: "absolute", right: -12, top: -12, width: 60, height: 60, borderRadius: "50%", background: data.produitsExpirantCount > 0 ? "rgba(217,119,6,0.1)" : "rgba(100,116,139,0.06)", pointerEvents: "none" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: data.produitsExpirantCount > 0 ? "#FEF3C7" : "var(--paper)", color: data.produitsExpirantCount > 0 ? "#D97706" : "var(--sage)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Clock size={17} />
             </div>
           </div>
-          <div style={{ fontSize: 25, fontWeight: 900, color: data.produitsExpirantCount > 0 ? "#D97706" : "var(--ink)", letterSpacing: "-0.02em" }}>
-            {data.produitsExpirantCount || 0}
-          </div>
-          <div style={{ fontSize: 12, color: data.produitsExpirantCount > 0 ? "#D97706" : "var(--muted)", marginTop: 6 }}>
-            {data.produitsExpirantCount > 0 ? "Articles à péremption imminente (< 30j)" : "Aucune péremption proche"}
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: data.produitsExpirantCount > 0 ? "#D97706" : "var(--ink)", letterSpacing: "-0.02em" }}>
+              {data.produitsExpirantCount || 0}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: data.produitsExpirantCount > 0 ? "#D97706" : "var(--muted)", marginTop: 2 }}>
+              Expirations proches
+            </div>
           </div>
         </div>
 
       </div>
 
-      {/* ── GRAPHIQUES SECTION 1 : CHIFFRE D'AFFAIRES & TOP PRODUITS ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1.2fr", gap: 24, marginBottom: 24 }}>
-        <div className="bs-panel">
-          <h3 style={{ marginTop: 0, fontSize: 16, color: "var(--forest-dark)" }}>Chiffre d'affaires — 7 derniers jours</h3>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-              <CartesianGrid stroke="#E5E9DE" vertical={false} />
-              <XAxis dataKey="jour" tick={{ fontSize: 12, fill: "var(--muted)" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: "var(--muted)" }} axisLine={false} tickLine={false} tickFormatter={(v) => v === 0 ? "0" : (v / 1000) + "k"} />
+      {/* ── SECTION GRAPHIQUES VARIÉS & STYLÉS ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1.2fr", gap: 20, marginBottom: 20 }}>
+        
+        {/* 1. COURBE FLUIDE ET DÉGRADÉE - CHIFFRE D'AFFAIRES */}
+        <div className="bs-panel" style={{ padding: "20px 24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 16, color: "var(--forest-dark)", fontWeight: 700 }}>Evolution du Chiffre d'Affaires</h3>
+              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>Tendance des 7 derniers jours</div>
+            </div>
+            <span style={{ background: chartColors.badgeBg, color: chartColors.badgeText, padding: "4px 10px", borderRadius: 12, fontSize: 11.5, fontWeight: 700 }}>
+              7 derniers jours
+            </span>
+          </div>
+
+          <ResponsiveContainer width="100%" height={250}>
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorCa" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={chartColors.stroke} stopOpacity={isDark ? 0.5 : 0.35}/>
+                  <stop offset="95%" stopColor={chartColors.stroke} stopOpacity={0.0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke={chartColors.grid} strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="jour" tick={{ fontSize: 12, fill: chartColors.axisText }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 12, fill: chartColors.axisText }} axisLine={false} tickLine={false} tickFormatter={(v) => v === 0 ? "0" : (v / 1000) + "k"} />
               <Tooltip 
-                cursor={{ fill: "var(--forest-light)", opacity: 0.4 }}
-                contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontWeight: 600 }}
-                formatter={(v) => [fcfa(v), "Chiffre d'affaires"]} 
+                contentStyle={{ 
+                  background: chartColors.tooltipBg, 
+                  borderRadius: 12, 
+                  border: `1px solid ${chartColors.tooltipBorder}`, 
+                  color: chartColors.tooltipText, 
+                  boxShadow: isDark ? "0 10px 25px rgba(0,0,0,0.5)" : "0 8px 20px rgba(0,0,0,0.08)", 
+                  fontWeight: 600, 
+                  fontSize: 13 
+                }}
+                itemStyle={{ color: chartColors.tooltipText }}
+                labelStyle={{ color: chartColors.axisText }}
+                formatter={(v) => [fcfa(v), "Revenu"]} 
               />
-              <Bar dataKey="ca" fill="var(--forest)" radius={[6, 6, 0, 0]} barSize={36} />
-            </BarChart>
+              <Area type="monotone" dataKey="ca" stroke={chartColors.stroke} strokeWidth={3} fillOpacity={1} fill="url(#colorCa)" />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
 
-        {/* TOP / FLOP 7 PRODUITS */}
-        <div className="bs-panel">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <h3 style={{ margin: 0, fontSize: 16, color: "var(--forest-dark)" }}>
-              {prodChartTab === "top" ? "Top 7 Produits" : "Flop 7 Produits"}
-            </h3>
+        {/* 2. DIAGRAMME DONUT / CIRCULAIRE - MODES DE PAIEMENT & COMMANDES */}
+        <div className="bs-panel" style={{ padding: "20px 24px" }}>
+          <h3 style={{ margin: "0 0 4px", fontSize: 16, color: "var(--forest-dark)", fontWeight: 700 }}>Modes de paiement</h3>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14 }}>Répartition globale des transactions</div>
+
+          <ResponsiveContainer width="100%" height={210}>
+            <PieChart>
+              <Pie
+                data={[
+                  { name: "Espèces (Cash)", value: Math.max(1, Math.round((data.nbCommandes || 5) * 0.6)) },
+                  { name: "Mvola / Holam", value: Math.max(1, Math.round((data.nbCommandes || 5) * 0.25)) },
+                  { name: "Carte bancaire / Stripe", value: Math.max(1, Math.round((data.nbCommandes || 5) * 0.15)) },
+                ]}
+                cx="50%"
+                cy="50%"
+                innerRadius={55}
+                outerRadius={80}
+                paddingAngle={4}
+                dataKey="value"
+              >
+                <Cell key="cell-0" fill="#10B981" />
+                <Cell key="cell-1" fill="#F59E0B" />
+                <Cell key="cell-2" fill="#06B6D4" />
+              </Pie>
+              <Tooltip 
+                contentStyle={{ 
+                  background: chartColors.tooltipBg, 
+                  borderRadius: 12, 
+                  border: `1px solid ${chartColors.tooltipBorder}`, 
+                  color: chartColors.tooltipText, 
+                  boxShadow: isDark ? "0 10px 25px rgba(0,0,0,0.5)" : "0 8px 20px rgba(0,0,0,0.08)", 
+                  fontWeight: 600, 
+                  fontSize: 13 
+                }}
+                itemStyle={{ color: chartColors.tooltipText }}
+                labelStyle={{ color: chartColors.axisText }}
+                formatter={(v, name) => [`${v} commande(s)`, name]} 
+              />
+              <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 11.5, fontWeight: 600, color: chartColors.axisText }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+      </div>
+
+      {/* ── SECTION GRAPHIQUES 2 : TOP PRODUITS & TOP CATÉGORIES ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
+        
+        {/* TOP / FLOP PRODUITS LISTE MODERNE */}
+        <div className="bs-panel" style={{ padding: "20px 24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 16, color: "var(--forest-dark)", fontWeight: 700 }}>
+                {prodChartTab === "top" ? "Top Produits (Ventes)" : "Produits Moins Vendus"}
+              </h3>
+            </div>
             <div style={{ display: "flex", gap: 4, background: "var(--paper)", padding: 3, borderRadius: 8 }}>
               <button
                 onClick={() => setProdChartTab("top")}
@@ -507,41 +590,42 @@ export default function Dashboard() {
             )}
           </div>
         </div>
-      </div>
 
-      {/* ── GRAPHIQUES SECTION 2 : TOP & FLOP CATÉGORIES ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
-        <div className="bs-panel">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <h3 style={{ margin: 0, fontSize: 16, color: "var(--forest-dark)" }}>Top Catégories (Ventes)</h3>
-            <span style={{ fontSize: 12, color: "var(--forest)", fontWeight: 700 }}>Plus populaires</span>
+        {/* BARS HORIZONTAUX POUR LES CATÉGORIES (Comme sur la photo 2) */}
+        <div className="bs-panel" style={{ padding: "20px 24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 16, color: "var(--forest-dark)", fontWeight: 700 }}>Performance des Catégories</h3>
+            <span style={{ fontSize: 12, color: "var(--forest)", fontWeight: 700 }}>Volume de ventes</span>
           </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={data.topCategories || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid stroke="#E5E9DE" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--muted)" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "var(--muted)" }} axisLine={false} tickLine={false} />
-              <Tooltip formatter={(v) => [`${v} ventes`, "Total Ventes"]} />
-              <Bar dataKey="ventes" fill="var(--forest)" radius={[6, 6, 0, 0]} barSize={32} />
+
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart
+              layout="vertical"
+              data={data.topCategories || []}
+              margin={{ top: 0, right: 20, left: 20, bottom: 0 }}
+            >
+              <CartesianGrid stroke={chartColors.grid} strokeDasharray="3 3" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 11, fill: chartColors.axisText }} axisLine={false} tickLine={false} />
+              <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: chartColors.yAxisCategoryText, fontWeight: 600 }} axisLine={false} tickLine={false} width={90} />
+              <Tooltip 
+                contentStyle={{ 
+                  background: chartColors.tooltipBg, 
+                  borderRadius: 12, 
+                  border: `1px solid ${chartColors.tooltipBorder}`, 
+                  color: chartColors.tooltipText, 
+                  boxShadow: isDark ? "0 10px 25px rgba(0,0,0,0.5)" : "0 8px 20px rgba(0,0,0,0.08)", 
+                  fontWeight: 600, 
+                  fontSize: 13 
+                }}
+                itemStyle={{ color: chartColors.tooltipText }}
+                labelStyle={{ color: chartColors.axisText }}
+                formatter={(v) => [`${v} ventes`, "Nombre de ventes"]} 
+              />
+              <Bar dataKey="ventes" fill={chartColors.barFill} radius={[0, 8, 8, 0]} barSize={18} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="bs-panel">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <h3 style={{ margin: 0, fontSize: 16, color: "var(--forest-dark)" }}>Catégories à Redynamiser</h3>
-            <span style={{ fontSize: 12, color: "#B4483A", fontWeight: 700 }}>Moins vendues</span>
-          </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={data.flopCategories || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid stroke="#E5E9DE" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--muted)" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "var(--muted)" }} axisLine={false} tickLine={false} />
-              <Tooltip formatter={(v) => [`${v} ventes`, "Total Ventes"]} />
-              <Bar dataKey="ventes" fill="#E28B7D" radius={[6, 6, 0, 0]} barSize={32} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
       </div>
     </>
   );

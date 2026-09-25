@@ -1,16 +1,16 @@
 import React from "react";
 
-// 1. MVola Logo (Green MVola logo matching user image)
+// 1. MVola Logo (Vivid Green MVola logo matching brand)
 export function MvolaLogo({ height = 28, style = {} }) {
   return (
     <div style={{ display: "inline-flex", alignItems: "center", gap: 4, ...style }}>
       <svg height={height} viewBox="0 0 160 55" fill="none" xmlns="http://www.w3.org/2000/svg">
         {/* Signal arcs above 'M' */}
-        <path d="M 32 14 A 8 8 0 0 1 48 14" stroke="#007A3D" strokeWidth="3" strokeLinecap="round" />
-        <path d="M 27 9 A 14 14 0 0 1 53 9" stroke="#007A3D" strokeWidth="3" strokeLinecap="round" />
-        <circle cx="40" cy="18" r="2.5" fill="#007A3D" />
+        <path d="M 32 14 A 8 8 0 0 1 48 14" stroke="#00C853" strokeWidth="3.5" strokeLinecap="round" />
+        <path d="M 27 9 A 14 14 0 0 1 53 9" stroke="#00C853" strokeWidth="3.5" strokeLinecap="round" />
+        <circle cx="40" cy="18" r="2.5" fill="#00C853" />
         {/* MVola Text */}
-        <text x="2" y="48" fill="#007A3D" fontFamily="Outfit, Inter, sans-serif" fontWeight="900" fontSize="42" letterSpacing="-1">
+        <text x="2" y="48" fill="#00C853" fontFamily="Outfit, Inter, sans-serif" fontWeight="900" fontSize="42" letterSpacing="-1">
           MVola
         </text>
       </svg>
@@ -18,13 +18,13 @@ export function MvolaLogo({ height = 28, style = {} }) {
   );
 }
 
-// 2. WERO Logo (Yellow background badge with WERO dark text matching user image)
+// 2. WERO Logo (Yellow background badge with WERO dark text)
 export function WeroLogo({ height = 26, style = {} }) {
   return (
     <div style={{
       background: "#FFF899", border: "1px solid #FFE866", borderRadius: 8,
       padding: "3px 12px", display: "inline-flex", alignItems: "center", justifyContent: "center",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.06)", height, ...style
+      boxShadow: "0 1px 3px rgba(0,0,0,0.1)", height, ...style
     }}>
       <span style={{
         fontFamily: "'Outfit', 'Arial Black', sans-serif",
@@ -47,9 +47,9 @@ export const HoloLogo = WeroLogo;
 export function VisaLogo({ height = 20 }) {
   return (
     <div style={{
-      background: "#fff", border: "1px solid #E2E8F0", borderRadius: 6,
+      background: "#FFFFFF", border: "1px solid #CBD5E1", borderRadius: 6,
       padding: "3px 9px", display: "inline-flex", alignItems: "center", justifyContent: "center",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.05)", height
+      boxShadow: "0 1px 3px rgba(0,0,0,0.1)", height
     }}>
       <span style={{
         fontFamily: "Impact, sans-serif", fontWeight: 900, fontSize: height * 0.8,
@@ -65,9 +65,9 @@ export function VisaLogo({ height = 20 }) {
 export function MastercardLogo({ height = 20 }) {
   return (
     <div style={{
-      background: "#fff", border: "1px solid #E2E8F0", borderRadius: 6,
+      background: "#FFFFFF", border: "1px solid #CBD5E1", borderRadius: 6,
       padding: "3px 8px", display: "inline-flex", alignItems: "center", justifyContent: "center",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.05)", height
+      boxShadow: "0 1px 3px rgba(0,0,0,0.1)", height
     }}>
       <svg height={height * 0.85} viewBox="0 0 36 24" fill="none">
         <circle cx="13" cy="12" r="10" fill="#EB001B" />
@@ -81,9 +81,9 @@ export function MastercardLogo({ height = 20 }) {
 export function PaypalLogo({ height = 20 }) {
   return (
     <div style={{
-      background: "#fff", border: "1px solid #E2E8F0", borderRadius: 6,
+      background: "#FFFFFF", border: "1px solid #CBD5E1", borderRadius: 6,
       padding: "3px 9px", display: "inline-flex", alignItems: "center", justifyContent: "center",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.05)", height
+      boxShadow: "0 1px 3px rgba(0,0,0,0.1)", height
     }}>
       <span style={{
         fontFamily: "Impact, sans-serif", fontWeight: 900, fontSize: height * 0.75,
@@ -99,21 +99,21 @@ export function PaypalLogo({ height = 20 }) {
 export function VirementLogo({ height = 20 }) {
   return (
     <div style={{
-      background: "#fff", border: "1px solid #E2E8F0", borderRadius: 6,
+      background: "#FFFFFF", border: "1px solid #CBD5E1", borderRadius: 6,
       padding: "2px 8px", display: "inline-flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.05)", height
+      boxShadow: "0 1px 3px rgba(0,0,0,0.1)", height
     }}>
       <span style={{ fontFamily: "sans-serif", fontWeight: 800, fontSize: Math.max(7, height * 0.38), color: "#D97706", lineHeight: 1 }}>
         Virement
       </span>
-      <span style={{ fontFamily: "sans-serif", fontWeight: 800, fontSize: Math.max(7, height * 0.38), color: "#1E293B", lineHeight: 1 }}>
+      <span style={{ fontFamily: "sans-serif", fontWeight: 800, fontSize: Math.max(7, height * 0.38), color: "#0F172A", lineHeight: 1 }}>
         Bancaire
       </span>
     </div>
   );
 }
 
-// 7. Cash Logo (Hand holding green Euro banknote - matching exact user photo)
+// 7. Cash Logo (Hand holding green Euro banknote)
 export function CashLogo({ height = 30, style = {} }) {
   return (
     <div style={{ display: "inline-flex", alignItems: "center", gap: 6, ...style }}>
@@ -141,7 +141,7 @@ export function CashLogo({ height = 30, style = {} }) {
 // 8. Combined Payment Badges (VISA + Mastercard + Virement + Paypal)
 export function OnlinePaymentBadges({ style = {} }) {
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap", ...style }}>
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap", ...style }}>
       <VisaLogo height={22} />
       <MastercardLogo height={22} />
       <VirementLogo height={22} />

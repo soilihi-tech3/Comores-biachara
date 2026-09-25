@@ -43,6 +43,14 @@ const STATUT_STYLE = {
   annulee: { bg: "#FEE2E2", color: "#991B1B", border: "#FCA5A5" }
 };
 
+const MOYEN_LABEL = {
+  cash: "Paiement à la livraison",
+  mvola: "Mvola",
+  holam: "Wero",
+  carte: "Carte bancaire",
+  whatsapp: "Commande via WhatsApp"
+};
+
 const MOIS = [
   { value: "tous", label: "Tous les mois" },
   { value: "0", label: "Janvier" },
@@ -60,11 +68,12 @@ const MOIS = [
 ];
 
 import { useCart } from "../../context/CartContext.jsx";
-
+import { useAuth } from "../../context/AuthContext.jsx";
 import { subscribeRealtime } from "../../utils/realtime.js";
 
 export default function AdminOrders() {
   const { showToast } = useCart();
+  const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [search, setSearch] = useState("");
@@ -130,16 +139,31 @@ export default function AdminOrders() {
   }, []);
 
   async function changeStatus(id, statut) {
+    const targetOrder = orders.find((o) => o.id === id);
+    const currentUserEmployee = employees.find(e => e.userId === user?.id || e.email === user?.email) || (user?.id ? { id: user.id, nom: user.nom || user.email?.split("@")[0] || "Agent" } : null);
+    
+    // Auto assign connected person when status becomes recuperee / livree, or if unassigned
+    let assignedEmpId = targetOrder?.employeAssigneId;
+    let assignedEmp = targetOrder?.employeAssigne;
+    
+    if ((statut === "recuperee" || statut === "livree" || !assignedEmpId) && currentUserEmployee) {
+      assignedEmpId = currentUserEmployee.id;
+      assignedEmp = currentUserEmployee;
+    }
+
     // 0ms Optimistic local update
     setOrders((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, statut } : o))
+      prev.map((o) => (o.id === id ? { ...o, statut, employeAssigneId: assignedEmpId, employeAssigne: assignedEmp } : o))
     );
     if (selectedOrder && selectedOrder.id === id) {
-      setSelectedOrder((prev) => ({ ...prev, statut }));
+      setSelectedOrder((prev) => ({ ...prev, statut, employeAssigneId: assignedEmpId, employeAssigne: assignedEmp }));
     }
 
     try {
-      await api.patch(`/admin/orders/${id}/status`, { statut });
+      await api.patch(`/admin/orders/${id}/status`, { statut, employeId: assignedEmpId });
+      if (assignedEmpId) {
+        api.patch(`/admin/orders/${id}/assign`, { employeId: assignedEmpId }).catch(() => {});
+      }
       const cmdNum = formatOrderNum(id);
       const label = STATUT_LABEL[statut] || statut;
       if (showToast) {
@@ -151,6 +175,17 @@ export default function AdminOrders() {
   }
 
   async function assign(id, employeId) {
+    const targetOrder = orders.find(o => o.id === id);
+    if (targetOrder?.statut === "recuperee" || targetOrder?.statut === "livree") {
+      if (showToast) showToast("L'agent responsable d'une commande récupérée/livrée est définitivement attribué et ne peut plus être modifié.", "warning");
+      return;
+    }
+
+    if (targetOrder?.employeAssigneId && user?.role !== "admin") {
+      if (showToast) showToast("Seul un administrateur peut modifier l'agent d'une commande déjà assignée.", "warning");
+      return;
+    }
+
     const empId = employeId || null;
     const emp = employees.find((e) => e.id === Number(empId));
 
@@ -504,14 +539,48 @@ export default function AdminOrders() {
                       <div style={{ fontWeight: 800, fontSize: 15, color: "var(--forest-dark)" }}>
                         {fcfa(o.total)}
                       </div>
-                      <div style={{ fontSize: 11.5, color: "var(--muted)", textTransform: "capitalize" }}>
-                        {o.moyenPaiement || "Cash"}
+                      <div style={{ fontSize: 11.5, color: "var(--muted)", marginBottom: 4 }}>
+                        {MOYEN_LABEL[o.moyenPaiement] || o.moyenPaiement || "Paiement à la livraison"}
                       </div>
+                      {o.statutPaiement === 'paye' ? (
+                        <span style={{ background: "#D1FAE5", color: "#064E3B", fontSize: 10.5, fontWeight: 700, padding: "3px 8px", borderRadius: 12, display: "inline-block" }}>Payé en ligne</span>
+                      ) : (
+                        <span style={{ background: "#FEF3C7", color: "#92400E", fontSize: 10.5, fontWeight: 700, padding: "3px 8px", borderRadius: 12, display: "inline-block" }}>À l'encaissement</span>
+                      )}
                     </td>
 
                     {/* 8. Statut */}
                     <td>
                       {(() => {
+                        if (o.statut === "en_attente_paiement") {
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              <span
+                                style={{
+                                  background: "#FFFBEB",
+                                  color: "#B45309",
+                                  border: `1px solid #FDE68A`,
+                                  borderRadius: 20,
+                                  padding: "6px 14px",
+                                  fontWeight: 700,
+                                  fontSize: 12,
+                                  display: "inline-block",
+                                  cursor: "not-allowed"
+                                }}
+                                title="Le client n'a pas encore validé son paiement en ligne. Attendez que la transaction soit terminée."
+                              >
+                                Paiement en attente
+                              </span>
+                              <button
+                                onClick={() => updateStatus(o.id, "annulee")}
+                                style={{ fontSize: 11, color: "var(--danger)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", textAlign: "left", padding: 0 }}
+                              >
+                                Annuler (abandon)
+                              </button>
+                            </div>
+                          );
+                        }
+
                         const isLocked = ["annulee", "livree", "recuperee"].includes(o.statut);
                         const isDelivery = o.modeLivraison === "domicile";
 
@@ -595,17 +664,23 @@ export default function AdminOrders() {
                         }}>
                           {o.employeAssigne ? o.employeAssigne.nom.charAt(0).toUpperCase() : "?"}
                         </div>
-                        <select
-                          className="bs-select"
-                          value={o.employeAssigneId || ""}
-                          onChange={(e) => assign(o.id, e.target.value)}
-                          style={{ fontSize: 12, padding: "5px 8px", borderRadius: 10, flex: 1 }}
-                        >
-                          <option value="">Non assigné</option>
-                          {employees.map((e) => (
-                            <option key={e.id} value={e.id}>{e.nom}</option>
-                          ))}
-                        </select>
+                        {(o.statut === "recuperee" || o.statut === "livree" || (o.employeAssigneId && user?.role !== "admin")) ? (
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--forest-dark)", padding: "4px 8px", background: "var(--forest-light)", borderRadius: 8, whiteSpace: "nowrap" }} title="L'agent qui a traité/récupéré cette commande est définitivement attribué sans possibilité de modification.">
+                            {o.employeAssigne?.nom || "Assigné"}
+                          </span>
+                        ) : (
+                          <select
+                            className="bs-select"
+                            value={o.employeAssigneId || ""}
+                            onChange={(e) => assign(o.id, e.target.value)}
+                            style={{ fontSize: 12, padding: "5px 8px", borderRadius: 10, flex: 1 }}
+                          >
+                            <option value="">Non assigné</option>
+                            {employees.map((e) => (
+                              <option key={e.id} value={e.id}>{e.nom}</option>
+                            ))}
+                          </select>
+                        )}
                       </div>
                     </td>
 
@@ -703,17 +778,23 @@ export default function AdminOrders() {
                   </div>
                 </div>
               </div>
-              <select
-                className="bs-select"
-                value={selectedOrder.employeAssigneId || ""}
-                onChange={(e) => assign(selectedOrder.id, e.target.value)}
-                style={{ fontSize: 12, padding: "6px 10px", borderRadius: 10 }}
-              >
-                <option value="">Assigner un agent</option>
-                {employees.map(e => (
-                  <option key={e.id} value={e.id}>{e.nom}</option>
-                ))}
-              </select>
+              {(selectedOrder.statut === "recuperee" || selectedOrder.statut === "livree" || (selectedOrder.employeAssigneId && user?.role !== "admin")) ? (
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--forest-dark)", padding: "6px 12px", background: "var(--paper)", borderRadius: 8, border: "1px solid var(--line)" }} title="L'agent qui a traité/récupéré cette commande est définitivement attribué sans possibilité de modification.">
+                  {selectedOrder.employeAssigne?.nom ? `Assigné à ${selectedOrder.employeAssigne.nom}` : "Agent attribué"}
+                </span>
+              ) : (
+                <select
+                  className="bs-select"
+                  value={selectedOrder.employeAssigneId || ""}
+                  onChange={(e) => assign(selectedOrder.id, e.target.value)}
+                  style={{ fontSize: 12, padding: "6px 10px", borderRadius: 10 }}
+                >
+                  <option value="">Assigner un agent</option>
+                  {employees.map(e => (
+                    <option key={e.id} value={e.id}>{e.nom}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* Items list with full photos and details */}
@@ -749,10 +830,27 @@ export default function AdminOrders() {
                 <span>Frais de livraison</span>
                 <span>{fcfa(selectedOrder.fraisLivraison || 0)}</span>
               </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "var(--muted)", alignItems: "center" }}>
+                <span>Statut du paiement</span>
+                {selectedOrder.statutPaiement === 'paye' ? (
+                  <span style={{ background: "#D1FAE5", color: "#064E3B", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 12 }}>Payé en ligne</span>
+                ) : selectedOrder.statut === 'en_attente_paiement' ? (
+                  <span style={{ background: "#FFFBEB", color: "#B45309", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 12 }}>Paiement en attente</span>
+                ) : (
+                  <span style={{ background: "#FEF3C7", color: "#92400E", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 12 }}>À l'encaissement</span>
+                )}
+              </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 800, color: "var(--forest-dark)", marginTop: 6, paddingTop: 10, borderTop: "1px solid var(--line)" }}>
                 <span>Total</span>
                 <span>{fcfa(selectedOrder.total)}</span>
               </div>
+              {selectedOrder.receiptUrl && (
+                <div style={{ marginTop: 12 }}>
+                  <a href={selectedOrder.receiptUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 10, padding: "10px", textDecoration: "none", color: "var(--forest-dark)", fontWeight: 700, fontSize: 13 }}>
+                    Voir le reçu du paiement
+                  </a>
+                </div>
+              )}
             </div>
 
             {/* Close button */}

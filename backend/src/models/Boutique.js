@@ -50,10 +50,10 @@ const Boutique = sequelize.define("Boutique", {
     }
   },
   customDomain: { type: DataTypes.STRING(255), allowNull: true },
-  stripePublishableKey: { type: DataTypes.STRING(255), allowNull: true },
-  stripeSecretKey: { type: DataTypes.STRING(255), allowNull: true },
-  stripeAccountId: { type: DataTypes.STRING(255), allowNull: true },
-  stripeOnboardingComplete: { type: DataTypes.BOOLEAN, defaultValue: false }
+  stripePublishableKey: { type: DataTypes.STRING(255), allowNull: true, field: "stripe_publishable_key" },
+  stripeSecretKey: { type: DataTypes.STRING(255), allowNull: true, field: "stripe_secret_key" },
+  stripeAccountId: { type: DataTypes.STRING(255), allowNull: true, field: "stripe_account_id" },
+  stripeOnboardingComplete: { type: DataTypes.BOOLEAN, defaultValue: false, field: "stripe_onboarding_complete" }
 }, { tableName: "boutiques" });
 
 module.exports = Boutique;

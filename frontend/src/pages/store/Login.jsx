@@ -8,7 +8,7 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  
+
   const [form, setForm] = useState({ email: "", motDePasse: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [erreur, setErreur] = useState("");
@@ -42,6 +42,10 @@ export default function Login() {
     try {
       const user = await login(form.email, form.motDePasse);
       const redirect = params.get("redirect");
+      if (user?.mustChangePassword) {
+        // Le modal MustChangePasswordModal prendra le relais sans rediriger
+        return;
+      }
       if (redirect) navigate(redirect);
       else if (user.role === "super_admin") navigate("/super-admin");
       else if (user.role === "admin" || user.role === "employe") navigate("/admin");
@@ -97,7 +101,7 @@ export default function Login() {
             <LogIn size={26} color="var(--forest)" />
           </div>
           <h2>Espace Connexion</h2>
-          <p>Connectez-vous pour accéder à votre espace client ou administration</p>
+          <p>Connectez-vous pour accéder à votre espace </p>
         </div>
 
         {erreur && (
@@ -121,7 +125,7 @@ export default function Login() {
               />
             </div>
             <span style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 4 }}>
-              Vous pouvez saisir votre numéro avec l'indicatif (+221, +269, +33...), sans indicatif, ou votre adresse e-mail.
+              Vous pouvez saisir votre numéro avec l'indicatif (+221, +269, +33...), sans indicatif,
             </span>
           </div>
 

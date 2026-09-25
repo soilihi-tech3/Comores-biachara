@@ -32,10 +32,10 @@ export default function SalesHistory() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters state
+  // Filter state
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("tous"); // "tous" | "vente_directe" | "commande_enligne"
-  const [filterPaiement, setFilterPaiement] = useState("tous"); // "tous" | "cash" | "orange_money" | "wave" | "carte"
+  const [filterPaiement, setFilterPaiement] = useState("tous"); // "tous" | "cash" | "mvola" | "wero" | "carte"
   const [filterEmploye, setFilterEmploye] = useState("tous");
   const [filterAnnee, setFilterAnnee] = useState(new Date().getFullYear().toString());
   const [filterMois, setFilterMois] = useState("");
@@ -79,7 +79,13 @@ export default function SalesHistory() {
     if (filterType !== "tous" && saleType !== filterType) return false;
 
     // Paiement filter
-    if (filterPaiement !== "tous" && o.moyenPaiement !== filterPaiement) return false;
+    if (filterPaiement !== "tous") {
+      const p = o.moyenPaiement;
+      if (filterPaiement === "cash" && p !== "cash" && p !== "especes") return false;
+      if (filterPaiement === "mvola" && p !== "mvola") return false;
+      if (filterPaiement === "wero" && p !== "wero" && p !== "holam") return false;
+      if (filterPaiement === "carte" && p !== "carte") return false;
+    }
 
     // Employe filter
     if (filterEmploye !== "tous") {
@@ -120,15 +126,19 @@ export default function SalesHistory() {
 
   // Calculate totals for KPI cards
   const totalCash = filteredOrders
-    .filter(o => o.moyenPaiement === "cash")
+    .filter(o => o.moyenPaiement === "cash" || o.moyenPaiement === "especes")
     .reduce((sum, o) => sum + Number(o.total || 0), 0);
 
-  const totalOrange = filteredOrders
-    .filter(o => o.moyenPaiement === "orange_money")
+  const totalMvola = filteredOrders
+    .filter(o => o.moyenPaiement === "mvola")
     .reduce((sum, o) => sum + Number(o.total || 0), 0);
 
-  const totalWave = filteredOrders
-    .filter(o => o.moyenPaiement === "wave")
+  const totalWero = filteredOrders
+    .filter(o => o.moyenPaiement === "wero" || o.moyenPaiement === "holam")
+    .reduce((sum, o) => sum + Number(o.total || 0), 0);
+
+  const totalCarte = filteredOrders
+    .filter(o => o.moyenPaiement === "carte")
     .reduce((sum, o) => sum + Number(o.total || 0), 0);
 
   const totalGlobal = filteredOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
@@ -150,7 +160,10 @@ export default function SalesHistory() {
       const dateStr = new Date(o.createdAt).toLocaleString("fr-FR");
       const typeStr = isPOS ? "Vente Directe (POS)" : "Commande en Ligne";
       const empStr = o.employeAssigne?.nom || "Admin / Système";
-      const payStr = o.moyenPaiement === "cash" ? "Cash / Espèces" : o.moyenPaiement === "orange_money" ? "Orange Money" : o.moyenPaiement === "wave" ? "Wave" : "Carte Bancaire";
+      const payStr = (o.moyenPaiement === "cash" || o.moyenPaiement === "especes") ? "Cash / Espèces"
+        : o.moyenPaiement === "mvola" ? "MVola"
+        : (o.moyenPaiement === "wero" || o.moyenPaiement === "holam") ? "Wero"
+        : "Carte Bancaire";
       return [
         `#COM-B${String(o.id).padStart(3, "0")}`,
         `"${dateStr}"`,
@@ -242,8 +255,8 @@ export default function SalesHistory() {
           >
             <option value="tous">Tous les paiements</option>
             <option value="cash">Espèces / Cash</option>
-            <option value="orange_money">Orange Money</option>
-            <option value="wave">Wave</option>
+            <option value="mvola">MVola</option>
+            <option value="wero">Wero</option>
             <option value="carte">Carte Bancaire</option>
           </select>
 
@@ -300,44 +313,54 @@ export default function SalesHistory() {
         </div>
       </div>
 
-      {/* KPI SUMMARY CARDS */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 20 }}>
+      {/* KPI SUMMARY CARDS (5 CARDS) */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginBottom: 20 }}>
         {/* TOTAL CASH */}
-        <div className="bs-panel" style={{ padding: 18, background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#166534", fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>
-            <DollarSign size={16} /> TOTAL CASH
+        <div className="bs-panel" style={{ padding: 16, background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#166534", fontSize: 11.5, fontWeight: 800, textTransform: "uppercase" }}>
+            <DollarSign size={15} /> TOTAL CASH
           </div>
-          <div style={{ fontSize: 24, fontWeight: 900, color: "#15803D", marginTop: 8 }}>
+          <div style={{ fontSize: 22, fontWeight: 900, color: "#15803D", marginTop: 6 }}>
             {fcfa(totalCash)}
           </div>
         </div>
 
-        {/* TOTAL ORANGE MONEY */}
-        <div className="bs-panel" style={{ padding: 18, background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#92400E", fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>
-            <Smartphone size={16} /> TOTAL ORANGE
+        {/* TOTAL MVOLA */}
+        <div className="bs-panel" style={{ padding: 16, background: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#047857", fontSize: 11.5, fontWeight: 800, textTransform: "uppercase" }}>
+            <Smartphone size={15} /> TOTAL MVOLA
           </div>
-          <div style={{ fontSize: 24, fontWeight: 900, color: "#D97706", marginTop: 8 }}>
-            {fcfa(totalOrange)}
+          <div style={{ fontSize: 22, fontWeight: 900, color: "#059669", marginTop: 6 }}>
+            {fcfa(totalMvola)}
           </div>
         </div>
 
-        {/* TOTAL WAVE */}
-        <div className="bs-panel" style={{ padding: 18, background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#1E40AF", fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>
-            <Smartphone size={16} /> TOTAL WAVE
+        {/* TOTAL WERO */}
+        <div className="bs-panel" style={{ padding: 16, background: "#FEFCE8", border: "1px solid #FEF08A", borderRadius: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#854D0E", fontSize: 11.5, fontWeight: 800, textTransform: "uppercase" }}>
+            <Smartphone size={15} /> TOTAL WERO
           </div>
-          <div style={{ fontSize: 24, fontWeight: 900, color: "#2563EB", marginTop: 8 }}>
-            {fcfa(totalWave)}
+          <div style={{ fontSize: 22, fontWeight: 900, color: "#CA8A04", marginTop: 6 }}>
+            {fcfa(totalWero)}
+          </div>
+        </div>
+
+        {/* TOTAL CARTE */}
+        <div className="bs-panel" style={{ padding: 16, background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#6D28D9", fontSize: 11.5, fontWeight: 800, textTransform: "uppercase" }}>
+            <CreditCard size={15} /> TOTAL CARTE
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: "#7C3AED", marginTop: 6 }}>
+            {fcfa(totalCarte)}
           </div>
         </div>
 
         {/* TOTAL GLOBAL */}
-        <div className="bs-panel" style={{ padding: 18, background: "var(--forest-light)", border: "1px solid #A7F3D0", borderRadius: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--forest-dark)", fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>
-            <ShoppingBag size={16} /> TOTAL GLOBAL
+        <div className="bs-panel" style={{ padding: 16, background: "var(--forest-light)", border: "1px solid #A7F3D0", borderRadius: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--forest-dark)", fontSize: 11.5, fontWeight: 800, textTransform: "uppercase" }}>
+            <ShoppingBag size={15} /> TOTAL GLOBAL
           </div>
-          <div style={{ fontSize: 24, fontWeight: 900, color: "var(--forest-dark)", marginTop: 8 }}>
+          <div style={{ fontSize: 22, fontWeight: 900, color: "var(--forest-dark)", marginTop: 6 }}>
             {fcfa(totalGlobal)}
           </div>
         </div>
@@ -383,6 +406,10 @@ export default function SalesHistory() {
               const itemsList = o.items || [];
               const displayItems = itemsList.slice(0, 2);
               const extraCount = itemsList.length - 2;
+
+              const isCash = o.moyenPaiement === "cash" || o.moyenPaiement === "especes";
+              const isMvola = o.moyenPaiement === "mvola";
+              const isWero = o.moyenPaiement === "wero" || o.moyenPaiement === "holam";
 
               return (
                 <tr key={o.id}>
@@ -430,10 +457,10 @@ export default function SalesHistory() {
                   <td>
                     <span style={{
                       padding: "4px 10px", borderRadius: 12, fontSize: 11.5, fontWeight: 800,
-                      background: o.moyenPaiement === "cash" ? "#FEF3C7" : o.moyenPaiement === "orange_money" ? "#FFEDD5" : o.moyenPaiement === "wave" ? "#E0F2FE" : "#F3E8FF",
-                      color: o.moyenPaiement === "cash" ? "#92400E" : o.moyenPaiement === "orange_money" ? "#C2410C" : o.moyenPaiement === "wave" ? "#0369A1" : "#6B21A8"
+                      background: isCash ? "#FEF3C7" : isMvola ? "#DCFCE7" : isWero ? "#FEF9C3" : "#F3E8FF",
+                      color: isCash ? "#92400E" : isMvola ? "#15803D" : isWero ? "#854D0E" : "#6B21A8"
                     }}>
-                      {o.moyenPaiement === "cash" ? "Cash / Espèces" : o.moyenPaiement === "orange_money" ? "Orange Money" : o.moyenPaiement === "wave" ? "Wave" : "Carte"}
+                      {isCash ? "Cash / Espèces" : isMvola ? "MVola" : isWero ? "Wero" : "Carte"}
                     </span>
                   </td>
                   <td style={{ fontWeight: 800, fontSize: 14, color: "var(--forest-dark)", whiteSpace: "nowrap" }}>
@@ -469,39 +496,40 @@ export default function SalesHistory() {
         <div
           onClick={() => setSelectedOrder(null)}
           style={{
-            position: "fixed", inset: 0, zIndex: 1000,
-            background: "rgba(22,52,36,0.5)", backdropFilter: "blur(4px)",
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "rgba(15, 23, 42, 0.75)", backdropFilter: "blur(4px)",
             display: "flex", alignItems: "center", justifyContent: "center", padding: 16
           }}
         >
           <div
+            className="bs-receipt-paper"
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: "#fff", borderRadius: 16, padding: 24,
-              maxWidth: 420, width: "100%", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.15)",
-              fontFamily: "Courier, monospace, sans-serif"
+              background: "#FFFFFF", color: "#0F172A", borderRadius: 16, padding: 24,
+              maxWidth: 420, width: "100%", boxShadow: "0 20px 30px rgba(0,0,0,0.4)",
+              fontFamily: "Courier, monospace, sans-serif", border: "1px solid #CBD5E1"
             }}
           >
             {/* TICKET HEADER */}
             <div style={{ textAlign: "center", borderBottom: "1px dashed #64748B", paddingBottom: 12, marginBottom: 12 }}>
               <div style={{ fontSize: 20, fontWeight: 900, color: "#0F172A", letterSpacing: 1 }}>{storeName.toUpperCase()}</div>
-              <div style={{ fontSize: 11, color: "#64748B", marginTop: 2 }}>BOUTIQUE & COMMERCE EN LIGNE</div>
-              <div style={{ fontSize: 11, color: "#64748B", marginTop: 4 }}>
+              <div style={{ fontSize: 11, color: "#475569", marginTop: 2, fontWeight: 600 }}>BOUTIQUE & COMMERCE EN LIGNE</div>
+              <div style={{ fontSize: 11, color: "#475569", marginTop: 4, fontWeight: 700 }}>
                 REÇU N° #COM-B{String(selectedOrder.id).padStart(3, "0")}
               </div>
-              <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>
+              <div style={{ fontSize: 11, color: "#64748B", marginTop: 2 }}>
                 {new Date(selectedOrder.createdAt).toLocaleString("fr-FR")}
               </div>
             </div>
 
             {/* METADATA */}
-            <div style={{ fontSize: 11.5, color: "#334155", marginBottom: 12, lineHeight: 1.5 }}>
-              <div><strong>Client:</strong> {selectedOrder.client?.nom || "Client comptoir"}</div>
+            <div style={{ fontSize: 12, color: "#1E293B", marginBottom: 12, lineHeight: 1.6 }}>
+              <div><strong style={{ color: "#0F172A" }}>Client:</strong> {selectedOrder.client?.nom || "Client comptoir"}</div>
               {selectedOrder.client?.telephone && selectedOrder.client.telephone !== "non_renseigne" && (
-                <div><strong>Téléphone:</strong> {selectedOrder.client.telephone}</div>
+                <div><strong style={{ color: "#0F172A" }}>Téléphone:</strong> {selectedOrder.client.telephone}</div>
               )}
-              <div><strong>Caissier:</strong> {selectedOrder.employeAssigne?.nom || "Admin / Système"}</div>
-              <div><strong>Type:</strong> {selectedOrder.typeVente === "vente_directe" ? "Vente Directe POS" : "Commande en Ligne"}</div>
+              <div><strong style={{ color: "#0F172A" }}>Caissier:</strong> {selectedOrder.employeAssigne?.nom || "Admin / Système"}</div>
+              <div><strong style={{ color: "#0F172A" }}>Type:</strong> {selectedOrder.typeVente === "vente_directe" ? "Vente Directe POS" : "Commande en Ligne"}</div>
             </div>
 
             {/* ITEMS TABLE */}
@@ -518,42 +546,42 @@ export default function SalesHistory() {
                 const totLine = pu * it.quantite;
 
                 return (
-                  <div key={idx} style={{ display: "grid", gridTemplateColumns: "2.2fr 0.6fr 1fr 1fr", fontSize: 11.5, color: "#1E293B", marginBottom: 5 }}>
+                  <div key={idx} style={{ display: "grid", gridTemplateColumns: "2.2fr 0.6fr 1fr 1fr", fontSize: 11.5, color: "#0F172A", marginBottom: 5, fontWeight: 600 }}>
                     <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {it.product?.nom || "Produit"}
                     </span>
                     <span style={{ textAlign: "center" }}>{it.quantite}</span>
                     <span style={{ textAlign: "right" }}>{pu.toFixed(2)} €</span>
-                    <span style={{ textAlign: "right", fontWeight: 700 }}>{totLine.toFixed(2)} €</span>
+                    <span style={{ textAlign: "right", fontWeight: 800 }}>{totLine.toFixed(2)} €</span>
                   </div>
                 );
               })}
             </div>
 
             {/* TOTALS SUMMARY */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#1E293B", marginBottom: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#0F172A", marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>Sous-Total:</span>
-                <span>{fcfa(selectedOrder.sousTotal || selectedOrder.total)}</span>
+                <span style={{ color: "#475569" }}>Sous-Total:</span>
+                <span style={{ fontWeight: 700 }}>{fcfa(selectedOrder.sousTotal || selectedOrder.total)}</span>
               </div>
               {Number(selectedOrder.fraisLivraison || 0) > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span>Frais de livraison:</span>
-                  <span>{fcfa(selectedOrder.fraisLivraison)}</span>
+                  <span style={{ color: "#475569" }}>Frais de livraison:</span>
+                  <span style={{ fontWeight: 700 }}>{fcfa(selectedOrder.fraisLivraison)}</span>
                 </div>
               )}
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 900, color: "#0F172A", borderTop: "1px dashed #64748B", paddingTop: 8, marginTop: 4 }}>
                 <span>TOTAL RÉGLÉ:</span>
-                <span>{fcfa(selectedOrder.total)}</span>
+                <span style={{ color: "#15803D" }}>{fcfa(selectedOrder.total)}</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#64748B", marginTop: 2 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#475569", marginTop: 4 }}>
                 <span>Paiement:</span>
-                <span style={{ fontWeight: 700, textTransform: "uppercase" }}>{selectedOrder.moyenPaiement?.replace("_", " ")}</span>
+                <span style={{ fontWeight: 800, textTransform: "uppercase", color: "#0F172A" }}>{selectedOrder.moyenPaiement?.replace("_", " ")}</span>
               </div>
             </div>
 
             {/* FOOTER MESSAGE */}
-            <div style={{ textAlign: "center", fontSize: 11, color: "#64748B", borderTop: "1px dashed #64748B", paddingTop: 10, marginBottom: 16 }}>
+            <div style={{ textAlign: "center", fontSize: 11, color: "#475569", borderTop: "1px dashed #64748B", paddingTop: 10, marginBottom: 16, fontWeight: 600 }}>
               Merci pour votre confiance !<br />À très bientôt chez {storeName}.
             </div>
 

@@ -15,6 +15,7 @@ import ModulesTab from "./components/ModulesTab";
 import CreateBoutiqueModal from "./components/CreateBoutiqueModal";
 import EditBoutiqueModal from "./components/EditBoutiqueModal";
 import EditUserModal from "./components/EditUserModal";
+import CreateUserModal from "./components/CreateUserModal";
 import ConfirmModal from "./components/ConfirmModal";
 
 export default function SuperAdmin() {
@@ -34,6 +35,7 @@ export default function SuperAdmin() {
 
   // Modal states
   const [createForm, setCreateForm] = useState(null);
+  const [createUserForm, setCreateUserForm] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [editUserForm, setEditUserForm] = useState(null);
   const [deleteBoutiqueId, setDeleteBoutiqueId] = useState(null);
@@ -87,10 +89,10 @@ export default function SuperAdmin() {
       return;
     }
     try {
-      await api.post("/superadmin/boutiques", createForm);
-      setCreateForm(null);
+      const res = await api.post("/superadmin/boutiques", createForm);
       showSuccess("Nouvelle boutique et son compte admin créés avec succès !");
       loadData();
+      return res.data;
     } catch (err) {
       showError(err.response?.data?.message || "Impossible de créer la boutique.");
     }
@@ -183,8 +185,23 @@ export default function SuperAdmin() {
     }
   }
 
+  async function submitCreateUser() {
+    if (!createUserForm?.nom || !createUserForm?.email || !createUserForm?.motDePasse) {
+      showError("Veuillez remplir tous les champs obligatoires (nom, email, mot de passe).");
+      return;
+    }
+    try {
+      const res = await api.post("/superadmin/users", createUserForm);
+      showSuccess(`Nouvel utilisateur (${createUserForm.role}) créé avec succès !`);
+      loadData();
+      return res.data;
+    } catch (err) {
+      showError(err.response?.data?.message || "Impossible de créer l'utilisateur.");
+    }
+  }
+
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", minHeight: "100vh", background: "#F4F7F5" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", minHeight: "100vh", background: "var(--paper)" }}>
       {/* ── SIDEBAR ── */}
       <SuperAdminSidebar
         activeTab={activeTab}
@@ -203,6 +220,7 @@ export default function SuperAdmin() {
           onRefresh={loadData}
           loading={loading}
           onNewBoutique={() => setCreateForm({ nomBoutique: "", slug: "", formuleAbonnement: "standard", nomAdmin: "", emailAdmin: "", motDePasseAdmin: "" })}
+          onNewUser={() => setCreateUserForm({ nom: "", email: "", telephone: "", role: "super_admin", boutiqueId: "", motDePasse: "" })}
         />
 
         {/* ALERTS */}
@@ -298,6 +316,16 @@ export default function SuperAdmin() {
           setForm={setCreateForm}
           onSubmit={submitCreateBoutique}
           onClose={() => setCreateForm(null)}
+        />
+      )}
+
+      {createUserForm && (
+        <CreateUserModal
+          form={createUserForm}
+          setForm={setCreateUserForm}
+          boutiques={boutiques}
+          onSubmit={submitCreateUser}
+          onClose={() => setCreateUserForm(null)}
         />
       )}
 

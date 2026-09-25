@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { User, Phone, MapPin, Lock, CheckCircle2, AlertCircle, LogOut, ArrowLeft, Save, ShieldCheck } from "lucide-react";
+import { User, Phone, Mail, MapPin, Lock, CheckCircle2, AlertCircle, LogOut, ArrowLeft, Save, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import api from "../../api.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useCart } from "../../context/CartContext.jsx";
@@ -13,11 +13,15 @@ export default function Profile() {
 
   const [form, setForm] = useState({
     nom: user?.nom || "",
+    email: user?.email || "",
     telephone: user?.telephone || "",
     adresse: user?.adresse || "",
     ancienMotDePasse: "",
     nouveauMotDePasse: ""
   });
+
+  const [showOldPass, setShowOldPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
 
   const [message, setMessage] = useState("");
   const [erreur, setErreur] = useState("");
@@ -28,6 +32,7 @@ export default function Profile() {
       setForm((f) => ({
         ...f,
         nom: user.nom || "",
+        email: user.email || "",
         telephone: user.telephone || "",
         adresse: user.adresse || ""
       }));
@@ -62,16 +67,24 @@ export default function Profile() {
 
   return (
     <div style={{ maxWidth: 760, margin: "32px auto", padding: "0 16px" }}>
-      {/* Bouton Retour */}
+      {/* Bouton Retour intelligent */}
       <button
         type="button"
-        onClick={() => navigate(-1)}
+        onClick={() => {
+          if (user?.role === "super_admin") {
+            navigate("/super-admin");
+          } else if (user?.role === "admin" || user?.role === "employe") {
+            navigate("/admin");
+          } else {
+            navigate(-1);
+          }
+        }}
         style={{
           display: "flex", alignItems: "center", gap: 8, background: "none", border: "none",
           cursor: "pointer", color: "var(--muted)", fontWeight: 700, fontSize: 13.5, marginBottom: 20
         }}
       >
-        <ArrowLeft size={16} /> Retourner à la boutique
+        <ArrowLeft size={16} /> {user?.role === "super_admin" || user?.role === "admin" || user?.role === "employe" ? "Retourner au Tableau de Bord" : "Retourner"}
       </button>
 
       {/* CARTE PRINCIPALE DE PROFIL */}
@@ -103,7 +116,7 @@ export default function Profile() {
               <span>{user?.email || user?.telephone}</span>
               <span style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--muted)" }} />
               <span style={{ textTransform: "capitalize", fontWeight: 700, color: "var(--forest)" }}>
-                {user?.role === "client" ? "Compte Client Privilégié" : user?.role}
+                {user?.role === "client" ? "Compte Client Privilégié" : user?.role === "admin" ? "Administrateur" : user?.role}
               </span>
             </div>
           </div>
@@ -150,15 +163,30 @@ export default function Profile() {
             />
           </div>
 
-          <div className="bs-input-group">
-            <label style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
-              <Phone size={15} color="var(--forest)" /> Numéro de téléphone principal *
-            </label>
-            <PhoneInputSelect
-              value={form.telephone}
-              onChange={(val) => setForm({ ...form, telephone: val })}
-              placeholder="Ex: 330 00 00 ou 77 123 45 67"
-            />
+          <div className="bs-form-row-2">
+            <div className="bs-input-group">
+              <label style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                <Mail size={15} color="var(--forest)" /> Adresse E-mail
+              </label>
+              <input
+                type="email"
+                className="bs-input"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="votre.email@exemple.com"
+              />
+            </div>
+
+            <div className="bs-input-group">
+              <label style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                <Phone size={15} color="var(--forest)" /> Numéro de téléphone principal *
+              </label>
+              <PhoneInputSelect
+                value={form.telephone}
+                onChange={(val) => setForm({ ...form, telephone: val })}
+                placeholder="Ex: 330 00 00 ou 77 123 45 67"
+              />
+            </div>
           </div>
 
           <div className="bs-input-group">
@@ -183,26 +211,52 @@ export default function Profile() {
             </h3>
 
             <div className="bs-form-row-2">
-              <div className="bs-input-group">
+              <div className="bs-input-group" style={{ position: "relative" }}>
                 <label style={{ fontSize: 12.5, color: "var(--muted)" }}>Ancien mot de passe</label>
-                <input
-                  type="password"
-                  className="bs-input"
-                  placeholder="Laisser vide si inchangé"
-                  value={form.ancienMotDePasse}
-                  onChange={(e) => setForm({ ...form, ancienMotDePasse: e.target.value })}
-                />
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showOldPass ? "text" : "password"}
+                    className="bs-input"
+                    style={{ paddingRight: 40 }}
+                    placeholder="Laisser vide si inchangé"
+                    value={form.ancienMotDePasse}
+                    onChange={(e) => setForm({ ...form, ancienMotDePasse: e.target.value })}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowOldPass(!showOldPass)}
+                    style={{
+                      position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+                      background: "none", border: "none", cursor: "pointer", color: "var(--muted)"
+                    }}
+                  >
+                    {showOldPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
-              <div className="bs-input-group">
+              <div className="bs-input-group" style={{ position: "relative" }}>
                 <label style={{ fontSize: 12.5, color: "var(--muted)" }}>Nouveau mot de passe</label>
-                <input
-                  type="password"
-                  className="bs-input"
-                  placeholder="Min. 6 caractères"
-                  value={form.nouveauMotDePasse}
-                  onChange={(e) => setForm({ ...form, nouveauMotDePasse: e.target.value })}
-                />
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showNewPass ? "text" : "password"}
+                    className="bs-input"
+                    style={{ paddingRight: 40 }}
+                    placeholder="Min. 6 caractères"
+                    value={form.nouveauMotDePasse}
+                    onChange={(e) => setForm({ ...form, nouveauMotDePasse: e.target.value })}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPass(!showNewPass)}
+                    style={{
+                      position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+                      background: "none", border: "none", cursor: "pointer", color: "var(--muted)"
+                    }}
+                  >
+                    {showNewPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

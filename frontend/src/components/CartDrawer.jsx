@@ -1,15 +1,27 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight, PackageOpen } from "lucide-react";
+import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight, PackageOpen, MessageCircle } from "lucide-react";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import { processWhatsAppOrder } from "../utils/whatsappOrder.js";
 
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 
 export default function CartDrawer({ onClose }) {
-  const { cart, updateQuantite, removeFromCart, subtotal } = useCart();
-  const { user } = useAuth();
+  const { cart, updateQuantite, setExactQuantite, removeFromCart, subtotal, clearCart, showToast } = useCart();
+  const { user, boutique } = useAuth();
   const navigate = useNavigate();
+
+  const isWhatsAppEnabled = boutique?.modulesActifs?.commanderWhatsapp !== false;
+
+  function handleWhatsAppClick() {
+    onClose();
+    if (!user) {
+      navigate("/connexion?redirect=/commander?whatsapp=true");
+      return;
+    }
+    navigate("/commander?whatsapp=true");
+  }
 
   function goToCheckout() {
     onClose();
@@ -152,23 +164,29 @@ export default function CartDrawer({ onClose }) {
                           <button 
                             onClick={() => updateQuantite(l.product.id, -1)}
                             style={{
-                              width: 30, height: 30, background: "none", border: "none",
+                              width: 28, height: 28, background: "none", border: "none",
                               cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                               color: "var(--ink)", transition: "background 0.15s"
                             }}
                           >
                             <Minus size={12} />
                           </button>
-                          <span style={{ 
-                            width: 28, textAlign: "center", fontWeight: 700, fontSize: 13,
-                            color: "var(--ink)"
-                          }}>
-                            {l.quantite}
-                          </span>
+                          <input
+                            type="number"
+                            min="1"
+                            max={l.product.stock || 999}
+                            value={l.quantite}
+                            onChange={(e) => setExactQuantite(l.product.id, e.target.value)}
+                            style={{
+                              width: 34, textAlign: "center", fontWeight: 700, fontSize: 13,
+                              border: "none", background: "transparent", color: "var(--ink)", outline: "none",
+                              MozAppearance: "textfield"
+                            }}
+                          />
                           <button 
                             onClick={() => updateQuantite(l.product.id, 1)}
                             style={{
-                              width: 30, height: 30, background: "none", border: "none",
+                              width: 28, height: 28, background: "none", border: "none",
                               cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                               color: "var(--ink)", transition: "background 0.15s"
                             }}
@@ -225,17 +243,37 @@ export default function CartDrawer({ onClose }) {
               <span style={{ fontSize: 16, fontWeight: 700, color: "var(--ink)" }}>Total estimé</span>
               <span style={{ fontSize: 20, fontWeight: 800, color: "var(--forest-dark)" }}>{fcfa(subtotal)}</span>
             </div>
-            <button 
-              className="bs-btn-primary" 
-              style={{
-                width: "100%", padding: "14px 20px", fontSize: 15,
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                borderRadius: 14
-              }} 
-              onClick={goToCheckout}
-            >
-              Passer la commande <ArrowRight size={18} />
-            </button>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <button 
+                className="bs-btn-primary" 
+                style={{
+                  width: "100%", padding: "14px 20px", fontSize: 15,
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  borderRadius: 14
+                }} 
+                onClick={goToCheckout}
+              >
+                Passer la commande <ArrowRight size={18} />
+              </button>
+
+              {isWhatsAppEnabled && (
+                <button
+                  type="button"
+                  onClick={handleWhatsAppClick}
+                  style={{
+                    width: "100%", padding: "12px 20px", fontSize: 14, fontWeight: 700,
+                    background: "#25D366", color: "#ffffff", border: "none",
+                    borderRadius: 14, cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    boxShadow: "0 4px 12px rgba(37, 211, 102, 0.3)"
+                  }}
+                >
+                  <MessageCircle size={18} fill="#ffffff" color="#25D366" />
+                  Commander via WhatsApp
+                </button>
+              )}
+            </div>
+
             <button
               onClick={onClose}
               style={{

@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
-import { ArrowLeft, Tag, Star, ShoppingBag, CheckCircle, Heart, Minus, Plus, Search, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Tag, Star, ShoppingBag, CheckCircle, Heart, Minus, Plus, Search, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import api, { SLUG } from "../../api";
 import Stars from "../../components/Stars.jsx";
 import ProductCard from "../../components/ProductCard.jsx";
@@ -26,6 +26,28 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [related, setRelated] = useState([]);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [hasPurchasedProduct, setHasPurchasedProduct] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      api.get(`/store/${SLUG}/orders/mine`)
+        .then((res) => {
+          const orders = res.data || [];
+          const bought = orders.some((order) => {
+            const isCompleted = order.statut === "recuperee" || order.statut === "livree";
+            if (!isCompleted) return false;
+            return order.items?.some((it) => {
+              const pid = it.product?.id || it.productId || it.product_id;
+              return Number(pid) === Number(id);
+            });
+          });
+          setHasPurchasedProduct(bought);
+        })
+        .catch(() => setHasPurchasedProduct(false));
+    } else {
+      setHasPurchasedProduct(false);
+    }
+  }, [user, id]);
 
   // Scroll to top immediately on navigate
   useEffect(() => {
@@ -61,16 +83,25 @@ export default function ProductDetail() {
     window.dispatchEvent(new Event("favorites_updated"));
   }
 
+  const sliderRef = useRef(null);
+
   function load() {
     api.get(`/store/${SLUG}/products/${id}`).then((res) => {
       setProduct(res.data);
       if (res.data.categoryId) {
         api.get(`/store/${SLUG}/products?categoryId=${res.data.categoryId}`).then(r => {
-          setRelated(r.data.filter(p => p.id !== res.data.id).slice(0, 4));
+          setRelated(r.data.filter(p => p.id !== res.data.id).slice(0, 10));
         });
       }
     }).catch(() => {});
   }
+
+  const scrollSlider = (direction) => {
+    if (sliderRef.current) {
+      const scrollAmount = direction === "left" ? -300 : 300;
+      sliderRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+    }
+  };
 
   useEffect(() => {
     load();
@@ -237,11 +268,32 @@ export default function ProductDetail() {
 
           <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 40 }}>
             <div style={{ display: "flex", alignItems: "center", border: "1px solid var(--line)", borderRadius: 30, overflow: "hidden", height: 48, opacity: isMaxStockReached || product.stock === 0 ? 0.6 : 1 }}>
-              <button onClick={decrementQty} disabled={quantity <= 1} style={{ width: 48, height: "100%", background: "var(--paper)", border: "none", cursor: quantity <= 1 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <button onClick={decrementQty} disabled={quantity <= 1} style={{ width: 44, height: "100%", background: "var(--paper)", border: "none", cursor: quantity <= 1 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Minus size={18} color="var(--ink)" />
               </button>
-              <div style={{ width: 48, textAlign: "center", fontWeight: 700, fontSize: 16 }}>{quantity}</div>
-              <button onClick={incrementQty} disabled={quantity >= stockDisponible} style={{ width: 48, height: "100%", background: "var(--paper)", border: "none", cursor: quantity >= stockDisponible ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <input
+                type="number"
+                min="1"
+                max={stockDisponible}
+                value={quantity}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  if (isNaN(val) || val < 1) {
+                    setQuantity(1);
+                  } else if (val > stockDisponible) {
+                    setQuantity(stockDisponible);
+                    showToast(`Quantité ajustée au stock disponible (${stockDisponible}).`, "warning");
+                  } else {
+                    setQuantity(val);
+                  }
+                }}
+                style={{
+                  width: 54, textAlign: "center", fontWeight: 700, fontSize: 16,
+                  border: "none", background: "transparent", color: "var(--ink)", outline: "none",
+                  MozAppearance: "textfield"
+                }}
+              />
+              <button onClick={incrementQty} disabled={quantity >= stockDisponible} style={{ width: 44, height: "100%", background: "var(--paper)", border: "none", cursor: quantity >= stockDisponible ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Plus size={18} color="var(--ink)" />
               </button>
             </div>
@@ -287,38 +339,6 @@ export default function ProductDetail() {
               </div>
             ))}
 
-            {user?.role === "client" ? (
-              <div className="bs-panel" style={{ marginTop: 20 }}>
-                <h4 style={{ margin: "0 0 10px", fontSize: 15 }}>Laisser un avis sur ce produit</h4>
-                {erreur && <div className="bs-error">{erreur}</div>}
-                <div style={{ display: "flex", gap: 6, margin: "10px 0" }}>
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <Star 
-                      key={n} 
-                      size={22} 
-                      color="var(--accent)" 
-                      fill={n <= reviewDraft.note ? "var(--accent)" : "none"}
-                      style={{ cursor: "pointer" }} 
-                      onClick={() => setReviewDraft((r) => ({ ...r, note: n }))} 
-                    />
-                  ))}
-                </div>
-                <textarea 
-                  className="bs-input" 
-                  rows={3} 
-                  placeholder="Partagez votre avis sur la qualité du produit..."
-                  value={reviewDraft.commentaire} 
-                  onChange={(e) => setReviewDraft((r) => ({ ...r, commentaire: e.target.value }))} 
-                />
-                <button className="bs-btn-primary" style={{ marginTop: 10, padding: "10px 20px" }} onClick={submitReview}>
-                  Publier mon avis
-                </button>
-              </div>
-            ) : (
-              <p style={{ fontSize: 14, color: "var(--muted)", marginTop: 16 }}>
-                <Link to="/connexion" style={{ color: "var(--forest)", fontWeight: 700 }}>Connectez-vous</Link> pour évaluer ce produit.
-              </p>
-            )}
           </div>
         </div>
       </div>
@@ -326,9 +346,56 @@ export default function ProductDetail() {
       {/* RELATED PRODUCTS */}
       {related.length > 0 && (
         <div style={{ marginTop: 60, paddingTop: 40, borderTop: "1px solid var(--line)" }}>
-          <h2 style={{ fontSize: 24, color: "var(--forest-dark)", marginBottom: 24, textAlign: "center" }}>Produits similaires</h2>
-          <div className="bs-grid">
-            {related.map(p => <ProductCard key={p.id} product={p} />)}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <h2 style={{ fontSize: 24, color: "var(--forest-dark)", margin: 0 }}>Produits similaires</h2>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => scrollSlider("left")}
+                aria-label="Défiler à gauche"
+                style={{
+                  width: 38, height: 38, borderRadius: "50%",
+                  background: "#fff", border: "1px solid var(--line)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+                  transition: "all 0.2s"
+                }}
+              >
+                <ChevronLeft size={20} color="var(--forest-dark)" />
+              </button>
+              <button
+                onClick={() => scrollSlider("right")}
+                aria-label="Défiler à droite"
+                style={{
+                  width: 38, height: 38, borderRadius: "50%",
+                  background: "#fff", border: "1px solid var(--line)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+                  transition: "all 0.2s"
+                }}
+              >
+                <ChevronRight size={20} color="var(--forest-dark)" />
+              </button>
+            </div>
+          </div>
+
+          <div
+            ref={sliderRef}
+            style={{
+              display: "flex",
+              gap: 16,
+              overflowX: "auto",
+              scrollSnapType: "x mandatory",
+              scrollBehavior: "smooth",
+              paddingBottom: 16,
+              scrollbarWidth: "none",
+              msOverflowStyle: "none"
+            }}
+          >
+            {related.map(p => (
+              <div key={p.id} style={{ flex: "0 0 260px", minWidth: 260, scrollSnapAlign: "start" }}>
+                <ProductCard product={p} />
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -117,12 +117,72 @@ export function CartProvider({ children }) {
     });
   }
 
+  function setExactQuantite(productId, targetValue) {
+    const parsed = parseInt(targetValue, 10);
+    if (isNaN(parsed) || parsed < 1) {
+      // Remove or reset to 1
+      removeFromCart(productId);
+      return;
+    }
+
+    setCart((prev) => {
+      const item = prev.find((l) => l.product.id === productId);
+      if (!item) return prev;
+
+      const stockMax = Number(item.product.stock ?? 0);
+      let nouvelleQte = parsed;
+
+      if (nouvelleQte > stockMax) {
+        showToast(
+          `Quantité ajustée à ${stockMax} (maximum en stock pour "${item.product.nom}").`,
+          "warning"
+        );
+        nouvelleQte = stockMax;
+      }
+
+      return prev.map((l) =>
+        l.product.id === productId ? { ...l, quantite: nouvelleQte } : l
+      );
+    });
+  }
+
   function removeFromCart(productId) {
     setCart((prev) => prev.filter((l) => l.product.id !== productId));
   }
 
   function clearCart() {
     setCart([]);
+  }
+
+  function addMultipleToCart(items) {
+    let addedCount = 0;
+    setCart((prev) => {
+      let newCart = [...prev];
+      items.forEach(item => {
+        const product = item.product;
+        if (!product) return; // Skip if product was deleted
+        const quantite = item.quantite || 1;
+        const stockMax = Number(product.stock ?? 0);
+        const itemExistant = newCart.find((l) => l.product.id === product.id);
+        const dejaEnPanier = itemExistant ? itemExistant.quantite : 0;
+        if (stockMax > 0 && dejaEnPanier < stockMax) {
+          const ajoutPossible = Math.min(quantite, stockMax - dejaEnPanier);
+          if (itemExistant) {
+            newCart = newCart.map((l) => l.product.id === product.id ? { ...l, quantite: l.quantite + ajoutPossible } : l);
+          } else {
+            newCart.push({ product, quantite: ajoutPossible });
+          }
+          addedCount++;
+        }
+      });
+      return newCart;
+    });
+    
+    if (addedCount > 0) {
+      showToast(`${addedCount} article(s) ajouté(s) à votre panier.`, "success");
+    } else {
+      showToast("Certains articles sont en rupture de stock.", "warning");
+    }
   }
 
   const subtotal = cart.reduce(
@@ -136,7 +196,9 @@ export function CartProvider({ children }) {
       value={{
         cart,
         addToCart,
+        addMultipleToCart,
         updateQuantite,
+        setExactQuantite,
         removeFromCart,
         clearCart,
         subtotal,

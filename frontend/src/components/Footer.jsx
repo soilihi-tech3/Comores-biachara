@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, Phone, Mail, Store, Facebook, Instagram, MessageCircle, Info, Package, Grid, Home as HomeIcon, Clock } from "lucide-react";
+import { MapPin, Phone, Mail, Store, Facebook, Instagram, MessageCircle, Info, Package, Grid, Home as HomeIcon, Clock, ShieldCheck, Truck, CheckCircle, Headphones } from "lucide-react";
 import api, { SLUG } from "../api";
 
 import { useAuth } from "../context/AuthContext.jsx";
@@ -15,9 +15,9 @@ export default function Footer() {
 
   useEffect(() => {
     if (!boutiqueContext) {
-      api.get(`/store/${SLUG}`).then(res => setBoutiqueLocal(res.data)).catch(() => {});
+      api.get(`/store/${SLUG}`).then(res => setBoutiqueLocal(res.data)).catch(() => { });
     }
-    api.get(`/store/${SLUG}/categories`).then(res => setCategories(res.data || [])).catch(() => {});
+    api.get(`/store/${SLUG}/categories`).then(res => setCategories(res.data || [])).catch(() => { });
   }, [boutiqueContext]);
 
   const rawWaNum = boutique?.whatsappNumber || boutique?.telephone || "";
@@ -29,9 +29,141 @@ export default function Footer() {
   const horaires = boutique?.horairesOuverture || "Tous les jours de 08h30 à 23h00";
 
   return (
-    <footer style={{ background: "var(--forest-dark)", color: "#F0F3EC", padding: "60px 24px 24px", marginTop: "auto" }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 40, marginBottom: 40 }}>
-        
+    <>
+      {/* ── BANNIÈRE DE CONFIANCE HORIZONTALE SUR LE FOND DU SITE (OUTSIDE FOOTER) ── */}
+      <div style={{
+        background: "var(--paper)",
+        borderTop: "1px solid var(--line)",
+        padding: "32px 24px"
+      }}>
+        <div style={{
+          maxWidth: 1280,
+          margin: "0 auto",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: 16
+        }}>
+          {/* CARTE 1: PAIEMENT SÉCURISÉ */}
+          <div style={{
+            background: "var(--card)",
+            borderRadius: 16,
+            padding: "20px 18px",
+            textAlign: "center",
+            border: "1px solid var(--line)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+          }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: "50%",
+              background: "#E8F0FE", color: "#1A73E8",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              marginBottom: 12
+            }}>
+              <ShieldCheck size={24} />
+            </div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: "var(--ink)", marginBottom: 4 }}>
+              Paiement sécurisé
+            </div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.4 }}>
+              Paiement à la livraison ou en ligne avec reçu officiel
+            </div>
+          </div>
+
+          {/* CARTE 2: COMMANDE SUIVIE */}
+          <div style={{
+            background: "var(--card)",
+            borderRadius: 16,
+            padding: "20px 18px",
+            textAlign: "center",
+            border: "1px solid var(--line)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+          }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: "50%",
+              background: "#EBF7F0", color: "var(--forest)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              marginBottom: 12
+            }}>
+              <Truck size={24} />
+            </div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: "var(--ink)", marginBottom: 4 }}>
+              Commande suivie
+            </div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.4 }}>
+              Suivi et notification à chaque étape de votre livraison
+            </div>
+          </div>
+
+          {/* CARTE 3: PRODUITS VÉRIFIÉS AUTHENTIQUES */}
+          <div style={{
+            background: "var(--card)",
+            borderRadius: 16,
+            padding: "20px 18px",
+            textAlign: "center",
+            border: "1px solid var(--line)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+          }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: "50%",
+              background: "#FFF4EB", color: "var(--accent)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              marginBottom: 12
+            }}>
+              <CheckCircle size={24} />
+            </div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: "var(--ink)", marginBottom: 4 }}>
+              Produits vérifiés authentiques
+            </div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.4 }}>
+              Produits certifiés authentiques et contrôlés rigoureusement
+            </div>
+          </div>
+
+          {/* CARTE 4: SUPPORT 24H / 7J */}
+          <div style={{
+            background: "var(--card)",
+            borderRadius: 16,
+            padding: "20px 18px",
+            textAlign: "center",
+            border: "1px solid var(--line)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.03)"
+          }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: "50%",
+              background: "#F3E8FF", color: "#7E22CE",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              marginBottom: 12
+            }}>
+              <Headphones size={24} />
+            </div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: "var(--ink)", marginBottom: 4 }}>
+              Support 24h / 7d
+            </div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.4 }}>
+              Service client à votre écoute 7j/7 pour vous assister
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer style={{ background: "var(--forest-dark)", color: "#F0F3EC", padding: "48px 24px 24px", marginTop: "auto" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 40, marginBottom: 40 }}>
+
         {/* COLONNE 1: À PROPOS & LOGO */}
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
@@ -56,7 +188,7 @@ export default function Footer() {
             </a>
             <a href={tiktokUrl} target="_blank" rel="noreferrer" title="TikTok" style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#000000"} onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 1 1-5.2-1.74 2.89 2.89 0 0 1 2.31-1.42V8.9a6.34 6.34 0 0 0-5.46 6.31 6.34 6.34 0 1 0 11.8-3.41V9.5a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.0-0.93z"/>
+                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 1 1-5.2-1.74 2.89 2.89 0 0 1 2.31-1.42V8.9a6.34 6.34 0 0 0-5.46 6.31 6.34 6.34 0 1 0 11.8-3.41V9.5a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.0-0.93z" />
               </svg>
             </a>
           </div>
@@ -188,11 +320,7 @@ export default function Footer() {
             🔒 Paiement 100% Sécurisé & Modes de règlement acceptés :
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            {/* Espèces / Cash */}
-            <div style={{ background: "#fff", padding: "4px 10px", borderRadius: 8, display: "flex", alignItems: "center", gap: 6, boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}>
-              <CashLogo height={24} />
-              <span style={{ fontWeight: 800, fontSize: 11, color: "var(--forest-dark)" }}>Cash</span>
-            </div>
+
 
             {/* MVola */}
             <div style={{ background: "#fff", padding: "4px 10px", borderRadius: 8, display: "flex", alignItems: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}>
@@ -223,5 +351,6 @@ export default function Footer() {
         </div>
       </div>
     </footer>
+    </>
   );
 }

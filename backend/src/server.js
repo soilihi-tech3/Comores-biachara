@@ -25,8 +25,21 @@ const app = express();
 // Trust reverse proxy headers on Render/Vercel for express-rate-limit
 app.set("trust proxy", 1);
 
+// Webhook Stripe (doit être configuré avant express.json car Stripe nécessite le corps brut)
+const stripeWebhookRoutes = require("./routes/stripe.webhook");
+app.use("/api/webhooks/stripe", express.raw({ type: "application/json" }), stripeWebhookRoutes);
+
 // High Performance Compression (GZIP/Brotli)
 app.use(compression());
+
+// Security Headers
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  next();
+});
 
 // Universal CORS Configuration supporting custom domains (comoresbiachara.site, vercel.app, custom domains)
 app.use((req, res, next) => {
@@ -52,7 +65,8 @@ app.use((req, res, next) => {
   }
   next();
 });
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(morgan("dev"));
 app.use(resolveBoutique);
 app.use(iconsRoutes);
@@ -168,10 +182,15 @@ app.use("/api/superadmin", superadminRoutes);
 app.use("/api/admin", uploadRoutes);
 app.use("/api/notifications", notificationRoutes);
 
-// Gestion d'erreurs centralisée
+// Gestion d'erreurs centralisée sécurisée
 app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(err.status || 500).json({ message: err.message || "Erreur serveur interne." });
+  console.error("[SERVER ERROR]", err);
+  const status = err.status || err.statusCode || 500;
+  const isProd = process.env.NODE_ENV === "production";
+  const message = (isProd && status === 500) 
+    ? "Une erreur interne du serveur est survenue." 
+    : (err.message || "Erreur serveur interne.");
+  res.status(status).json({ message });
 });
 
 const PORT = process.env.PORT || 4000;
@@ -210,11 +229,33 @@ async function ensureColumns() {
       await sequelize.query(`ALTER TABLE products ADD COLUMN is_nouveau TINYINT(1) DEFAULT 0;`);
     }
 
+    const tableOrders = await queryInterface.describeTable("orders");
+    if (!tableOrders["stripe_session_id"]) {
+      console.log("[MIGRATION] Ajout colonne stripe_session_id sur orders");
+      await sequelize.query(`ALTER TABLE orders ADD COLUMN stripe_session_id VARCHAR(255) NULL;`);
+    }
+    if (tableOrders["statutPaiement"] && !tableOrders["statut_paiement"]) {
+      console.log("[MIGRATION] Renommage statutPaiement en statut_paiement");
+      await sequelize.query(`ALTER TABLE orders CHANGE COLUMN statutPaiement statut_paiement VARCHAR(50) DEFAULT 'non_paye';`);
+    } else if (!tableOrders["statut_paiement"]) {
+      console.log("[MIGRATION] Ajout colonne statut_paiement");
+      await sequelize.query(`ALTER TABLE orders ADD COLUMN statut_paiement VARCHAR(50) DEFAULT 'non_paye';`);
+    }
+
+    if (tableOrders["receiptUrl"] && !tableOrders["receipt_url"]) {
+      console.log("[MIGRATION] Renommage receiptUrl en receipt_url");
+      await sequelize.query(`ALTER TABLE orders CHANGE COLUMN receiptUrl receipt_url VARCHAR(500) NULL;`);
+    } else if (!tableOrders["receipt_url"]) {
+      console.log("[MIGRATION] Ajout colonne receipt_url");
+      await sequelize.query(`ALTER TABLE orders ADD COLUMN receipt_url VARCHAR(500) NULL;`);
+    }
+
     const tableUsers = await queryInterface.describeTable("users");
     const columnsToAddUser = [
       { name: "otp_code", type: "VARCHAR(255) NULL" },
       { name: "otp_expires_at", type: "DATETIME NULL" },
-      { name: "is_email_verified", type: "TINYINT(1) DEFAULT 0" }
+      { name: "is_email_verified", type: "TINYINT(1) DEFAULT 0" },
+      { name: "must_change_password", type: "TINYINT(1) DEFAULT 0" }
     ];
 
     for (const col of columnsToAddUser) {

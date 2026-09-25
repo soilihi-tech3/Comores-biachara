@@ -133,11 +133,7 @@ export default function Home() {
 
   const [categories, setCategories] = useState(() => {
     const cached = getData(`categories:${SLUG}`);
-    if (cached && Array.isArray(cached)) return cached;
-    try {
-      const ls = localStorage.getItem(`cached_categories_${SLUG}`);
-      return ls ? JSON.parse(ls) : [];
-    } catch (e) { return []; }
+    return cached && Array.isArray(cached) ? cached : [];
   });
 
   const [familles, setFamilles] = useState(() => {
@@ -150,12 +146,8 @@ export default function Home() {
   });
 
   const [products, setProducts] = useState(() => {
-    const cached = getData(`products:${SLUG}`);
-    if (cached && Array.isArray(cached)) return cached;
-    try {
-      const ls = localStorage.getItem(`cached_products_${SLUG}`);
-      return ls ? JSON.parse(ls) : [];
-    } catch (e) { return []; }
+    const cached = getData(`products:${SLUG}:::`);
+    return cached && Array.isArray(cached) ? cached : [];
   });
 
   const [boutique, setBoutique] = useState(() => {
@@ -187,7 +179,6 @@ export default function Home() {
       if (Array.isArray(res.data)) {
         setData(`categories:${SLUG}`, res.data, 300000);
         setCategories(res.data);
-        try { localStorage.setItem(`cached_categories_${SLUG}`, JSON.stringify(res.data)); } catch (e) {}
       }
     }).catch(() => {});
 
@@ -201,9 +192,8 @@ export default function Home() {
 
     api.get(`/store/${SLUG}/products`).then((res) => {
       if (Array.isArray(res.data)) {
-        setData(`products:${SLUG}`, res.data, 120000);
+        setData(`products:${SLUG}:::`, res.data, 120000);
         setProducts(res.data);
-        try { localStorage.setItem(`cached_products_${SLUG}`, JSON.stringify(res.data)); } catch (e) {}
       }
     }).catch(() => {});
   }

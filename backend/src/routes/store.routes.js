@@ -174,16 +174,54 @@ router.get("/:slug/products/:id", loadBoutique, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /api/store/:slug/products/:id/reviews  (client connecté)
+// POST /api/store/:slug/products/:id/reviews  (client connecté — commande récupérée/livrée requise)
 router.post("/:slug/products/:id/reviews", loadBoutique, authenticate, requireRole("client"), async (req, res, next) => {
   try {
-    const { note, commentaire } = req.body;
+    const { note, commentaire, orderId } = req.body;
     if (!note || note < 1 || note > 5) return res.status(400).json({ message: "La note doit être comprise entre 1 et 5." });
 
     const product = await Product.findOne({ where: { id: req.params.id, boutiqueId: req.boutique.id } });
     if (!product) return res.status(404).json({ message: "Produit introuvable." });
 
-    const review = await Review.create({ productId: product.id, userId: req.user.id, note, commentaire });
+    // Vérifier que le client a une commande contenant ce produit avec le statut 'recuperee' ou 'livree'
+    const orderWhere = {
+      clientId: req.user.id,
+      boutiqueId: req.boutique.id,
+      statut: { [Op.in]: ["recuperee", "livree"] }
+    };
+    if (orderId) {
+      orderWhere.id = orderId;
+    }
+
+    const eligibleOrder = await Order.findOne({
+      where: orderWhere,
+      include: [{
+        model: OrderItem,
+        as: "items",
+        where: { productId: product.id },
+        required: true
+      }]
+    });
+
+    if (!eligibleOrder) {
+      return res.status(403).json({
+        message: "Vous ne pouvez laisser un avis que pour les produits d'une commande récupérée ou livrée."
+      });
+    }
+
+    // Vérifier si un avis existe déjà pour cet utilisateur et ce produit
+    const existingReview = await Review.findOne({
+      where: { productId: product.id, userId: req.user.id }
+    });
+
+    let review;
+    if (existingReview) {
+      await existingReview.update({ note, commentaire, statut: "publie" });
+      review = existingReview;
+    } else {
+      review = await Review.create({ productId: product.id, userId: req.user.id, note, commentaire });
+    }
+
     broadcast("product_updated", { productId: product.id });
     res.status(201).json(review);
   } catch (err) { next(err); }
@@ -216,9 +254,20 @@ router.post("/:slug/orders", loadBoutique, authenticate, requireRole("client"), 
     }
 
     const fraisLivraison = modeLivraison === "domicile" ? Number(req.boutique.fraisLivraison) : 0;
+    
+    // Si paiement par carte ou wero (via Stripe), on met en attente de paiement
+    const statutInit = (moyenPaiement === "carte" || moyenPaiement === "wero") ? "en_attente_paiement" : "en_attente";
+
+    if (moyenPaiement === "carte" || moyenPaiement === "wero") {
+      const stripeSecretKey = req.boutique.stripeSecretKey || process.env.STRIPE_SECRET_KEY;
+      if (!stripeSecretKey) {
+        await t.rollback();
+        return res.status(400).json({ message: "Ce mode de paiement n'est pas encore configuré par la boutique. Veuillez en choisir un autre." });
+      }
+    }
 
     const order = await Order.create({
-      boutiqueId: req.boutique.id, clientId: req.user.id, statut: "en_attente",
+      boutiqueId: req.boutique.id, clientId: req.user.id, statut: statutInit,
       modeLivraison, adresseLivraison, moyenPaiement, sousTotal, fraisLivraison,
       total: sousTotal + fraisLivraison,
     }, { transaction: t });
@@ -273,34 +322,183 @@ router.post("/:slug/orders", loadBoutique, authenticate, requireRole("client"), 
     next(err);
   }
 });
-
-// POST /api/store/:slug/create-payment-intent (Création d'un paiement Stripe par carte)
-router.post("/:slug/create-payment-intent", loadBoutique, authenticate, async (req, res, next) => {
+// POST /api/store/:slug/orders/:id/verify-payment (Vérifier le paiement Stripe côté serveur si le webhook est en retard)
+router.post("/:slug/orders/:id/verify-payment", loadBoutique, authenticate, async (req, res, next) => {
   try {
-    const { amount, currency = "eur" } = req.body;
-    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    const order = await Order.findOne({
+      where: { id: req.params.id, boutiqueId: req.boutique.id, clientId: req.user.id },
+      include: [{ model: OrderItem, as: "items", include: [{ model: Product, as: "product" }] }]
+    });
 
-    if (!stripeSecretKey) {
-      // Fallback mode démonstration / test local
-      return res.json({
-        clientSecret: "pi_demo_secret_" + Math.random().toString(36).substring(2),
-        isDemo: true,
-        publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || "pk_test_demo"
+    if (!order) return res.status(404).json({ message: "Commande introuvable" });
+    
+    // Si la commande est déjà validée (ex: par le webhook), on ne fait rien.
+    if (order.statut !== "en_attente_paiement") {
+      return res.json({ verified: true, order });
+    }
+
+    if (!order.stripeSessionId) {
+      return res.status(400).json({ message: "Pas de session Stripe associée" });
+    }
+
+    const stripeSecretKey = req.boutique.stripeSecretKey || process.env.STRIPE_SECRET_KEY;
+    const stripe = require("stripe")(stripeSecretKey);
+
+    const session = await stripe.checkout.sessions.retrieve(order.stripeSessionId);
+
+    if (session.payment_status === "paid") {
+      let receiptUrl = null;
+      try {
+        if (session.payment_intent) {
+          const pi = await stripe.paymentIntents.retrieve(session.payment_intent, { expand: ["latest_charge"] });
+          if (pi.latest_charge && pi.latest_charge.receipt_url) {
+            receiptUrl = pi.latest_charge.receipt_url;
+          }
+        }
+      } catch (e) {}
+
+      await order.update({ 
+        statut: "en_attente", 
+        statutPaiement: "paye",
+        receiptUrl: receiptUrl
       });
+
+      const cmdNum = "COM-B" + String(order.id).padStart(3, "0");
+      Notification.create({
+        userId: order.clientId, boutiqueId: order.boutiqueId, orderId: order.id,
+        title: "Paiement validé",
+        message: `Le paiement de votre commande #${cmdNum} a été validé avec succès.`,
+        type: "order"
+      }).catch(() => {});
+
+      Notification.create({
+        userId: null, boutiqueId: order.boutiqueId, orderId: order.id,
+        title: "Paiement en ligne reçu",
+        message: `Le paiement pour la commande #${cmdNum} a été confirmé via Stripe/Wero.`,
+        type: "order"
+      }).catch(() => {});
+
+      clearCachePattern("cache:/api/store").catch(() => {});
+      broadcast("order_updated", { orderId: order.id, statut: "en_attente", clientId: order.clientId, boutiqueId: order.boutiqueId });
+      
+      return res.json({ verified: true, order });
+    }
+
+    res.json({ verified: false, order });
+  } catch (err) {
+    console.error("Erreur verify-payment:", err);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+});
+
+// PATCH /api/store/:slug/orders/:id/switch-to-cash (Passer une commande en attente de paiement au cash)
+router.patch("/:slug/orders/:id/switch-to-cash", loadBoutique, authenticate, async (req, res, next) => {
+  try {
+    const order = await Order.findOne({
+      where: { id: req.params.id, boutiqueId: req.boutique.id, clientId: req.user.id }
+    });
+
+    if (!order) return res.status(404).json({ message: "Commande introuvable" });
+    if (order.statut !== "en_attente_paiement") {
+      return res.status(400).json({ message: "Le paiement de cette commande ne peut plus être modifié." });
+    }
+
+    await order.update({
+      moyenPaiement: "cash",
+      statut: "en_attente" // Repasse en attente classique
+    });
+
+    const cmdNum = "COM-B" + String(order.id).padStart(3, "0");
+    
+    Notification.create({
+      userId: order.clientId, boutiqueId: order.boutiqueId, orderId: order.id,
+      title: "Mode de paiement modifié",
+      message: `Votre commande #${cmdNum} a été modifiée en paiement à la livraison.`,
+      type: "order"
+    }).catch(() => {});
+
+    Notification.create({
+      userId: null, boutiqueId: order.boutiqueId, orderId: order.id,
+      title: "Nouvelle commande",
+      message: `La commande #${cmdNum} est passée en paiement à la livraison et attend votre confirmation.`,
+      type: "order"
+    }).catch(() => {});
+
+    clearCachePattern("cache:/api/store").catch(() => {});
+    broadcast("order_updated", { orderId: order.id, statut: "en_attente", clientId: order.clientId, boutiqueId: order.boutiqueId });
+    
+    // Si on veut envoyer l'e-mail à l'admin, on pourrait le faire ici, 
+    // car il n'avait peut-être pas été averti du succès du paiement.
+
+    res.json(order);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/store/:slug/create-checkout-session (Redirection Stripe pour Carte & Wero)
+router.post("/:slug/create-checkout-session", loadBoutique, authenticate, async (req, res, next) => {
+  try {
+    const { orderId } = req.body;
+    if (!orderId) return res.status(400).json({ message: "L'ID de la commande est requis." });
+
+    const order = await Order.findOne({
+      where: { id: orderId, boutiqueId: req.boutique.id, clientId: req.user.id, statut: "en_attente_paiement" },
+      include: [{ model: OrderItem, as: "items", include: [{ model: Product, as: "product" }] }]
+    });
+
+    if (!order) return res.status(404).json({ message: "Commande introuvable ou déjà payée." });
+
+    const stripeSecretKey = req.boutique.stripeSecretKey || process.env.STRIPE_SECRET_KEY;
+    if (!stripeSecretKey) {
+      return res.status(400).json({ message: "La boutique n'a pas configuré ses paiements par carte/wero." });
     }
 
     const stripe = require("stripe")(stripeSecretKey);
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(Number(amount) * 100), // Stripe attend des centimes
-      currency: currency.toLowerCase(),
-      metadata: { boutiqueId: req.boutique.id, userId: req.user.id }
-    });
+    const originUrl = req.headers.origin || process.env.FRONTEND_URL || "http://localhost:5173";
 
-    res.json({
-      clientSecret: paymentIntent.client_secret,
-      isDemo: false,
-      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY
-    });
+    // Préparer les articles pour Stripe
+    const line_items = order.items.map(item => ({
+      price_data: {
+        currency: "eur", // Wero nécessite obligatoirement de l'Euro
+        product_data: {
+          name: item.product.nom,
+          images: item.product.imageUrl ? [item.product.imageUrl] : [],
+        },
+        unit_amount: Math.round(Number(item.prixUnitaire) * 100),
+      },
+      quantity: item.quantite,
+    }));
+
+    if (Number(order.fraisLivraison) > 0) {
+      line_items.push({
+        price_data: {
+          currency: "eur",
+          product_data: { name: "Frais de livraison" },
+          unit_amount: Math.round(Number(order.fraisLivraison) * 100),
+        },
+        quantity: 1,
+      });
+    }
+
+    // Paramètres Stripe Connect si un Account ID est défini
+    const stripeConfig = {};
+    if (req.boutique.stripeAccountId && !req.boutique.stripeSecretKey) {
+      stripeConfig.stripeAccount = req.boutique.stripeAccountId;
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      line_items,
+      mode: "payment",
+      success_url: `${originUrl}/confirmation/${order.id}?success=true`,
+      cancel_url: `${originUrl}/confirmation/${order.id}?canceled=true`,
+      metadata: { boutiqueId: req.boutique.id, userId: req.user.id, orderId: order.id }
+    }, stripeConfig);
+
+    // Mettre à jour l'ID de session dans la base
+    await order.update({ stripeSessionId: session.id });
+
+    res.json({ url: session.url });
   } catch (err) { next(err); }
 });
 

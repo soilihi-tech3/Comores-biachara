@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { ShoppingCart, Search, User, LogOut, Store, X, Home, Grid, Package, Shield, Menu, ChevronDown, Info, Heart } from "lucide-react";
+import { ShoppingCart, Search, User, LogOut, Store, X, Home, Grid, Package, Shield, Menu, ChevronDown, Info, Heart, Sun, Moon } from "lucide-react";
 
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -12,7 +12,7 @@ import ProfileModal from "./ProfileModal.jsx";
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 
 export default function Header({ setCartOpen: setCartOpenProp }) {
-  const { user, boutique: boutiqueContext, logout } = useAuth();
+  const { user, boutique: boutiqueContext, logout, theme, toggleTheme } = useAuth();
   const { count, showToast } = useCart();
   const [cartOpen, setCartOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -110,7 +110,7 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
 
   return (
     <>
-      <header style={{ background: "#fff", borderBottom: "1px solid var(--line)", position: "sticky", top: 0, zIndex: 1000, boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+      <header style={{ background: "var(--card)", borderBottom: "1px solid var(--line)", position: "sticky", top: 0, zIndex: 1000, boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
         {/* ROW 1: MAIN HEADER ROW */}
         <div style={{ maxWidth: 1440, margin: "0 auto", padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
 
@@ -389,6 +389,27 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
               </div>
             )}
 
+            {/* BOUTON CHANGER LE THÈME */}
+            <button
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Passer en mode clair" : "Passer en mode sombre"}
+              style={{
+                background: "var(--paper)",
+                border: "1px solid var(--line)",
+                borderRadius: "50%",
+                width: 38,
+                height: 38,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: "var(--forest-dark)",
+                transition: "all 0.2s ease"
+              }}
+            >
+              {theme === "dark" ? <Sun size={18} color="#F59E0B" /> : <Moon size={18} color="var(--forest-dark)" />}
+            </button>
+
             <button className="bs-cart-btn" onClick={() => setCartOpen(true)}>
               <ShoppingCart size={16} />
               <span>Panier</span>
@@ -406,11 +427,11 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
               <button
                 onClick={() => setCategoriesOpen(!categoriesOpen)}
                 style={{
-                  background: "var(--forest-dark)", color: "#fff",
+                  background: "var(--forest)", color: "#fff",
                   border: "none", borderRadius: 20, padding: "8px 18px",
                   fontWeight: 800, fontSize: 13, cursor: "pointer",
                   display: "flex", alignItems: "center", gap: 8,
-                  boxShadow: "0 2px 8px rgba(16,42,28,0.2)"
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
                 }}
               >
                 <Menu size={16} /> Toutes les catégories <ChevronDown size={14} />
@@ -419,8 +440,8 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
               {categoriesOpen && (
                 <div style={{
                   position: "absolute", top: "calc(100% + 8px)", left: 0,
-                  width: 250, background: "#fff", borderRadius: 14,
-                  border: "1px solid var(--line)", boxShadow: "0 10px 30px rgba(0,0,0,0.18)",
+                  width: 250, background: "var(--card)", borderRadius: 14,
+                  border: "1px solid var(--line)", boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
                   zIndex: 3000, overflow: "hidden", padding: "6px 0"
                 }}>
                   {categories.length === 0 ? (
@@ -438,8 +459,8 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
                           color: "var(--ink)", cursor: "pointer", display: "flex",
                           alignItems: "center", gap: 10, transition: "background 0.15s"
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = "var(--forest-light)"}
-                        onMouseLeave={(e) => e.currentTarget.style.background = "#fff"}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "var(--paper)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
                       >
                         {cat.imageUrl ? (
                           <img src={cat.imageUrl} alt={cat.nom} style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover" }} />
@@ -461,14 +482,14 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
                   key={cat.id}
                   onClick={() => navigate(`/catalogue?categoryId=${cat.id}`)}
                   style={{
-                    background: "#fff", border: "1px solid var(--line)",
+                    background: "var(--card)", border: "1px solid var(--line)",
                     borderRadius: 20, padding: "5px 14px", fontSize: 12.5,
                     fontWeight: 600, color: "var(--ink)", cursor: "pointer",
                     whiteSpace: "nowrap", display: "inline-flex", alignItems: "center",
                     gap: 6, transition: "all 0.15s"
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = "var(--forest-light)"; e.currentTarget.style.borderColor = "var(--forest)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "var(--line)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "var(--card)"; e.currentTarget.style.borderColor = "var(--line)"; }}
                 >
                   {cat.imageUrl && (
                     <img src={cat.imageUrl} alt={cat.nom} style={{ width: 18, height: 18, borderRadius: "50%", objectFit: "cover" }} />

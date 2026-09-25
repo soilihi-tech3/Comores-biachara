@@ -23,20 +23,12 @@ export default function Catalogue() {
 
   const [categories, setCategories] = useState(() => {
     const cached = getData(`categories:${SLUG}`);
-    if (cached && Array.isArray(cached)) return cached;
-    try {
-      const ls = localStorage.getItem(`cached_categories_${SLUG}`);
-      return ls ? JSON.parse(ls) : [];
-    } catch (e) { return []; }
+    return cached && Array.isArray(cached) ? cached : [];
   });
 
   const [products, setProducts] = useState(() => {
     const cached = getData(cacheKey);
-    if (cached && Array.isArray(cached)) return cached;
-    try {
-      const ls = localStorage.getItem(`cached_products_${SLUG}`);
-      return ls ? JSON.parse(ls) : [];
-    } catch (e) { return []; }
+    return cached && Array.isArray(cached) ? cached : [];
   });
 
   const [loading, setLoading] = useState(() => {
@@ -90,9 +82,6 @@ export default function Catalogue() {
       .then((res) => {
         setData(cacheKey, res.data, 120000);
         setProducts(res.data);
-        if (!categoryId && !famille && !search) {
-          try { localStorage.setItem(`cached_products_${SLUG}`, JSON.stringify(res.data)); } catch (e) {}
-        }
       })
       .finally(() => setLoading(false));
   }

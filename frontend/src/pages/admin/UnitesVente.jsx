@@ -150,24 +150,28 @@ export default function UnitesVente() {
 
       {/* MODAL CREER / MODIFIER */}
       {(modalType === "create" || modalType === "edit") && (
-        <div className="bs-modal-bg" onClick={() => setModalType(null)}>
-          <div className="bs-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440, width: "90%" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 9999,
+          background: "rgba(15, 23, 42, 0.65)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 16
+        }} onClick={() => setModalType(null)}>
+          <div className="bs-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440, width: "100%", borderRadius: 16, padding: 24, boxShadow: "0 20px 30px rgba(0,0,0,0.3)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--line)", paddingBottom: 12 }}>
               <h2 style={{ margin: 0, fontSize: 18, color: "var(--forest-dark)" }}>
                 {modalType === "create" ? "Ajouter une Unité de Vente" : `Modifier : ${selectedUnite?.nom}`}
               </h2>
-              <button onClick={() => setModalType(null)} style={{ background: "none", border: "none", cursor: "pointer" }}>
+              <button onClick={() => setModalType(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}>
                 <X size={20} />
               </button>
             </div>
 
             {erreur && (
-              <div style={{ background: "#FDF2F0", color: "#B4483A", padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
+              <div style={{ background: "#FDF2F0", color: "#B4483A", padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
                 <AlertCircle size={16} /> {erreur}
               </div>
             )}
             {succes && (
-              <div style={{ background: "#EBF7F0", color: "#1F4D3A", padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
+              <div style={{ background: "#EBF7F0", color: "#1F4D3A", padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
                 <CheckCircle size={16} /> {succes}
               </div>
             )}
@@ -184,7 +188,7 @@ export default function UnitesVente() {
               </div>
 
               <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
-                <button type="button" onClick={() => setModalType(null)} style={{ flex: 1, padding: "12px", borderRadius: 10, border: "1px solid var(--line)", background: "#fff", fontWeight: 600, cursor: "pointer" }}>
+                <button type="button" onClick={() => setModalType(null)} style={{ flex: 1, padding: "12px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--paper)", color: "var(--ink)", fontWeight: 600, cursor: "pointer" }}>
                   Annuler
                 </button>
                 <button type="submit" className="bs-btn-primary" style={{ flex: 1, borderRadius: 10 }}>

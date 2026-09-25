@@ -67,6 +67,7 @@ function WideLayout({ children }) {
 }
 
 import PWAInstallPrompt from "./components/PWAInstallPrompt.jsx";
+import MustChangePasswordModal from "./components/MustChangePasswordModal.jsx";
 import { initRealtimeSync, subscribeRealtime } from "./utils/realtime.js";
 import { useCart } from "./context/CartContext.jsx";
 
@@ -106,6 +107,7 @@ export default function App() {
     <>
       <ScrollToTop />
       <PWAInstallPrompt />
+      <MustChangePasswordModal />
       <RealtimeToastNotifier />
       <Routes>
         {/* --- Boutique (front-office) --- */}

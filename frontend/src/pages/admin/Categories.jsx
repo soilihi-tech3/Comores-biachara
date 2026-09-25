@@ -332,7 +332,7 @@ export default function AdminCategories() {
                   </td>
                   <td style={{ fontWeight: 700, color: "var(--ink)" }}>{c.nom}</td>
                   <td>
-                    <span style={{ background: "var(--forest-light)", color: "var(--forest-dark)", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                    <span style={{ background: "var(--forest-light)", color: "var(--forest-dark)", padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700, border: "1px solid var(--line)" }}>
                       {c.famille || "Alimentation"}
                     </span>
                   </td>
@@ -409,8 +409,17 @@ export default function AdminCategories() {
             <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
               <button
                 type="button"
-                className="bs-btn-primary"
-                style={{ background: "#E2E8E3", color: "var(--ink)", flex: 1 }}
+                style={{
+                  background: "var(--paper)",
+                  border: "1px solid var(--line)",
+                  color: "var(--ink)",
+                  padding: "12px 20px",
+                  borderRadius: 12,
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: "pointer",
+                  flex: 1
+                }}
                 onClick={cancelEditCategory}
               >
                 Annuler

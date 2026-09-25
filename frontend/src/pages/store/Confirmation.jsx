@@ -14,6 +14,21 @@ export default function Confirmation() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    
+    // Vérifier les paramètres d'URL (Retour de Stripe)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("success") === "true") {
+      api.post(`/store/${SLUG}/orders/${id}/verify-payment`).then(() => {
+        // Optionnel : Re-fetch the order to get the updated status
+        api.get(`/store/${SLUG}/orders/mine`).then(res => {
+          const found = res.data.find(o => String(o.id) === String(id));
+          setOrder(found || null);
+        }).catch(() => {});
+      }).catch(() => {});
+    } else if (params.get("canceled") === "true") {
+      alert("Le paiement a été annulé. Vous pourrez réessayer depuis la section 'Mes Commandes'.");
+    }
+
     api.get(`/store/${SLUG}/orders/mine`).then(res => {
       const found = res.data.find(o => String(o.id) === String(id));
       setOrder(found || null);

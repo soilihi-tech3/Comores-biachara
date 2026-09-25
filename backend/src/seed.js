@@ -178,19 +178,23 @@ async function runSeed() {
   const { clearCachePattern } = require("./config/cache");
 
   const produits = {};
-  for (const p of produitsData) {
-    const { cat, ...rest } = p;
-    const catObj = cats[cat];
-    let prodObj = await Product.findOne({ where: { nom: p.nom, boutiqueId: boutique.id } });
-    if (!prodObj) {
-      prodObj = await Product.create({ ...rest, boutiqueId: boutique.id, categoryId: catObj ? catObj.id : null });
-    } else {
-      if (catObj && prodObj.categoryId !== catObj.id) prodObj.categoryId = catObj.id;
-      if (p.imageUrl && !prodObj.imageUrl) prodObj.imageUrl = p.imageUrl;
-      if (p.imageUrl2 && !prodObj.imageUrl2) prodObj.imageUrl2 = p.imageUrl2;
-      await prodObj.save();
+  const nbProduitsExistant = await Product.count({ where: { boutiqueId: boutique.id } });
+  
+  if (nbProduitsExistant === 0) {
+    for (const p of produitsData) {
+      const { cat, ...rest } = p;
+      const catObj = cats[cat];
+      const prodObj = await Product.create({ ...rest, boutiqueId: boutique.id, categoryId: catObj ? catObj.id : null });
+      produits[p.nom] = prodObj;
     }
-    produits[p.nom] = prodObj;
+  } else {
+    // Ne pas recréer de produits si la base de données n'est pas vide (pour ne pas restaurer les suppressions !)
+    for (const p of produitsData) {
+      const prodObj = await Product.findOne({ where: { nom: p.nom, boutiqueId: boutique.id } });
+      if (prodObj) {
+        produits[p.nom] = prodObj;
+      }
+    }
   }
 
   // --- 7. Avis & Commandes ---

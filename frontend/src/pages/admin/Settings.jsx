@@ -3,9 +3,11 @@ import { Plus, Trash2, Image, Layers, LayoutGrid, Store, Phone, MapPin, Mail, In
 import api from "../../api";
 import ImageUploader from "../../components/ImageUploader.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { useCart } from "../../context/CartContext.jsx";
 
 export default function AdminSettings({ defaultTab = "general" }) {
   const { refreshBoutique } = useAuth();
+  const { showToast } = useCart();
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [boutique, setBoutique] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -28,8 +30,28 @@ export default function AdminSettings({ defaultTab = "general" }) {
       }
       if (!Array.isArray(data.sideBanners)) data.sideBanners = [];
 
-      if (!data.modesPaiement) {
-        data.modesPaiement = { especes: true, mvola: true, holam: true, carte: false };
+      if (typeof data.modesPaiement === "string") {
+        try { data.modesPaiement = JSON.parse(data.modesPaiement); } catch (e) { data.modesPaiement = null; }
+      }
+      
+      // Assainissement strict pour éviter les objets corrompus géants (due au spread de string)
+      const sanitizedModes = { especes: true, mvola: true, holam: true, carte: false };
+      if (data.modesPaiement && typeof data.modesPaiement === "object" && !data.modesPaiement["0"]) {
+        if (typeof data.modesPaiement.especes === "boolean") sanitizedModes.especes = data.modesPaiement.especes;
+        if (typeof data.modesPaiement.mvola === "boolean") sanitizedModes.mvola = data.modesPaiement.mvola;
+        if (typeof data.modesPaiement.holam === "boolean") sanitizedModes.holam = data.modesPaiement.holam;
+        if (typeof data.modesPaiement.carte === "boolean") sanitizedModes.carte = data.modesPaiement.carte;
+      }
+      data.modesPaiement = sanitizedModes;
+
+      if (typeof data.modulesActifs === "string") {
+        try { data.modulesActifs = JSON.parse(data.modulesActifs); } catch (e) { data.modulesActifs = null; }
+      }
+      if (!data.modulesActifs || typeof data.modulesActifs !== "object" || data.modulesActifs["0"]) {
+        data.modulesActifs = {
+          vente: true, ventesHistorique: true, achats: true, fournisseurs: true, 
+          unites: true, homeBanners: true, sideBanners: true, commandes: true
+        };
       }
 
       setBoutique(data);
@@ -39,10 +61,18 @@ export default function AdminSettings({ defaultTab = "general" }) {
   }, []);
 
   async function save() {
-    await api.put("/admin/boutique", boutique);
-    refreshBoutique();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    try {
+      await api.put("/admin/boutique", boutique);
+      refreshBoutique();
+      setSaved(true);
+      showToast("Configurations enregistrées avec succès !", "success");
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error(err);
+      const msg = err.response?.data?.message || err.message;
+      alert("Erreur lors de l'enregistrement: " + msg);
+      showToast("Erreur: " + msg, "error");
+    }
   }
 
   if (!boutique) return <div style={{ padding: 40 }}>Chargement des paramètres...</div>;
@@ -332,17 +362,17 @@ export default function AdminSettings({ defaultTab = "general" }) {
       {activeTab === "domain" && (
         <div className="bs-panel">
           <div style={{ marginBottom: 20 }}>
-            <h3 style={{ margin: "0 0 6px", fontSize: 18, color: "var(--forest-dark)", display: "flex", alignItems: "center", gap: 8 }}>
-              <Globe size={20} /> Nom de Domaine Personnalisé
+            <h3 style={{ margin: "0 0 6px", fontSize: 18, color: "var(--ink)", display: "flex", alignItems: "center", gap: 8 }}>
+              <Globe size={20} color="var(--forest)" /> Nom de Domaine Personnalisé
             </h3>
             <div style={{ fontSize: 13.5, color: "var(--muted)" }}>
               Liez votre propre nom de domaine (ex: <code>abdou.com</code> ou <code>boutique.abdou.com</code>) à votre storefront.
             </div>
           </div>
 
-          <div style={{ background: "#F8FAF9", border: "1px solid var(--line)", borderRadius: 14, padding: 20, marginBottom: 24 }}>
+          <div style={{ background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 14, padding: 20, marginBottom: 24 }}>
             <div className="bs-field">
-              <label style={{ fontWeight: 700, fontSize: 14, color: "var(--forest-dark)" }}>
+              <label style={{ fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>
                 Domaine personnalisé de votre boutique
               </label>
               <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
@@ -360,18 +390,18 @@ export default function AdminSettings({ defaultTab = "general" }) {
             </div>
           </div>
 
-          <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 14, padding: 20 }}>
-            <h4 style={{ margin: "0 0 12px", fontSize: 15, color: "#1E40AF", display: "flex", alignItems: "center", gap: 8 }}>
-              <HelpCircle size={18} /> Instructions de configuration DNS chez votre Registrar (Namecheap, GoDaddy, OVH, etc.)
+          <div style={{ background: "var(--paper)", border: "1.5px solid var(--forest)", borderRadius: 14, padding: 20 }}>
+            <h4 style={{ margin: "0 0 12px", fontSize: 15, color: "var(--ink)", display: "flex", alignItems: "center", gap: 8 }}>
+              <HelpCircle size={18} color="var(--forest)" /> Instructions de configuration DNS chez votre Registrar (Namecheap, GoDaddy, OVH, etc.)
             </h4>
             
-            <p style={{ fontSize: 13.5, color: "#1E3A8A", lineHeight: 1.5, margin: "0 0 14px" }}>
+            <p style={{ fontSize: 13.5, color: "var(--muted)", lineHeight: 1.5, margin: "0 0 14px" }}>
               Pour que votre domaine personnalisé pointe vers votre boutique Render, ajoutez les enregistrements DNS suivants dans l'espace client de votre registrar :
             </p>
 
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, background: "#FFFFFF", borderRadius: 8, overflow: "hidden", border: "1px solid #DBEAFE" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, background: "var(--card)", borderRadius: 8, overflow: "hidden", border: "1px solid var(--line)" }}>
               <thead>
-                <tr style={{ background: "#DBEAFE", textAlign: "left", color: "#1E40AF" }}>
+                <tr style={{ background: "var(--forest-light)", textAlign: "left", color: "var(--ink)" }}>
                   <th style={{ padding: "10px 14px" }}>Type</th>
                   <th style={{ padding: "10px 14px" }}>Nom / Hôte</th>
                   <th style={{ padding: "10px 14px" }}>Valeur / Cible</th>
@@ -379,23 +409,23 @@ export default function AdminSettings({ defaultTab = "general" }) {
                 </tr>
               </thead>
               <tbody>
-                <tr style={{ borderBottom: "1px solid #EFF6FF" }}>
-                  <td style={{ padding: "10px 14px", fontWeight: 700 }}>CNAME</td>
-                  <td style={{ padding: "10px 14px", fontFamily: "monospace" }}>@ ou store</td>
-                  <td style={{ padding: "10px 14px", fontFamily: "monospace", color: "#2563EB" }}>votre-app.onrender.com</td>
+                <tr style={{ borderBottom: "1px solid var(--line)" }}>
+                  <td style={{ padding: "10px 14px", fontWeight: 700, color: "var(--ink)" }}>CNAME</td>
+                  <td style={{ padding: "10px 14px", fontFamily: "monospace", color: "var(--ink)" }}>@ ou store</td>
+                  <td style={{ padding: "10px 14px", fontFamily: "monospace", color: "var(--forest)", fontWeight: 700 }}>votre-app.onrender.com</td>
                   <td style={{ padding: "10px 14px", color: "var(--muted)" }}>Redirige le trafic vers Render</td>
                 </tr>
                 <tr>
-                  <td style={{ padding: "10px 14px", fontWeight: 700 }}>CNAME</td>
-                  <td style={{ padding: "10px 14px", fontFamily: "monospace" }}>www</td>
-                  <td style={{ padding: "10px 14px", fontFamily: "monospace", color: "#2563EB" }}>votre-app.onrender.com</td>
+                  <td style={{ padding: "10px 14px", fontWeight: 700, color: "var(--ink)" }}>CNAME</td>
+                  <td style={{ padding: "10px 14px", fontFamily: "monospace", color: "var(--ink)" }}>www</td>
+                  <td style={{ padding: "10px 14px", fontFamily: "monospace", color: "var(--forest)", fontWeight: 700 }}>votre-app.onrender.com</td>
                   <td style={{ padding: "10px 14px", color: "var(--muted)" }}>Redirige les visites www</td>
                 </tr>
               </tbody>
             </table>
 
-            <div style={{ marginTop: 14, fontSize: 12.5, color: "#1E40AF", display: "flex", alignItems: "center", gap: 6 }}>
-              <CheckCircle2 size={16} color="#2563EB" /> Render émettra automatiquement un certificat SSL/TLS gratuit dès la validation DNS.
+            <div style={{ marginTop: 14, fontSize: 12.5, color: "var(--forest)", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+              <CheckCircle2 size={16} color="var(--forest)" /> Render émettra automatiquement un certificat SSL/TLS gratuit dès la validation DNS.
             </div>
           </div>
         </div>
@@ -567,7 +597,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
             {[
               { key: "especes", label: "Espèces (Cash)", sub: "Paiement à la livraison / réception au comptoir", Icon: Banknote },
               { key: "mvola", label: "Mvola", sub: "Paiement mobile Money Mvola", Icon: Smartphone },
-              { key: "holam", label: "Holam", sub: "Paiement mobile Money Holam", Icon: Smartphone },
+              { key: "holam", label: "Wero", sub: "Paiement instantané européen Wero", Icon: Smartphone },
               { key: "carte", label: "Carte Bancaire (Stripe)", sub: "Paiement en ligne Visa / Mastercard", Icon: CreditCard },
             ].map((item) => {
               const isEnabled = !!modesPaiement[item.key];
@@ -579,21 +609,21 @@ export default function AdminSettings({ defaultTab = "general" }) {
                     display: "flex", alignItems: "center", justifyContent: "space-between",
                     padding: "20px", borderRadius: 16,
                     border: `2px solid ${isEnabled ? "var(--forest)" : "var(--line)"}`,
-                    background: isEnabled ? "var(--forest-light)" : "#FAFAFA",
+                    background: isEnabled ? "var(--forest-light)" : "var(--paper)",
                     cursor: "pointer", transition: "all 0.2s ease"
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                     <div style={{
                       width: 44, height: 44, borderRadius: 12,
-                      background: isEnabled ? "var(--forest)" : "var(--paper)",
+                      background: isEnabled ? "var(--forest)" : "var(--card)",
                       color: isEnabled ? "#fff" : "var(--muted)",
                       display: "flex", alignItems: "center", justifyContent: "center"
                     }}>
                       <item.Icon size={22} />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 15, color: isEnabled ? "var(--forest-dark)" : "var(--ink)" }}>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: "var(--ink)" }}>
                         {item.label}
                       </div>
                       <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>
@@ -619,9 +649,9 @@ export default function AdminSettings({ defaultTab = "general" }) {
 
           {/* STRIPE CREDENTIALS SECTION */}
           {modesPaiement.carte && (
-            <div style={{ background: "#F8FAF9", border: "1px solid var(--forest)", borderRadius: 16, padding: 22, marginTop: 20 }}>
-              <h4 style={{ margin: "0 0 8px", fontSize: 16, color: "var(--forest-dark)", display: "flex", alignItems: "center", gap: 8 }}>
-                <Key size={18} /> Clés API & Compte Stripe de la Boutique
+            <div style={{ background: "var(--paper)", border: "1.5px solid var(--forest)", borderRadius: 16, padding: 22, marginTop: 20 }}>
+              <h4 style={{ margin: "0 0 8px", fontSize: 16, color: "var(--ink)", display: "flex", alignItems: "center", gap: 8 }}>
+                <Key size={18} color="var(--forest)" /> Clés API & Compte Stripe de la Boutique
               </h4>
               <p style={{ margin: "0 0 16px", fontSize: 13, color: "var(--muted)" }}>
                 Renseignez vos clés d'API Stripe pour recevoir directement les paiements en carte bancaire sur votre propre compte Stripe d'entreprise.
@@ -629,7 +659,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                 <div className="bs-field">
-                  <label>Clé Publique Stripe (Publishable Key)</label>
+                  <label style={{ color: "var(--ink)", fontWeight: 600 }}>Clé Publique Stripe (Publishable Key)</label>
                   <input
                     className="bs-input"
                     style={{ fontFamily: "monospace", fontSize: 13.5 }}
@@ -640,7 +670,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
                 </div>
 
                 <div className="bs-field">
-                  <label>Clé Secrète Stripe (Secret Key)</label>
+                  <label style={{ color: "var(--ink)", fontWeight: 600 }}>Clé Secrète Stripe (Secret Key)</label>
                   <input
                     className="bs-input"
                     type="password"
@@ -653,7 +683,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
               </div>
 
               <div className="bs-field" style={{ marginTop: 14 }}>
-                <label>ID de compte Stripe Connect (Facultatif - ex: acct_1N...)</label>
+                <label style={{ color: "var(--ink)", fontWeight: 600 }}>ID de compte Stripe Connect (Facultatif - ex: acct_1N...)</label>
                 <input
                   className="bs-input"
                   style={{ fontFamily: "monospace", fontSize: 13.5 }}
@@ -663,11 +693,17 @@ export default function AdminSettings({ defaultTab = "general" }) {
                 />
               </div>
 
-              <div style={{ marginTop: 16, background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 10, padding: 12, fontSize: 12.5, color: "#92400E" }}>
-                <strong>Note d'éligibilité Stripe :</strong> Stripe requiert que le compte d'entreprise soit enregistré dans un pays pris en charge (ex: États-Unis via une LLC US, France, Émirats Arabes Unis). Les paiements seront directement versés sur votre compte bancaire rattaché.
+              <div style={{ background: "var(--accent-light)", color: "var(--accent)", padding: "12px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--accent)", marginTop: 16 }}>
+                <span style={{ fontWeight: 700 }}>Note d'éligibilité Stripe :</span> Stripe requiert que le compte d'entreprise soit enregistré dans un pays pris en charge (ex: États-Unis via une LLC US, France, Émirats Arabes Unis). Les paiements seront directement versés sur votre compte bancaire rattaché.
               </div>
             </div>
           )}
+
+          <div style={{ marginTop: 24, display: "flex", justifyContent: "flex-end" }}>
+            <button className="bs-btn-primary" onClick={save} style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 24px", fontSize: 15 }}>
+              <Save size={18} /> Enregistrer les configurations de paiement
+            </button>
+          </div>
         </div>
       )}
 

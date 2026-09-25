@@ -284,12 +284,56 @@ async function envoyerResetMotDePasse(email, resetUrl, nomUtilisateur = "Client"
   }
 }
 
+/**
+ * 5. Envoie un e-mail de création de compte avec identifiants temporaires
+ */
+async function envoyerEmailCreationCompte(email, nomUtilisateur, identifiant, telephone, tempPassword, role, boutiqueNom = "EasyMarket") {
+  try {
+    const roleLabel = role === "admin" ? "Administrateur" : "Employé";
+    const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const connUrl = `${baseUrl}/connexion`;
+
+    const html = `
+      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #f8fafc; border-radius: 16px;">
+        <div style="background: #163424; padding: 24px; border-radius: 12px; text-align: center; color: #ffffff; margin-bottom: 20px;">
+          <h2 style="margin: 0; font-size: 22px;">🎉 Bienvenue sur ${boutiqueNom}</h2>
+          <p style="margin: 8px 0 0; opacity: 0.9; font-size: 14px;">Votre compte ${roleLabel} a été créé avec succès</p>
+        </div>
+        <div style="background: #ffffff; padding: 28px; border-radius: 12px; border: 1px solid #e2e8f0;">
+          <p style="font-size: 15px; color: #1e293b; margin-top: 0;">Bonjour <strong>${nomUtilisateur}</strong>,</p>
+          <p style="font-size: 14px; color: #475569; line-height: 1.6;">
+            Un compte vous a été attribué sur la plateforme <strong>${boutiqueNom}</strong> avec le rôle de <strong>${roleLabel}</strong>. Voici vos identifiants de connexion :
+          </p>
+          <div style="background: #f1f5f9; padding: 20px; border-radius: 10px; margin: 20px 0; border-left: 4px solid #2D8653;">
+            ${email ? `<div style="font-size: 14px; color: #475569; margin-bottom: 8px;"><strong>Adresse E-mail :</strong> <span style="color: #1e293b; font-family: monospace; font-size: 15px;">${email}</span></div>` : ''}
+            ${telephone ? `<div style="font-size: 14px; color: #475569; margin-bottom: 8px;"><strong>Téléphone :</strong> <span style="color: #1e293b; font-family: monospace; font-size: 15px;">${telephone}</span></div>` : ''}
+            <div style="font-size: 14px; color: #475569;"><strong>Mot de passe générique :</strong> <span style="color: #163424; font-family: monospace; font-size: 16px; font-weight: bold; background: #e2e8f0; padding: 2px 8px; border-radius: 6px;">${tempPassword}</span></div>
+          </div>
+          <p style="font-size: 13px; color: #b45309; background: #fef3c7; padding: 12px 14px; border-radius: 8px; font-weight: 600;">
+            ⚠️ Lors de votre 1ère connexion, un changement de mot de passe vous sera automatiquement demandé pour sécuriser votre compte.
+          </p>
+          <div style="text-align: center; margin-top: 28px;">
+            <a href="${connUrl}" style="background: #2D8653; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 30px; font-weight: bold; font-size: 15px; display: inline-block;">Se connecter à mon compte</a>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const subject = `Vos identifiants de connexion — ${boutiqueNom}`;
+    return await sendEmailCore({ to: email, subject, html, type: "creation_compte" });
+  } catch (err) {
+    console.error("❌ [EMAIL CREATION COMPTE ERROR]:", err.message);
+    return false;
+  }
+}
+
 module.exports = {
   envoyerOTP,
   envoyerConfirmationCommande,
   envoyerNotificationAdminNouvelleCommande,
   envoyerChangementStatut,
   envoyerResetMotDePasse,
+  envoyerEmailCreationCompte,
   sendEmailCore,
   // Alias de rétrocompatibilité
   sendMail: ({ to, subject, html }) => sendEmailCore({ to, subject, html, type: "legacy" }),

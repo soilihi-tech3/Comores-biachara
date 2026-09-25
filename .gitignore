@@ -26,3 +26,6 @@ npm-debug.log*
 .DS_Store
 .vscode/
 .idea/
+
+# Internal documentation (not tracked in git)
+REALISATION_TECHNIQUE.md

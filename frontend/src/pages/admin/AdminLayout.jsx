@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { NavLink, Link, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, Package, ShoppingCart, Users, Store, LogOut, Layers, 
   PanelLeftClose, PanelLeftOpen, User, Image, LayoutGrid, CreditCard, 
-  ShoppingBag, Truck, Scale, History, Menu, X, ExternalLink, ArrowLeft, Clock, Lock, UserCheck
+  ShoppingBag, Truck, Scale, History, Menu, X, ExternalLink, ArrowLeft, Clock, Lock, UserCheck, Sun, Moon
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useCart } from "../../context/CartContext.jsx";
@@ -23,12 +23,15 @@ const ROUTE_MODULE_MAP = {
   "/admin/produits": { key: "produits", label: "Produits" },
   "/admin/commandes": { key: "commandes", label: "Commandes" },
   "/admin/clients": { key: "clients", label: "Clients" },
+  "/admin/employes": { key: "employes", label: "Équipe & Rôles" },
+  "/admin/parametres": { key: "parametres", label: "Paramètres Boutique" },
 };
 
 export default function AdminLayout() {
-  const { user, boutique, logout } = useAuth();
+  const { user, boutique, logout, theme, toggleTheme } = useAuth();
   const { showToast } = useCart();
   const location = useLocation();
+  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -43,14 +46,12 @@ export default function AdminLayout() {
     { to: "/admin/achats", label: "Achats & Stocks", icon: ShoppingBag, permKey: ["gerer_produits", "gerer_parametres"], moduleKey: "achats" },
     { to: "/admin/fournisseurs", label: "Fournisseurs", icon: Truck, permKey: ["gerer_produits", "gerer_parametres"], moduleKey: "fournisseurs" },
     { to: "/admin/unites", label: "Unités de vente", icon: Scale, permKey: ["gerer_produits", "gerer_categories"], moduleKey: "unites" },
-    { to: "/admin/home-banners", label: "Home Banners", icon: Image, permKey: ["gerer_banners", "gerer_parametres"], moduleKey: "homeBanners" },
-    { to: "/admin/side-banners", label: "Home Side Banners", icon: LayoutGrid, permKey: ["gerer_banners", "gerer_parametres"], moduleKey: "sideBanners" },
     { to: "/admin/categories", label: "Catégories", icon: Layers, permKey: "gerer_categories", moduleKey: "categories" },
     { to: "/admin/produits", label: "Produits", icon: Package, permKey: ["ajouter_produit", "modifier_produit", "supprimer_produit", "gerer_produits"], moduleKey: "produits" },
     { to: "/admin/commandes", label: "Commandes", icon: ShoppingCart, permKey: ["valider_commande", "changer_statut_commande", "assigner_commande", "gerer_commandes"], moduleKey: "commandes" },
     { to: "/admin/clients", label: "Clients", icon: UserCheck, permKey: ["gerer_commandes", "gerer_utilisateurs", "voir_dashboard"] },
-    { to: "/admin/employes", label: "Équipe & Rôles", icon: Users, adminOnly: true },
-    { to: "/admin/parametres", label: "Paramètres Boutique", icon: Store, permKey: "gerer_parametres" },
+    { to: "/admin/employes", label: "Équipe & Rôles", icon: Users, adminOnly: true, moduleKey: "employes" },
+    { to: "/admin/parametres", label: "Paramètres Boutique", icon: Store, permKey: "gerer_parametres", moduleKey: "parametres" },
   ];
 
 
@@ -138,12 +139,12 @@ export default function AdminLayout() {
           className="bs-side-btn"
           title="Retourner sur le site e-commerce"
           style={{ 
-            background: "rgba(22, 52, 36, 0.07)", 
-            color: "var(--forest-dark)", 
+            background: "var(--paper)", 
+            color: "var(--ink)", 
             fontWeight: 700, 
             marginBottom: 14,
             borderRadius: 10,
-            border: "1px solid rgba(22, 52, 36, 0.15)"
+            border: "1px solid var(--line)"
           }}
           onClick={() => setMobileOpen(false)}
         >
@@ -236,6 +237,26 @@ export default function AdminLayout() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            {/* BOUTON BASCULER DE THÈME (DARK / LIGHT) */}
+            <button
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Passer en mode clair" : "Passer en mode sombre"}
+              style={{
+                background: "var(--paper)",
+                border: "1px solid var(--line)",
+                borderRadius: "50%",
+                width: 36,
+                height: 36,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                transition: "all 0.2s ease"
+              }}
+            >
+              {theme === "dark" ? <Sun size={18} color="#F59E0B" /> : <Moon size={18} color="var(--forest-dark)" />}
+            </button>
+
             {/* NOTIFICATIONS BELL */}
             <div className="desktop-notifications">
               <NotificationMenu />
@@ -245,7 +266,7 @@ export default function AdminLayout() {
 
             {/* AVATAR & USER PROFILE TRIGGER */}
             <button
-              onClick={() => setProfileOpen(true)}
+              onClick={() => navigate("/profil")}
               style={{
                 background: "none",
                 border: "none",
@@ -254,7 +275,7 @@ export default function AdminLayout() {
                 alignItems: "center",
                 gap: 10
               }}
-              title="Modifier mon profil"
+              title="Gérer mon profil"
             >
               <div style={{
                 width: 36,
