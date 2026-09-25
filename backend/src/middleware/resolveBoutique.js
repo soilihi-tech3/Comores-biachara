@@ -1,7 +1,7 @@
 const { Boutique } = require('../models');
 const { Op } = require('sequelize');
 
-const MAIN_DOMAINS = ['easymarket.com', 'www.easymarket.com', 'localhost', '127.0.0.1'];
+const MAIN_DOMAINS = ['easymarket.com', 'www.easymarket.com', 'localhost', '127.0.0.1', 'comores-biachara.onrender.com'];
 
 /**
  * Middleware de résolution de boutique multi-tenant (Custom Domain, Subdomain, Header, or Fallback)
@@ -9,36 +9,51 @@ const MAIN_DOMAINS = ['easymarket.com', 'www.easymarket.com', 'localhost', '127.
 async function resolveBoutique(req, res, next) {
   try {
     const customHeaderDomain = req.headers['x-boutique-domain'] 
-      ? req.headers['x-boutique-domain'].split(':')[0].toLowerCase().replace(/^www\./, '')
+      ? req.headers['x-boutique-domain'].split(':')[0].toLowerCase().trim()
       : null;
 
     const rawHost = req.headers['x-forwarded-host'] || req.hostname || 'localhost';
-    const hostname = rawHost.split(':')[0].toLowerCase().replace(/^www\./, '');
+    const hostname = rawHost.split(':')[0].toLowerCase().trim();
 
     req.boutiqueSlug = req.headers['x-boutique-slug'] || req.headers['x-slug'] || req.query.slug || null;
     req.boutique = null;
+    req.isCustomDomainResolved = false;
 
-    // Domaines à tester (variantes apex et www)
-    const domainsToTest = Array.from(new Set([
-      customHeaderDomain,
-      customHeaderDomain ? `www.${customHeaderDomain}` : null,
-      hostname,
-      `www.${hostname}`
-    ].filter(Boolean)));
+    // Domaines nettoyés à tester (ex: comoresbiachara.site, www.comoresbiachara.site)
+    const rawDomains = [customHeaderDomain, hostname].filter(Boolean);
+    const cleanedDomains = Array.from(new Set(
+      rawDomains.flatMap(d => {
+        const clean = d.replace(/^(https?:\/\/)?(www\.)?/, '').replace(/\/$/, '').toLowerCase();
+        return [clean, `www.${clean}`, `http://${clean}`, `https://${clean}`, `http://www.${clean}`, `https://www.${clean}`];
+      })
+    ));
 
-    // 1. Recherche prioritaire par Domaine Personnalisé (ex: comoresbiachara.site, abdou.com)
-    let boutique = await Boutique.findOne({
-      where: {
-        customDomain: { [Op.in]: domainsToTest }
+    // Ne cherche par domaine personnalisé que si le domaine n'est pas un domaine principal de la plateforme
+    const isMainPlatformDomain = rawDomains.some(d => MAIN_DOMAINS.some(m => d.includes(m)));
+
+    let boutique = null;
+
+    // 1. Recherche prioritaire par Domaine Personnalisé
+    if (!isMainPlatformDomain) {
+      boutique = await Boutique.findOne({
+        where: {
+          [Op.or]: [
+            { customDomain: { [Op.in]: cleanedDomains } },
+            ...cleanedDomains.map(d => ({ customDomain: { [Op.like]: `%${d}%` } }))
+          ]
+        }
+      });
+      if (boutique) {
+        req.isCustomDomainResolved = true;
       }
-    });
+    }
 
-    // 2. Sinon, vérifier par slug depuis le sous-domaine, le header ou la première partie du domaine
+    // 2. Sinon, rechercher par slug dans l'en-tête ou le sous-domaine
     if (!boutique) {
       const potentialSlugs = [];
       if (req.boutiqueSlug) potentialSlugs.push(req.boutiqueSlug);
       
-      for (const d of domainsToTest) {
+      for (const d of cleanedDomains) {
         const firstPart = d.split('.')[0];
         if (firstPart && !['www', 'app', 'api', 'admin', 'localhost', '127'].includes(firstPart)) {
           potentialSlugs.push(firstPart);
