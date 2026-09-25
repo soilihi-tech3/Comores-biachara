@@ -275,7 +275,7 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
               <>
                 <NotificationMenu />
 
-                <div ref={userMenuRef} style={{ position: "relative" }}>
+                <div ref={userMenuRef} className="bs-desktop-user-menu" style={{ position: "relative" }}>
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                     style={{
@@ -512,6 +512,10 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
         <Link to="/catalogue" className={`bs-mobile-nav-item ${location.pathname === "/catalogue" && !location.search.includes("favoris=1") ? "active" : ""}`}>
           <Grid size={19} />
           <span>Catalogue</span>
+        </Link>
+        <Link to="/a-propos" className={`bs-mobile-nav-item ${location.pathname === "/a-propos" ? "active" : ""}`}>
+          <Info size={19} />
+          <span>À propos</span>
         </Link>
         <Link to="/catalogue?favoris=1" className={`bs-mobile-nav-item ${location.search.includes("favoris=1") ? "active" : ""}`}>
           <Heart size={19} color="#B4483A" fill={location.search.includes("favoris=1") ? "#B4483A" : "none"} />
