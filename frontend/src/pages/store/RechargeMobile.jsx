@@ -67,10 +67,13 @@ export default function RechargeMobile() {
   useEffect(() => {
     if (statusParam === "success") {
       showToast(`Paiement réussi ! Crédit envoyé direct au +269 ${phoneParam || ""}`, "success", "Félicitations");
+      // Nettoyer les paramètres d'URL pour éviter que le message ne réapparaisse à chaque rafraîchissement/render
+      navigate(location.pathname, { replace: true });
     } else if (statusParam === "canceled") {
       showToast("Paiement de la recharge annulé.", "info");
+      navigate(location.pathname, { replace: true });
     }
-  }, [statusParam, phoneParam, showToast]);
+  }, [statusParam, phoneParam, showToast, navigate, location.pathname]);
 
   const handlePhoneChange = (e) => {
     const rawVal = e.target.value.replace(/\D/g, "");

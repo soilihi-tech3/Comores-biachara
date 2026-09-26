@@ -501,6 +501,7 @@ router.post("/:slug/create-checkout-session", loadBoutique, authenticate, async 
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
+      customer_email: req.user?.email || undefined,
       line_items,
       mode: "payment",
       success_url: `${originUrl}/confirmation/${order.id}?success=true`,
