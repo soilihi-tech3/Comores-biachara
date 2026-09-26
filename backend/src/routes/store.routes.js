@@ -452,10 +452,15 @@ router.post("/:slug/create-checkout-session", loadBoutique, authenticate, async 
 
     const order = await Order.findOne({
       where: { id: orderId, boutiqueId: req.boutique.id, clientId: req.user.id, statut: "en_attente_paiement" },
-      include: [{ model: OrderItem, as: "items", include: [{ model: Product, as: "product" }] }]
+      include: [
+        { model: User, as: "client", attributes: ["email", "nom"] },
+        { model: OrderItem, as: "items", include: [{ model: Product, as: "product" }] }
+      ]
     });
 
     if (!order) return res.status(404).json({ message: "Commande introuvable ou déjà payée." });
+
+    const userEmail = order.client?.email || req.user?.email || undefined;
 
     const stripeSecretKey = getStripeSecretKey(req.boutique);
     if (!stripeSecretKey || (!stripeSecretKey.startsWith("sk_") && !stripeSecretKey.startsWith("rk_"))) {
@@ -501,7 +506,7 @@ router.post("/:slug/create-checkout-session", loadBoutique, authenticate, async 
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
-      customer_email: req.user?.email || undefined,
+      customer_email: userEmail,
       line_items,
       mode: "payment",
       success_url: `${originUrl}/confirmation/${order.id}?success=true`,

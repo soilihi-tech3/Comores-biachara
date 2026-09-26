@@ -568,7 +568,7 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
         ) : (
           <Link to="/connexion" className={`bs-mobile-nav-item ${location.pathname === "/connexion" ? "active" : ""}`}>
             <User size={20} />
-            <span>Se connecter</span>
+            <span>Connexion</span>
           </Link>
         )}
 
