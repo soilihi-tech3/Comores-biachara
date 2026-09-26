@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { ShoppingCart, Search, User, LogOut, Store, X, Home, Grid, Package, Shield, Menu, ChevronDown, Info, Heart, Sun, Moon, Smartphone } from "lucide-react";
+import { ShoppingCart, Search, User, LogOut, Store, X, Home, Grid, Package, Shield, Menu, ChevronDown, Info, Heart, Sun, Moon, Smartphone, MoreHorizontal } from "lucide-react";
 
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -19,6 +19,7 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [boutiqueLocal, setBoutiqueLocal] = useState(null);
   const [categories, setCategories] = useState(() => {
@@ -537,50 +538,137 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
       {/* MOBILE BOTTOM NAVIGATION BAR */}
       <div className="bs-mobile-bottom-bar">
         <Link to="/" className={`bs-mobile-nav-item ${location.pathname === "/" ? "active" : ""}`}>
-          <Home size={19} />
+          <Home size={20} />
           <span>Accueil</span>
         </Link>
-        <Link to="/recharge-mobile" className={`bs-mobile-nav-item ${location.pathname === "/recharge-mobile" ? "active" : ""}`}>
-          <Smartphone size={19} />
-          <span>Recharge</span>
-        </Link>
+
         <Link to="/catalogue" className={`bs-mobile-nav-item ${location.pathname === "/catalogue" && !location.search.includes("favoris=1") ? "active" : ""}`}>
-          <Grid size={19} />
+          <Grid size={20} />
           <span>Catalogue</span>
         </Link>
-        <Link to="/a-propos" className={`bs-mobile-nav-item ${location.pathname === "/a-propos" ? "active" : ""}`}>
-          <Info size={19} />
-          <span>À propos</span>
+
+        <Link to="/recharge-mobile" className={`bs-mobile-nav-item ${location.pathname === "/recharge-mobile" ? "active" : ""}`}>
+          <Smartphone size={20} />
+          <span>Recharge</span>
         </Link>
-        <Link to="/catalogue?favoris=1" className={`bs-mobile-nav-item ${location.search.includes("favoris=1") ? "active" : ""}`}>
-          <Heart size={19} color="#B4483A" fill={location.search.includes("favoris=1") ? "#B4483A" : "none"} />
-          <span>Favoris</span>
-        </Link>
-        {user?.role === "client" && (
-          <Link to="/mes-commandes" className={`bs-mobile-nav-item ${location.pathname === "/mes-commandes" ? "active" : ""}`}>
-            <Package size={19} />
-            <span>Commandes</span>
-          </Link>
-        )}
+
         <button className="bs-mobile-nav-item" onClick={() => setCartOpen(true)}>
           <div style={{ position: "relative", display: "flex" }}>
-            <ShoppingCart size={19} />
+            <ShoppingCart size={20} />
             {count > 0 && <span className="bs-mobile-badge">{count}</span>}
           </div>
           <span>Panier</span>
         </button>
+
         {user ? (
-          <Link to="/profil" className={`bs-mobile-nav-item ${location.pathname === "/profil" ? "active" : ""}`}>
-            <User size={19} />
-            <span>Profil</span>
+          <Link to="/mes-commandes" className={`bs-mobile-nav-item ${location.pathname === "/mes-commandes" ? "active" : ""}`}>
+            <Package size={20} />
+            <span>Commandes</span>
           </Link>
         ) : (
           <Link to="/connexion" className={`bs-mobile-nav-item ${location.pathname === "/connexion" ? "active" : ""}`}>
-            <User size={19} />
-            <span>Connexion</span>
+            <User size={20} />
+            <span>Se connecter</span>
           </Link>
         )}
+
+        <button className={`bs-mobile-nav-item ${mobileMoreOpen ? "active" : ""}`} onClick={() => setMobileMoreOpen(!mobileMoreOpen)}>
+          <MoreHorizontal size={22} />
+          <span>Plus</span>
+        </button>
       </div>
+
+      {/* MOBILE MORE POPUP CARD (ANCHORED ABOVE THE PLUS BUTTON) */}
+      {mobileMoreOpen && (
+        <>
+          {/* Transparent Backdrop to close when clicking outside */}
+          <div 
+            onClick={() => setMobileMoreOpen(false)}
+            style={{
+              position: "fixed", inset: 0, zIndex: 9998,
+              background: "rgba(15, 23, 42, 0.25)"
+            }}
+          />
+
+          {/* FLOATING POPUP CARD STYLED LIKE IOS MENUS */}
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "fixed",
+              bottom: 72,
+              right: 12,
+              zIndex: 9999,
+              width: 200,
+              background: "#ffffff",
+              borderRadius: 20,
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08)",
+              border: "1px solid var(--line)",
+              overflow: "hidden",
+              animation: "popIn 0.2s cubic-bezier(0.165, 0.84, 0.44, 1)"
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <Link 
+                to="/catalogue?favoris=1" 
+                onClick={() => setMobileMoreOpen(false)} 
+                style={{ 
+                  display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", 
+                  textDecoration: "none", color: "var(--ink)", fontWeight: 700, fontSize: 14,
+                  borderBottom: user ? "1px solid var(--line)" : "none", background: "#fff",
+                  transition: "background 0.15s"
+                }}
+              >
+                <Heart size={18} color="#B4483A" fill="#B4483A" />
+                <span style={{ flex: 1 }}>Favoris</span>
+              </Link>
+
+              <Link 
+                to="/a-propos" 
+                onClick={() => setMobileMoreOpen(false)} 
+                style={{ 
+                  display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", 
+                  textDecoration: "none", color: "var(--ink)", fontWeight: 700, fontSize: 14,
+                  borderBottom: user ? "1px solid var(--line)" : "none", background: "#fff",
+                  transition: "background 0.15s"
+                }}
+              >
+                <Info size={18} color="#0284C7" />
+                <span style={{ flex: 1 }}>À propos</span>
+              </Link>
+
+              {user && (
+                <>
+                  <Link 
+                    to="/profil" 
+                    onClick={() => setMobileMoreOpen(false)} 
+                    style={{ 
+                      display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", 
+                      textDecoration: "none", color: "var(--ink)", fontWeight: 700, fontSize: 14,
+                      borderBottom: "1px solid var(--line)", background: "#fff",
+                      transition: "background 0.15s"
+                    }}
+                  >
+                    <User size={18} color="var(--forest-dark)" />
+                    <span style={{ flex: 1 }}>Mon Profil</span>
+                  </Link>
+
+                  <button 
+                    onClick={() => { setMobileMoreOpen(false); logout(); }} 
+                    style={{ 
+                      display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", 
+                      background: "#fff", border: "none", cursor: "pointer", 
+                      color: "#B4483A", fontWeight: 700, fontSize: 14, width: "100%", textAlign: "left"
+                    }}
+                  >
+                    <LogOut size={18} color="#B4483A" />
+                    <span style={{ flex: 1 }}>Déconnexion</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* MOBILE SEARCH OVERLAY WITH SEMI-TRANSPARENT BACKDROP */}
       {mobileSearchOpen && (
