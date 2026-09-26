@@ -42,59 +42,110 @@ router.post("/", async (req, res) => {
     const sessionId = session.id;
 
     try {
-      // Trouver la commande correspondante
-      const order = await Order.findOne({ 
-        where: { stripeSessionId: sessionId },
-        include: [{ model: OrderItem, as: "items", include: [{ model: Product, as: "product" }] }]
-      });
-
-      if (order && order.statut === "en_attente_paiement") {
-        const bKey = boutique?.stripeSecretKey;
-        const specificStripeSecret = (bKey && (bKey.startsWith("sk_") || bKey.startsWith("rk_"))) ? bKey : stripeSecretKey;
-        const tenantStripe = require("stripe")(specificStripeSecret);
+      // CAS 1: RECHARGE CRÉDIT MOBILE
+      if (session.metadata?.type === "recharge_mobile") {
+        const { boutiqueId, userId, phone, operatorName } = session.metadata;
+        const totalEur = (session.amount_total || 0) / 100;
 
         let receiptUrl = null;
         try {
-          // Si on veut récupérer le reçu, il faut chercher le payment_intent
           if (session.payment_intent) {
-            const pi = await tenantStripe.paymentIntents.retrieve(session.payment_intent, { expand: ["latest_charge"] });
+            const pi = await stripe.paymentIntents.retrieve(session.payment_intent, { expand: ["latest_charge"] });
             if (pi.latest_charge && pi.latest_charge.receipt_url) {
               receiptUrl = pi.latest_charge.receipt_url;
             }
           }
         } catch (e) {
-          console.error("Impossible de récupérer le reçu Stripe:", e);
+          console.error("Impossible de récupérer le reçu Stripe recharge:", e);
         }
 
-        await order.update({ 
-          statut: "en_attente", 
+        const newOrder = await Order.create({
+          boutiqueId: boutiqueId ? Number(boutiqueId) : 1,
+          clientId: userId ? Number(userId) : null,
+          total: totalEur,
+          sousTotal: totalEur,
+          fraisLivraison: 0,
+          statut: "recuperee",
           statutPaiement: "paye",
-          receiptUrl: receiptUrl
+          typeVente: "recharge_mobile",
+          moyenPaiement: "carte",
+          stripeSessionId: sessionId,
+          receiptUrl: receiptUrl,
+          notes: `Recharge Crédit Mobile ${operatorName} pour le numéro ${phone}`
         });
 
-        // Notifications
-        const cmdNum = "COM-B" + String(order.id).padStart(3, "0");
+        const cmdNum = "COM-B" + String(newOrder.id).padStart(3, "0");
+
+        if (userId) {
+          Notification.create({
+            userId: Number(userId), boutiqueId: Number(boutiqueId), orderId: newOrder.id,
+            title: "Recharge crédit envoyée ! 📲",
+            message: `Votre recharge de crédit mobile (${operatorName}) a été transférée avec succès au ${phone} (#${cmdNum}).`,
+            type: "order"
+          }).catch(() => {});
+        }
+
         Notification.create({
-          userId: order.clientId, boutiqueId: order.boutiqueId, orderId: order.id,
-          title: "Paiement validé",
-          message: `Le paiement de votre commande #${cmdNum} a été validé avec succès.`,
+          userId: null, boutiqueId: Number(boutiqueId), orderId: newOrder.id,
+          title: "Nouvelle Recharge Crédit Mobile",
+          message: `Recharge de ${totalEur} € effectuée par carte pour le numéro ${phone}.`,
           type: "order"
         }).catch(() => {});
 
-        Notification.create({
-          userId: null, boutiqueId: order.boutiqueId, orderId: order.id,
-          title: "Paiement en ligne reçu",
-          message: `Le paiement pour la commande #${cmdNum} a été confirmé via Stripe/Wero.`,
-          type: "order"
-        }).catch(() => {});
-
-        const originUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-
-        // Si nécessaire, envoyer e-mail de confirmation
         clearCachePattern("cache:/api/store").catch(() => {});
-        broadcast("order_updated", { orderId: order.id, statut: "en_attente", clientId: order.clientId, boutiqueId: order.boutiqueId });
-        
-        console.log(`✅ Commande ${order.id} validée suite au paiement Stripe (${sessionId})`);
+        broadcast("order_created", { orderId: newOrder.id, statut: "recuperee", clientId: userId, boutiqueId });
+        console.log(`✅ Recharge Mobile ${phone} enregistrée avec succès (#${newOrder.id})`);
+      } else {
+        // CAS 2: COMMANDE BOUTIQUE CLASSIQUE
+        const order = await Order.findOne({ 
+          where: { stripeSessionId: sessionId },
+          include: [{ model: OrderItem, as: "items", include: [{ model: Product, as: "product" }] }]
+        });
+
+        if (order && order.statut === "en_attente_paiement") {
+          const bKey = boutique?.stripeSecretKey;
+          const specificStripeSecret = (bKey && (bKey.startsWith("sk_") || bKey.startsWith("rk_"))) ? bKey : stripeSecretKey;
+          const tenantStripe = require("stripe")(specificStripeSecret);
+
+          let receiptUrl = null;
+          try {
+            if (session.payment_intent) {
+              const pi = await tenantStripe.paymentIntents.retrieve(session.payment_intent, { expand: ["latest_charge"] });
+              if (pi.latest_charge && pi.latest_charge.receipt_url) {
+                receiptUrl = pi.latest_charge.receipt_url;
+              }
+            }
+          } catch (e) {
+            console.error("Impossible de récupérer le reçu Stripe:", e);
+          }
+
+          await order.update({ 
+            statut: "en_attente", 
+            statutPaiement: "paye",
+            receiptUrl: receiptUrl
+          });
+
+          // Notifications
+          const cmdNum = "COM-B" + String(order.id).padStart(3, "0");
+          Notification.create({
+            userId: order.clientId, boutiqueId: order.boutiqueId, orderId: order.id,
+            title: "Paiement validé",
+            message: `Le paiement de votre commande #${cmdNum} a été validé avec succès.`,
+            type: "order"
+          }).catch(() => {});
+
+          Notification.create({
+            userId: null, boutiqueId: order.boutiqueId, orderId: order.id,
+            title: "Paiement en ligne reçu",
+            message: `Le paiement pour la commande #${cmdNum} a été confirmé via Stripe/Wero.`,
+            type: "order"
+          }).catch(() => {});
+
+          clearCachePattern("cache:/api/store").catch(() => {});
+          broadcast("order_updated", { orderId: order.id, statut: "en_attente", clientId: order.clientId, boutiqueId: order.boutiqueId });
+          
+          console.log(`✅ Commande ${order.id} validée suite au paiement Stripe (${sessionId})`);
+        }
       }
     } catch (err) {
       console.error("❌ Erreur lors du traitement du webhook Stripe:", err);
