@@ -133,12 +133,16 @@ export default function Home() {
 
   const [categories, setCategories] = useState(() => {
     const cached = getData(`categories:${SLUG}`);
-    return cached && Array.isArray(cached) ? cached : [];
+    if (cached && Array.isArray(cached) && cached.length > 0) return cached;
+    try {
+      const ls = localStorage.getItem(`cached_categories_${SLUG}`);
+      return ls ? JSON.parse(ls) : [];
+    } catch (e) { return []; }
   });
 
   const [familles, setFamilles] = useState(() => {
     const cached = getData(`familles:${SLUG}`);
-    if (cached && Array.isArray(cached)) return cached;
+    if (cached && Array.isArray(cached) && cached.length > 0) return cached;
     try {
       const ls = localStorage.getItem(`cached_familles_${SLUG}`);
       return ls ? JSON.parse(ls) : [];
@@ -147,7 +151,11 @@ export default function Home() {
 
   const [products, setProducts] = useState(() => {
     const cached = getData(`products:${SLUG}:::`);
-    return cached && Array.isArray(cached) ? cached : [];
+    if (cached && Array.isArray(cached) && cached.length > 0) return cached;
+    try {
+      const ls = localStorage.getItem(`cached_products_${SLUG}`);
+      return ls ? JSON.parse(ls) : [];
+    } catch (e) { return []; }
   });
 
   const [boutique, setBoutique] = useState(() => {
@@ -179,6 +187,7 @@ export default function Home() {
       if (Array.isArray(res.data)) {
         setData(`categories:${SLUG}`, res.data, 300000);
         setCategories(res.data);
+        try { localStorage.setItem(`cached_categories_${SLUG}`, JSON.stringify(res.data)); } catch (e) {}
       }
     }).catch(() => {});
 
@@ -194,12 +203,13 @@ export default function Home() {
       if (Array.isArray(res.data)) {
         setData(`products:${SLUG}:::`, res.data, 120000);
         setProducts(res.data);
+        try { localStorage.setItem(`cached_products_${SLUG}`, JSON.stringify(res.data)); } catch (e) {}
       }
     }).catch(() => {});
   }
 
   useEffect(() => {
-    loadData(true);
+    loadData(false);
     const unsub = subscribeRealtime((detail) => {
       if (
         detail.type === "product_updated" ||

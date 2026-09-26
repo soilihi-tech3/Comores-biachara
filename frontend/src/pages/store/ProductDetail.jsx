@@ -86,12 +86,13 @@ export default function ProductDetail() {
   const sliderRef = useRef(null);
 
   function load() {
+    // If product was passed via location.state, we already have it rendered instantly!
     api.get(`/store/${SLUG}/products/${id}`).then((res) => {
       setProduct(res.data);
       if (res.data.categoryId) {
         api.get(`/store/${SLUG}/products?categoryId=${res.data.categoryId}`).then(r => {
           setRelated(r.data.filter(p => p.id !== res.data.id).slice(0, 10));
-        });
+        }).catch(() => {});
       }
     }).catch(() => {});
   }

@@ -59,19 +59,26 @@ export default function Catalogue() {
     const key = `categories:${SLUG}`;
     if (!force && !isStale(key)) {
       const cached = getData(key);
-      if (cached) { setCategories(cached); return; }
+      if (cached && Array.isArray(cached) && cached.length > 0) {
+        setCategories(cached);
+        return;
+      }
     }
     api.get(`/store/${SLUG}/categories`).then((res) => {
       setData(key, res.data, 300000);
       setCategories(res.data);
-    });
+    }).catch(() => {});
   }
 
   function loadProducts(force = false) {
     const cacheKey = `products:${SLUG}:${categoryId}:${famille}:${search}`;
     if (!force && !isStale(cacheKey)) {
       const cached = getData(cacheKey);
-      if (cached) { setProducts(cached); setLoading(false); return; }
+      if (cached && Array.isArray(cached) && cached.length > 0) {
+        setProducts(cached);
+        setLoading(false);
+        return;
+      }
     }
     setLoading(true);
     const query = {};
@@ -87,11 +94,11 @@ export default function Catalogue() {
   }
 
   useEffect(() => {
-    loadCategories(true);
+    loadCategories(false);
   }, []);
 
   useEffect(() => {
-    loadProducts(true);
+    loadProducts(false);
   }, [categoryId, famille, search]);
 
   useEffect(() => {
