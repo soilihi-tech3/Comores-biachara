@@ -2423,7 +2423,7 @@ html[data-theme="dark"] .bs-side-btn.active .bs-side-label {
 }
 
 .bs-my-orders-detail-layout {
-  min-height: calc(100vh - 70px);
+  min-height: 85vh;
   display: grid;
   grid-template-columns: 1fr 380px;
   background: var(--paper);

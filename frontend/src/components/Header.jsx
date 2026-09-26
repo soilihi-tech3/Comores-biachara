@@ -21,9 +21,19 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [boutiqueLocal, setBoutiqueLocal] = useState(null);
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState(() => {
+    try {
+      const ls = localStorage.getItem(`cached_categories_${SLUG}`);
+      return ls ? JSON.parse(ls) : [];
+    } catch (e) { return []; }
+  });
   const [results, setResults] = useState([]);
-  const [allProducts, setAllProducts] = useState([]);
+  const [allProducts, setAllProducts] = useState(() => {
+    try {
+      const ls = localStorage.getItem(`cached_products_${SLUG}`);
+      return ls ? JSON.parse(ls) : [];
+    } catch (e) { return []; }
+  });
   const [showDropdown, setShowDropdown] = useState(false);
   const searchRef = useRef(null);
   const userMenuRef = useRef(null);
@@ -52,8 +62,19 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
     if (!boutiqueContext) {
       api.get(`/store/${SLUG}`).then((res) => setBoutiqueLocal(res.data)).catch(() => { });
     }
-    api.get(`/store/${SLUG}/products`).then((res) => setAllProducts(res.data || [])).catch(() => { });
-    api.get(`/store/${SLUG}/categories`).then((res) => setCategories(res.data || [])).catch(() => { });
+    api.get(`/store/${SLUG}/products`).then((res) => {
+      if (Array.isArray(res.data)) {
+        setAllProducts(res.data);
+        try { localStorage.setItem(`cached_products_${SLUG}`, JSON.stringify(res.data)); } catch (e) {}
+      }
+    }).catch(() => { });
+
+    api.get(`/store/${SLUG}/categories`).then((res) => {
+      if (Array.isArray(res.data)) {
+        setCategories(res.data);
+        try { localStorage.setItem(`cached_categories_${SLUG}`, JSON.stringify(res.data)); } catch (e) {}
+      }
+    }).catch(() => { });
   }, [boutiqueContext]);
 
   // Live search filtering

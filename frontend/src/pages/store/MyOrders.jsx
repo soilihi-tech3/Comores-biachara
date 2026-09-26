@@ -156,13 +156,6 @@ export default function MyOrders() {
         if (targetOrderId && !selected) {
           const target = freshOrders.find(o => String(o.id) === String(targetOrderId));
           if (target) setSelected(target);
-        } else {
-          // Auto-update selected order if currently open
-          setSelected(prev => {
-            if (!prev) return null;
-            const found = freshOrders.find(o => o.id === prev.id);
-            return found || prev;
-          });
         }
       })
       .finally(() => setLoading(false));
@@ -668,7 +661,7 @@ export default function MyOrders() {
                   const cfg = STATUT_CONFIG[o.statut] || STATUT_CONFIG["en_attente"];
                   const isDelivery = o.modeLivraison === "domicile";
                   return (
-                    <div key={o.id} onClick={() => setSelected(o)} className="bs-my-orders-card">
+                    <div key={o.id} onClick={() => { setSelected(o); window.scrollTo(0, 0); }} className="bs-my-orders-card">
                       {/* Product thumbnails + info row */}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 10 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

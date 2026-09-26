@@ -23,17 +23,26 @@ export default function Catalogue() {
 
   const [categories, setCategories] = useState(() => {
     const cached = getData(`categories:${SLUG}`);
-    return cached && Array.isArray(cached) ? cached : [];
+    if (cached && Array.isArray(cached) && cached.length > 0) return cached;
+    try {
+      const ls = localStorage.getItem(`cached_categories_${SLUG}`);
+      return ls ? JSON.parse(ls) : [];
+    } catch (e) { return []; }
   });
 
   const [products, setProducts] = useState(() => {
-    const cached = getData(cacheKey);
-    return cached && Array.isArray(cached) ? cached : [];
+    const cached = getData(cacheKey) || getData(`products:${SLUG}:::`);
+    if (cached && Array.isArray(cached) && cached.length > 0) return cached;
+    try {
+      const ls = localStorage.getItem(`cached_products_${SLUG}`);
+      return ls ? JSON.parse(ls) : [];
+    } catch (e) { return []; }
   });
 
   const [loading, setLoading] = useState(() => {
-    const cached = getData(cacheKey);
-    return !cached && products.length === 0;
+    const hasCat = categories && categories.length > 0;
+    const hasProd = products && products.length > 0;
+    return !hasCat && !hasProd;
   });
 
   const [favIds, setFavIds] = useState([]);
@@ -80,7 +89,9 @@ export default function Catalogue() {
         return;
       }
     }
-    setLoading(true);
+    if (products.length === 0) {
+      setLoading(true);
+    }
     const query = {};
     if (categoryId) query.categoryId = categoryId;
     if (famille) query.famille = famille;
