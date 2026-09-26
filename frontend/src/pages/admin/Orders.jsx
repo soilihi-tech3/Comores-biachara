@@ -78,6 +78,7 @@ export default function AdminOrders() {
   const [employees, setEmployees] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("tous");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("tous");
   const [employeeFilter, setEmployeeFilter] = useState("tous");
   const [dateFilter, setDateFilter] = useState("");
   const [monthFilter, setMonthFilter] = useState("tous");
@@ -254,7 +255,13 @@ export default function AdminOrders() {
     // Year filter
     const matchYear = yearFilter === "tous" || orderDate.getFullYear() === Number(yearFilter);
 
-    return matchSearch && matchEmp && matchDate && matchMonth && matchYear;
+    // Payment status filter (paye en ligne vs a l'encaissement)
+    const isOnlinePaid = o.statutPaiement === "paye" || ["carte", "mvola", "wero", "holam"].includes(o.moyenPaiement);
+    const matchPaymentStatus = paymentStatusFilter === "tous" ||
+      (paymentStatusFilter === "paye_en_ligne" && isOnlinePaid) ||
+      (paymentStatusFilter === "a_encaissement" && !isOnlinePaid);
+
+    return matchSearch && matchEmp && matchDate && matchMonth && matchYear && matchPaymentStatus;
   });
 
   // Summary stats
@@ -331,7 +338,7 @@ export default function AdminOrders() {
               style={{ paddingLeft: 38, borderRadius: 10, fontSize: 13.5, height: 40 }}
             />
           </div>
-          {(search || dateFilter || monthFilter !== "tous" || yearFilter !== "tous" || statusFilter !== "tous" || employeeFilter !== "tous") && (
+          {(search || dateFilter || monthFilter !== "tous" || yearFilter !== "tous" || statusFilter !== "tous" || paymentStatusFilter !== "tous" || employeeFilter !== "tous") && (
             <button
               onClick={() => {
                 setSearch("");
@@ -339,6 +346,7 @@ export default function AdminOrders() {
                 setMonthFilter("tous");
                 setYearFilter("tous");
                 setStatusFilter("tous");
+                setPaymentStatusFilter("tous");
                 setEmployeeFilter("tous");
               }}
               style={{
@@ -355,6 +363,21 @@ export default function AdminOrders() {
 
         {/* Row 2: Filter Controls Pills */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+          {/* Encaissement / Paiement Filter */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--paper)", padding: "4px 10px", borderRadius: 10, border: "1px solid var(--line)" }}>
+            <CreditCard size={14} color="var(--muted)" />
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", whiteSpace: "nowrap" }}>Encaissement :</span>
+            <select
+              className="bs-select"
+              value={paymentStatusFilter}
+              onChange={(e) => setPaymentStatusFilter(e.target.value)}
+              style={{ border: "none", background: "transparent", fontSize: 12.5, padding: "2px 4px", outline: "none", cursor: "pointer", fontWeight: 700 }}
+            >
+              <option value="tous">Tous les paiements</option>
+              <option value="paye_en_ligne">Payé en ligne</option>
+              <option value="a_encaissement">À l'encaissement (Livraison/Comptoir)</option>
+            </select>
+          </div>
           {/* Date Specific Filter */}
           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--paper)", padding: "4px 10px", borderRadius: 10, border: "1px solid var(--line)" }}>
             <Calendar size={14} color="var(--muted)" />

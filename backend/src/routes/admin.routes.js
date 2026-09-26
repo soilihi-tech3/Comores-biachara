@@ -376,7 +376,10 @@ router.delete("/products/:id", async (req, res, next) => {
 
 router.get("/orders", async (req, res, next) => {
   try {
-    const where = { boutiqueId: req.boutiqueId };
+    const where = { 
+      boutiqueId: req.boutiqueId,
+      statut: { [Op.ne]: "en_attente_paiement" }
+    };
     if (req.query.statut) where.statut = req.query.statut;
     const orders = await Order.findAll({
       where,
