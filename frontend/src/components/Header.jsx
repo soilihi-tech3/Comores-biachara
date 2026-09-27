@@ -20,6 +20,7 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [query, setQuery] = useState("");
   const [boutiqueLocal, setBoutiqueLocal] = useState(null);
   const [categories, setCategories] = useState(() => {
@@ -128,6 +129,7 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
     setQuery("");
     setResults([]);
     setShowDropdown(false);
+    setIsSearchFocused(false);
   }
 
   return (
@@ -223,23 +225,46 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
             <Search size={18} color="var(--forest-dark)" />
           </button>
 
-          {/* VISIBLE & PROMINENT SEARCH INPUT (DESKTOP) */}
-          <div ref={searchRef} className="bs-header-search" style={{ flex: "0 1 320px", position: "relative" }}>
+          {/* RIGHT SIDE: SEARCH + ACTIONS */}
+          <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0, marginLeft: "auto" }}>
+            
+            {/* VISIBLE & PROMINENT SEARCH INPUT (DESKTOP) */}
+            <div ref={searchRef} className="bs-header-search" style={{ 
+                width: user ? 120 : 180, height: 42, position: "relative", zIndex: 100
+            }}>
+            {/* Overlay background when search is focused */}
+            <div style={{
+              position: "fixed", inset: 0, background: "rgba(255,255,255,0.7)", backdropFilter: "blur(4px)",
+              opacity: isSearchFocused ? 1 : 0, pointerEvents: isSearchFocused ? "auto" : "none",
+              transition: "opacity 0.3s ease", zIndex: -1
+            }} onClick={() => setIsSearchFocused(false)}></div>
+
             <form onSubmit={onSearch} style={{
               display: "flex", alignItems: "center", background: "var(--paper)",
-              border: "1.5px solid var(--line)", borderRadius: 24, padding: "8px 16px",
-              transition: "border-color 0.2s"
+              border: isSearchFocused ? "2px solid var(--forest)" : "1.5px solid var(--line)", 
+              borderRadius: 24, padding: isSearchFocused ? "8px 16px" : "8px 12px",
+              position: "absolute", right: 0, top: 0, bottom: 0,
+              width: isSearchFocused ? 420 : "100%",
+              boxShadow: isSearchFocused ? "0 12px 40px rgba(0,0,0,0.12)" : "none",
+              transition: "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2)",
+              zIndex: 20
             }}>
-              <Search size={16} color="var(--forest)" style={{ marginRight: 8, flexShrink: 0 }} />
+              <Search size={16} color={isSearchFocused ? "var(--forest)" : "var(--muted)"} style={{ marginRight: isSearchFocused ? 6 : 4, flexShrink: 0, transition: "color 0.2s" }} />
               <input
-                placeholder="Rechercher un produit, fruit..."
+                placeholder={isSearchFocused ? "Rechercher un produit..." : "Recherche"}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                onFocus={() => { if (results.length > 0) setShowDropdown(true); }}
+                onFocus={() => { 
+                  setIsSearchFocused(true);
+                  if (results.length > 0) setShowDropdown(true); 
+                }}
+                onBlur={() => {
+                  setTimeout(() => setIsSearchFocused(false), 200);
+                }}
                 autoComplete="off"
                 style={{
                   border: "none", background: "transparent", outline: "none",
-                  width: "100%", fontSize: 13.5, color: "var(--ink)", fontWeight: 500
+                  width: "100%", fontSize: isSearchFocused ? 14 : 12.5, color: "var(--ink)", fontWeight: 500
                 }}
               />
               {query && (
@@ -253,11 +278,12 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
             </form>
 
             {/* LIVE SEARCH DROPDOWN */}
-            {showDropdown && (
+            {showDropdown && isSearchFocused && (
               <div style={{
-                position: "absolute", top: "calc(100% + 8px)", left: 0, right: 0,
-                background: "#fff", borderRadius: 14, border: "1px solid var(--line)",
-                boxShadow: "0 8px 32px rgba(34,75,53,0.15)", zIndex: 3000, overflow: "hidden"
+                position: "absolute", top: "calc(100% + 12px)", right: 0, width: 480,
+                background: "#fff", borderRadius: 16, border: "1px solid var(--line)",
+                boxShadow: "0 16px 50px rgba(0,0,0,0.15)", zIndex: 3000, overflow: "hidden",
+                animation: "popIn 0.2s ease-out"
               }}>
                 {results.length === 0 ? (
                   <div style={{ padding: "16px 18px", fontSize: 13, color: "var(--muted)", textAlign: "center" }}>
@@ -299,10 +325,10 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
                 )}
               </div>
             )}
-          </div>
+            </div>
 
-          {/* ACTIONS (CONNEXION & PANIER PINNED FAR RIGHT) */}
-          <div style={{ display: "flex", gap: "16px", alignItems: "center", flexShrink: 0, marginLeft: "auto" }}>
+            {/* ACTIONS (CONNEXION & PANIER PINNED FAR RIGHT) */}
+            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             {user ? (
               <>
                 <NotificationMenu />
@@ -449,6 +475,7 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
             </button>
           </div>
         </div>
+      </div>
 
         {/* ROW 2: SECONDARY CATEGORIES BAR & GALLERY */}
         <div style={{ background: "var(--paper)", borderTop: "1px solid var(--line)", padding: "8px 24px" }}>
