@@ -9,15 +9,42 @@ export default function BoutiqueGuard({ children }) {
     return (
       <div style={{
         minHeight: "100vh", display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center", background: "#F4F7F5", color: "var(--ink)"
+        alignItems: "center", justifyContent: "center", background: "#f8fafc", position: "relative", overflow: "hidden"
       }}>
+        <style>{`
+          @keyframes bq-spin { to { transform: rotate(360deg); } }
+          @keyframes bq-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(0.95); } }
+          @keyframes bq-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        `}</style>
+
+        {/* Decorative background blurs */}
+        <div style={{ position: "absolute", width: "40vw", height: "40vw", background: "radial-gradient(circle, rgba(16,185,129,0.1) 0%, rgba(255,255,255,0) 70%)", top: "-10%", left: "-10%", borderRadius: "50%" }}></div>
+        <div style={{ position: "absolute", width: "40vw", height: "40vw", background: "radial-gradient(circle, rgba(59,130,246,0.08) 0%, rgba(255,255,255,0) 70%)", bottom: "-10%", right: "-10%", borderRadius: "50%" }}></div>
+        
+        {/* Animated Icon */}
         <div style={{
-          width: 50, height: 50, borderRadius: "50%",
-          border: "4px solid var(--forest-light)", borderTopColor: "var(--forest)",
-          animation: "spin 1s linear infinite", marginBottom: 16
-        }} />
-        <div style={{ fontWeight: 700, fontSize: 16, color: "var(--forest-dark)" }}>
-          Chargement de votre boutique...
+          position: "relative", width: 90, height: 90, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 30, animation: "bq-float 3s ease-in-out infinite"
+        }}>
+          <div style={{
+            position: "absolute", inset: 0, borderRadius: "50%", border: "3px solid transparent", borderTopColor: "#10B981", borderRightColor: "#3B82F6",
+            animation: "bq-spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite"
+          }} />
+          <div style={{
+            position: "absolute", inset: 10, borderRadius: "50%", border: "3px solid transparent", borderBottomColor: "#10B981", borderLeftColor: "#3B82F6",
+            animation: "bq-spin 1.5s cubic-bezier(0.5, 0, 0.5, 1) infinite reverse"
+          }} />
+          <Store size={36} color="#059669" style={{ animation: "bq-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" }} />
+        </div>
+
+        {/* Text */}
+        <div style={{
+          fontWeight: 800, fontSize: 24, letterSpacing: "-0.03em", marginBottom: 8,
+          background: "linear-gradient(90deg, #059669, #2563eb)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent"
+        }}>
+          Préparation de la boutique
+        </div>
+        <div style={{ color: "#64748b", fontSize: 15, fontWeight: 500, animation: "bq-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" }}>
+          Chargement sécurisé en cours...
         </div>
       </div>
     );

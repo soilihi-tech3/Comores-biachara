@@ -12,11 +12,18 @@ export function BoutiqueProvider({ children }) {
       return null;
     }
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    try {
+      return !localStorage.getItem("cached_boutique");
+    } catch (e) {
+      return true;
+    }
+  });
   const [error, setError] = useState(null);
 
   const refreshBoutique = async () => {
-    setLoading(true);
+    setLoading(prev => !boutique); // Seulement charger si aucune boutique en cache
+
     setError(null);
     const timestamp = Date.now();
 
