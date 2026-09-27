@@ -254,7 +254,7 @@ export default function SalesHistory() {
             <option value="tous">Tout type de vente</option>
             <option value="vente_directe">Vente Directe (POS)</option>
             <option value="commande_enligne">Commande en Ligne</option>
-            <option value="recharge_mobile">📲 Recharge Crédit Mobile</option>
+            <option value="recharge_mobile">Recharge Crédit Mobile</option>
           </select>
 
           {/* FILTER: PAIEMENT */}
@@ -463,7 +463,7 @@ export default function SalesHistory() {
                   <td>
                     {isRecharge ? (
                       <span style={{ background: "#E0F2FE", color: "#0284C7", padding: "4px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, whiteSpace: "nowrap" }}>
-                        📲 Recharge Mobile
+                        Recharge Mobile
                       </span>
                     ) : isPOS ? (
                       <span style={{ background: "#DCFCE7", color: "#166534", padding: "4px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 800, whiteSpace: "nowrap" }}>

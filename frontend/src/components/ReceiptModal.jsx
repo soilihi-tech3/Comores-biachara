@@ -118,20 +118,34 @@ export default function ReceiptModal({ order, boutique, onClose }) {
         {/* ITEMS TABLE */}
         <div style={{ borderTop: "1px dashed #64748B", borderBottom: "1px dashed #64748B", padding: "10px 0", marginBottom: 12 }}>
           <div style={{ display: "grid", gridTemplateColumns: "2.2fr 0.6fr 1fr 1fr", fontSize: 11, fontWeight: 800, color: "#0F172A", borderBottom: "1px solid #E2E8F0", paddingBottom: 4, marginBottom: 6 }}>
-            <span>ARTICLE</span>
+            <span>{isRecharge ? "N° DESTINATAIRE" : "ARTICLE"}</span>
             <span style={{ textAlign: "center" }}>QTÉ</span>
             <span style={{ textAlign: "right" }}>PRIX U.</span>
             <span style={{ textAlign: "right" }}>TOTAL</span>
           </div>
 
-          {(order.items || []).map((it, idx) => {
+          {(order.items && order.items.length > 0 ? order.items : (isRecharge ? [{
+            nom: order.notes ? order.notes.replace('Recharge Crédit Mobile ', '') : "Recharge Crédit",
+            quantite: 1,
+            prixUnitaire: order.total
+          }] : [])).map((it, idx) => {
             const pu = Number(it.prixUnitaire || it.product?.prix || 0);
             const totLine = pu * (it.quantite || 1);
 
+            let displayName = it.product?.nom || it.nom || "Article";
+            if (isRecharge) {
+               const phoneMatch = (order.notes || "").match(/\+?\d{7,15}/);
+               const destPhone = phoneMatch ? phoneMatch[0] : (clientPhone && clientPhone !== "non_renseigne" ? clientPhone : "Inconnu");
+               const matchKmf = (order.notes || "").match(/(\d[\d\s]*)\s*KMF/i);
+               const creditKmf = matchKmf ? matchKmf[1].trim() + " KMF" : "";
+               
+               displayName = `N° ${destPhone}${creditKmf ? ` (${creditKmf})` : ""}`;
+            }
+
             return (
               <div key={idx} style={{ display: "grid", gridTemplateColumns: "2.2fr 0.6fr 1fr 1fr", fontSize: 11.5, color: "#0F172A", marginBottom: 5, fontWeight: 600 }}>
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {it.product?.nom || it.nom || "Article"}
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={displayName}>
+                  {displayName}
                 </span>
                 <span style={{ textAlign: "center" }}>{it.quantite || 1}</span>
                 <span style={{ textAlign: "right" }}>{pu.toFixed(2)} €</span>
@@ -155,7 +169,17 @@ export default function ReceiptModal({ order, boutique, onClose }) {
           )}
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 900, color: "#0F172A", borderTop: "1px dashed #64748B", paddingTop: 8, marginTop: 4 }}>
             <span>TOTAL RÉGLÉ:</span>
-            <span style={{ color: "#15803D" }}>{fcfa(order.total)}</span>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ color: "#15803D" }}>{fcfa(order.total)}</div>
+              {isRecharge && (
+                <div style={{ fontSize: 11, color: "#64748B", fontWeight: 700 }}>
+                  {(() => {
+                    const match = (order.notes || "").match(/(\d[\d\s]*)\s*KMF/i);
+                    return match ? `Valeur du crédit : ${match[1].trim()} KMF = ${fcfa(order.total)}` : "";
+                  })()}
+                </div>
+              )}
+            </div>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#475569", marginTop: 4 }}>
             <span>Paiement:</span>

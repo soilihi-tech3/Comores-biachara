@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Package, Truck, CheckCircle, XCircle, Clock, ShoppingBag, Search, ChevronRight, MapPin, CreditCard, ArrowLeft, PackageOpen, TrendingUp, RefreshCw, Receipt, Star } from "lucide-react";
+import { Package, Truck, CheckCircle, XCircle, Clock, ShoppingBag, Search, ChevronRight, MapPin, CreditCard, ArrowLeft, PackageOpen, TrendingUp, RefreshCw, Receipt, Star, Smartphone } from "lucide-react";
 import api, { SLUG } from "../../api";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useCart } from "../../context/CartContext.jsx";
@@ -41,6 +41,7 @@ const MOYEN_LABEL = {
 
 const FILTERS = [
   { key: "all",          label: "Toutes les commandes", icon: ShoppingBag },
+  { key: "recharge_mobile", label: "Recharges de crédit", icon: Smartphone },
   { key: "en_attente",   label: "En attente",            icon: Clock },
   { key: "validee",      label: "Confirmées",            icon: CheckCircle },
   { key: "pret_retrait", label: "Prêtes à récupérer",   icon: Package },
@@ -192,7 +193,14 @@ export default function MyOrders() {
     const matchSearch = search === "" ||
       `${o.id}`.includes(search) ||
       o.items?.some(it => it.product?.nom?.toLowerCase().includes(search.toLowerCase()));
-    const matchFilter = filter === "all" || o.statut === filter;
+      
+    let matchFilter = false;
+    const isRecharge = o.typeVente === "recharge_mobile" || o.notes?.includes("recharge_mobile") || o.items?.some(it => it.product?.nom?.toLowerCase().includes("recharge"));
+    
+    if (filter === "all") matchFilter = true;
+    else if (filter === "recharge_mobile") matchFilter = isRecharge;
+    else matchFilter = o.statut === filter;
+    
     return matchSearch && matchFilter;
   });
 
@@ -590,7 +598,9 @@ export default function MyOrders() {
               Filtrer par statut
             </div>
             {FILTERS.map(f => {
-              const count = f.key === "all" ? orders.length : orders.filter(o => o.statut === f.key).length;
+              const count = f.key === "all" ? orders.length : 
+                            (f.key === "recharge_mobile" ? orders.filter(o => o.typeVente === "recharge_mobile" || o.notes?.includes("recharge_mobile") || o.items?.some(it => it.product?.nom?.toLowerCase().includes("recharge"))).length : 
+                            orders.filter(o => o.statut === f.key).length);
               const active = filter === f.key;
               return (
                 <button key={f.key} onClick={() => setFilter(f.key)} style={{
@@ -660,18 +670,23 @@ export default function MyOrders() {
                 {filtered.map(o => {
                   const cfg = STATUT_CONFIG[o.statut] || STATUT_CONFIG["en_attente"];
                   const isDelivery = o.modeLivraison === "domicile";
+                  const isRecharge = o.typeVente === "recharge_mobile" || o.notes?.includes("recharge_mobile") || o.items?.some(it => it.product?.nom?.toLowerCase().includes("recharge"));
                   return (
                     <div key={o.id} onClick={() => { setSelected(o); window.scrollTo(0, 0); }} className="bs-my-orders-card">
                       {/* Product thumbnails + info row */}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 10 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <div style={{ display: "flex", flexShrink: 0 }}>
-                            {o.items?.slice(0, 3).map((it, idx) => (
+                            {isRecharge && (!o.items || o.items.length === 0) ? (
+                              <div style={{ width: 44, height: 44, borderRadius: 10, background: "#E0F2FE", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>
+                                <Smartphone size={20} color="#0284C7" />
+                              </div>
+                            ) : o.items?.slice(0, 3).map((it, idx) => (
                               <img key={it.id} src={it.product?.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=60&q=80"} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: "cover", border: "2px solid #fff", boxShadow: "0 1px 4px rgba(0,0,0,0.08)", marginLeft: idx > 0 ? -12 : 0, zIndex: 3 - idx }} />
                             ))}
                           </div>
                           <div>
-                            <div style={{ fontWeight: 800, fontSize: 14.5, color: "var(--ink)" }}>Commande #{o.id}</div>
+                            <div style={{ fontWeight: 800, fontSize: 14.5, color: "var(--ink)" }}>{isRecharge ? "Recharge Mobile" : `Commande #${o.id}`}</div>
                             <div style={{ fontSize: 11.5, color: "var(--muted)" }}>
                               {new Date(o.createdAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
                             </div>
@@ -686,7 +701,7 @@ export default function MyOrders() {
                       {/* Articles summary + price row */}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", paddingTop: 8, borderTop: "1px solid var(--line)" }}>
                         <div style={{ fontSize: 12, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, paddingRight: 10 }}>
-                          {isDelivery ? "Livraison domicile" : "Retrait boutique"} · {o.items?.length} article{o.items?.length > 1 ? "s" : ""}
+                          {isRecharge ? "Recharge de crédit direct" : `${isDelivery ? "Livraison domicile" : "Retrait boutique"} · ${o.items?.length} article${o.items?.length > 1 ? "s" : ""}`}
                         </div>
 
                         <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>

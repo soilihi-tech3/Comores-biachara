@@ -249,6 +249,11 @@ async function ensureColumns() {
       await sequelize.query(`ALTER TABLE orders ADD COLUMN statut_paiement VARCHAR(50) DEFAULT 'non_paye';`);
     }
 
+    if (!tableOrders["notes"]) {
+      console.log("[MIGRATION] Ajout colonne notes sur orders");
+      await sequelize.query(`ALTER TABLE orders ADD COLUMN notes TEXT NULL;`);
+    }
+
     if (tableOrders["receiptUrl"] && !tableOrders["receipt_url"]) {
       console.log("[MIGRATION] Renommage receiptUrl en receipt_url");
       await sequelize.query(`ALTER TABLE orders CHANGE COLUMN receiptUrl receipt_url VARCHAR(500) NULL;`);

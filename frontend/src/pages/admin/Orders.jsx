@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Search, Filter, ShoppingBag, DollarSign, Clock, CheckCircle2,
-  Truck, UserCheck, Eye, X, Phone, MapPin, CreditCard, Calendar
+  Truck, UserCheck, Eye, X, Phone, MapPin, CreditCard, Calendar, Smartphone
 } from "lucide-react";
 import api from "../../api";
 import TablePagination from "../../components/TablePagination";
@@ -496,7 +496,10 @@ export default function AdminOrders() {
                 const dateObj = new Date(o.createdAt);
                 const dateFormatted = dateObj.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
                 const timeFormatted = dateObj.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-                const productNames = o.items?.map(it => it.product?.nom).filter(Boolean).join(", ") || "Produit(s)";
+                
+                const isRecharge = o.typeVente === "recharge_mobile" || o.notes?.includes("recharge_mobile");
+                const productNames = isRecharge ? "Recharge de crédit" : (o.items?.map(it => it.product?.nom).filter(Boolean).join(", ") || "Produit(s)");
+                const itemSubtitle = isRecharge ? "Crédit" : `${o.items?.length || 0} article(s)`;
 
                 return (
                   <tr key={o.id}>
@@ -553,7 +556,7 @@ export default function AdminOrders() {
                         {productNames}
                       </div>
                       <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 2 }}>
-                        {o.items?.length || 0} article(s)
+                        {itemSubtitle}
                       </div>
                     </td>
 
@@ -824,7 +827,28 @@ export default function AdminOrders() {
             <div style={{ marginBottom: 24 }}>
               <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, color: "var(--ink)" }}>Articles commandés (Photos & Détails)</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {selectedOrder.items?.map((it, idx) => (
+                {selectedOrder.typeVente === "recharge_mobile" || selectedOrder.notes?.includes("recharge_mobile") ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 10, background: "var(--paper)", borderRadius: 10, border: "1px solid var(--line)" }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 8, background: "#E0F2FE", color: "#0284C7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                       <Smartphone size={24} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13.5, color: "var(--ink)" }}>Recharge Crédit Mobile</div>
+                      <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                         {(() => {
+                            const phoneMatch = (selectedOrder.notes || "").match(/\+?\d{7,15}/);
+                            const kmfMatch = (selectedOrder.notes || "").match(/(\d[\d\s]*)\s*KMF/i);
+                            const phone = phoneMatch ? phoneMatch[0] : (selectedOrder.client?.telephone || "");
+                            const kmf = kmfMatch ? kmfMatch[1].trim() + " KMF" : "";
+                            return `N° ${phone}${kmf ? ` - ${kmf}` : ""}`;
+                         })()}
+                      </div>
+                    </div>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: "var(--forest-dark)" }}>
+                      {fcfa(selectedOrder.total)}
+                    </div>
+                  </div>
+                ) : selectedOrder.items?.map((it, idx) => (
                   <div key={idx} style={{ display: "flex", alignItems: "center", gap: 12, padding: 10, background: "var(--paper)", borderRadius: 10, border: "1px solid var(--line)" }}>
                     <img
                       src={it.product?.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=60&q=80"}

@@ -59,42 +59,70 @@ router.post("/", async (req, res) => {
           console.error("Impossible de récupérer le reçu Stripe recharge:", e);
         }
 
-        const newOrder = await Order.create({
-          boutiqueId: boutiqueId ? Number(boutiqueId) : 1,
-          clientId: userId ? Number(userId) : null,
-          total: totalEur,
-          sousTotal: totalEur,
-          fraisLivraison: 0,
-          statut: "recuperee",
-          statutPaiement: "paye",
-          typeVente: "recharge_mobile",
-          moyenPaiement: "carte",
-          stripeSessionId: sessionId,
-          receiptUrl: receiptUrl,
-          notes: `Recharge Crédit Mobile ${operatorName} pour le numéro ${phone}`
-        });
+        const orderId = session.metadata.orderId;
+        let existingOrder = null;
+        if (orderId) existingOrder = await Order.findByPk(orderId);
 
-        const cmdNum = "COM-B" + String(newOrder.id).padStart(3, "0");
-
-        if (userId) {
+        if (existingOrder) {
+          if (existingOrder.statut === "en_attente_paiement") {
+            await existingOrder.update({
+              statut: "recuperee",
+              statutPaiement: "paye",
+              receiptUrl: receiptUrl
+            });
+            const cmdNum = "COM-B" + String(existingOrder.id).padStart(3, "0");
+            if (userId) {
+              Notification.create({
+                userId: Number(userId), boutiqueId: Number(boutiqueId), orderId: existingOrder.id,
+                title: "Recharge crédit envoyée ! 📲",
+                message: `Votre recharge de crédit mobile (${operatorName}) a été transférée avec succès au ${phone} (#${cmdNum}).`,
+                type: "order"
+              }).catch(() => {});
+            }
+            Notification.create({
+              userId: null, boutiqueId: Number(boutiqueId), orderId: existingOrder.id,
+              title: "Nouvelle Recharge Crédit Mobile",
+              message: `Recharge de ${totalEur} € effectuée par carte pour le numéro ${phone}.`,
+              type: "order"
+            }).catch(() => {});
+            clearCachePattern("cache:/api/store").catch(() => {});
+            broadcast("order_updated", { orderId: existingOrder.id, statut: "recuperee", clientId: userId, boutiqueId });
+            console.log(`✅ Recharge Mobile ${phone} validée avec succès (#${existingOrder.id})`);
+          }
+        } else {
+          const newOrder = await Order.create({
+            boutiqueId: boutiqueId ? Number(boutiqueId) : 1,
+            clientId: userId ? Number(userId) : null,
+            total: totalEur,
+            sousTotal: totalEur,
+            fraisLivraison: 0,
+            statut: "recuperee",
+            statutPaiement: "paye",
+            typeVente: "recharge_mobile",
+            moyenPaiement: "carte",
+            stripeSessionId: sessionId,
+            receiptUrl: receiptUrl,
+            notes: `Recharge Crédit Mobile ${operatorName} pour le numéro ${phone}`
+          });
+          const cmdNum = "COM-B" + String(newOrder.id).padStart(3, "0");
+          if (userId) {
+            Notification.create({
+              userId: Number(userId), boutiqueId: Number(boutiqueId), orderId: newOrder.id,
+              title: "Recharge crédit envoyée ! 📲",
+              message: `Votre recharge de crédit mobile (${operatorName}) a été transférée avec succès au ${phone} (#${cmdNum}).`,
+              type: "order"
+            }).catch(() => {});
+          }
           Notification.create({
-            userId: Number(userId), boutiqueId: Number(boutiqueId), orderId: newOrder.id,
-            title: "Recharge crédit envoyée ! 📲",
-            message: `Votre recharge de crédit mobile (${operatorName}) a été transférée avec succès au ${phone} (#${cmdNum}).`,
+            userId: null, boutiqueId: Number(boutiqueId), orderId: newOrder.id,
+            title: "Nouvelle Recharge Crédit Mobile",
+            message: `Recharge de ${totalEur} € effectuée par carte pour le numéro ${phone}.`,
             type: "order"
           }).catch(() => {});
+          clearCachePattern("cache:/api/store").catch(() => {});
+          broadcast("order_created", { orderId: newOrder.id, statut: "recuperee", clientId: userId, boutiqueId });
+          console.log(`✅ Recharge Mobile ${phone} enregistrée avec succès (#${newOrder.id})`);
         }
-
-        Notification.create({
-          userId: null, boutiqueId: Number(boutiqueId), orderId: newOrder.id,
-          title: "Nouvelle Recharge Crédit Mobile",
-          message: `Recharge de ${totalEur} € effectuée par carte pour le numéro ${phone}.`,
-          type: "order"
-        }).catch(() => {});
-
-        clearCachePattern("cache:/api/store").catch(() => {});
-        broadcast("order_created", { orderId: newOrder.id, statut: "recuperee", clientId: userId, boutiqueId });
-        console.log(`✅ Recharge Mobile ${phone} enregistrée avec succès (#${newOrder.id})`);
       } else {
         // CAS 2: COMMANDE BOUTIQUE CLASSIQUE
         const order = await Order.findOne({ 

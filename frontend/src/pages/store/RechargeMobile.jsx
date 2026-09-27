@@ -54,6 +54,7 @@ export default function RechargeMobile() {
   const [searchParams] = useSearchParams();
   const statusParam = searchParams.get("status");
   const phoneParam = searchParams.get("phone");
+  const orderIdParam = searchParams.get("order_id");
 
   const [operator, setOperator] = useState(OPERATORS[0]); // Comores Telecom par défaut
   const [phone, setPhone] = useState("");
@@ -66,14 +67,22 @@ export default function RechargeMobile() {
 
   useEffect(() => {
     if (statusParam === "success") {
-      showToast(`Paiement réussi ! Crédit envoyé direct au +269 ${phoneParam || ""}`, "success", "Félicitations");
-      // Nettoyer les paramètres d'URL pour éviter que le message ne réapparaisse à chaque rafraîchissement/render
-      navigate(location.pathname, { replace: true });
+      const verify = async () => {
+        if (orderIdParam) {
+          try {
+            await api.post(`/store/${SLUG}/orders/${orderIdParam}/verify-payment`);
+          } catch (e) {}
+        }
+        showToast(`Paiement réussi ! Crédit envoyé direct au +269 ${phoneParam || ""}`, "success", "Félicitations");
+        // Nettoyer les paramètres d'URL pour éviter que le message ne réapparaisse à chaque rafraîchissement/render
+        navigate(location.pathname, { replace: true });
+      };
+      verify();
     } else if (statusParam === "canceled") {
       showToast("Paiement de la recharge annulé.", "info");
       navigate(location.pathname, { replace: true });
     }
-  }, [statusParam, phoneParam, showToast, navigate, location.pathname]);
+  }, [statusParam, phoneParam, orderIdParam, showToast, navigate, location.pathname]);
 
   const handlePhoneChange = (e) => {
     const rawVal = e.target.value.replace(/\D/g, "");

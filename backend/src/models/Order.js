@@ -19,6 +19,7 @@ const Order = sequelize.define("Order", {
   sousTotal: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
   fraisLivraison: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
   total: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+  notes: { type: DataTypes.TEXT, allowNull: true },
 }, { tableName: "orders" });
 
 module.exports = Order;

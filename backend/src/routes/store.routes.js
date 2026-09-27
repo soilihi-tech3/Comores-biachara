@@ -365,29 +365,46 @@ router.post("/:slug/orders/:id/verify-payment", loadBoutique, authenticate, asyn
         }
       } catch (e) {}
 
+      const nextStatut = order.typeVente === "recharge_mobile" ? "recuperee" : "en_attente";
       await order.update({ 
-        statut: "en_attente", 
+        statut: nextStatut, 
         statutPaiement: "paye",
         receiptUrl: receiptUrl
       });
 
       const cmdNum = "COM-B" + String(order.id).padStart(3, "0");
-      Notification.create({
-        userId: order.clientId, boutiqueId: order.boutiqueId, orderId: order.id,
-        title: "Paiement validé",
-        message: `Le paiement de votre commande #${cmdNum} a été validé avec succès.`,
-        type: "order"
-      }).catch(() => {});
+      
+      if (order.typeVente === "recharge_mobile") {
+        Notification.create({
+          userId: order.clientId, boutiqueId: order.boutiqueId, orderId: order.id,
+          title: "Recharge crédit envoyée ! 📲",
+          message: `Votre paiement a été validé et la recharge #${cmdNum} est confirmée.`,
+          type: "order"
+        }).catch(() => {});
+        Notification.create({
+          userId: null, boutiqueId: order.boutiqueId, orderId: order.id,
+          title: "Nouvelle Recharge Crédit Mobile",
+          message: `Le paiement pour la recharge #${cmdNum} a été confirmé via Stripe.`,
+          type: "order"
+        }).catch(() => {});
+      } else {
+        Notification.create({
+          userId: order.clientId, boutiqueId: order.boutiqueId, orderId: order.id,
+          title: "Paiement validé",
+          message: `Le paiement de votre commande #${cmdNum} a été validé avec succès.`,
+          type: "order"
+        }).catch(() => {});
 
-      Notification.create({
-        userId: null, boutiqueId: order.boutiqueId, orderId: order.id,
-        title: "Paiement en ligne reçu",
-        message: `Le paiement pour la commande #${cmdNum} a été confirmé via Stripe/Wero.`,
-        type: "order"
-      }).catch(() => {});
+        Notification.create({
+          userId: null, boutiqueId: order.boutiqueId, orderId: order.id,
+          title: "Paiement en ligne reçu",
+          message: `Le paiement pour la commande #${cmdNum} a été confirmé via Stripe/Wero.`,
+          type: "order"
+        }).catch(() => {});
+      }
 
       clearCachePattern("cache:/api/store").catch(() => {});
-      broadcast("order_updated", { orderId: order.id, statut: "en_attente", clientId: order.clientId, boutiqueId: order.boutiqueId });
+      broadcast("order_updated", { orderId: order.id, statut: nextStatut, clientId: order.clientId, boutiqueId: order.boutiqueId });
       
       return res.json({ verified: true, order });
     }
@@ -542,6 +559,18 @@ router.post("/:slug/create-recharge-session", loadBoutique, authenticate, async 
     const stripe = require("stripe")(stripeSecretKey);
     const originUrl = req.headers.origin || process.env.FRONTEND_URL || "http://localhost:5173";
 
+    const order = await Order.create({
+      boutiqueId: req.boutique.id,
+      clientId: req.user.id,
+      statut: "en_attente_paiement",
+      typeVente: "recharge_mobile",
+      moyenPaiement: "carte",
+      total: amountEur,
+      sousTotal: amountEur,
+      fraisLivraison: 0,
+      notes: `Recharge Crédit Mobile ${operatorName} pour le numéro +${cleanPhone}`
+    });
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       customer_email: req.user?.email || undefined,
@@ -559,16 +588,19 @@ router.post("/:slug/create-recharge-session", loadBoutique, authenticate, async 
         }
       ],
       mode: "payment",
-      success_url: `${originUrl}/recharge-mobile?status=success&phone=${encodeURIComponent(cleanPhone.replace(/^269/, ''))}`,
+      success_url: `${originUrl}/recharge-mobile?status=success&phone=${encodeURIComponent(cleanPhone.replace(/^269/, ''))}&order_id=${order.id}`,
       cancel_url: `${originUrl}/recharge-mobile?status=canceled`,
       metadata: { 
         boutiqueId: req.boutique.id, 
         userId: req.user ? req.user.id : null,
         type: "recharge_mobile", 
         phone: `+${cleanPhone}`, 
-        operatorName 
+        operatorName,
+        orderId: order.id
       }
     });
+
+    await order.update({ stripeSessionId: session.id });
 
     res.json({ url: session.url });
   } catch (err) { next(err); }
