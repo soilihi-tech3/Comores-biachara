@@ -1,5 +1,5 @@
 const express = require("express");
-const { Order, Boutique, Product, OrderItem, Notification } = require("../models");
+const { Order, Boutique, Product, OrderItem, Notification, User } = require("../models");
 const { broadcast } = require("../utils/broadcaster");
 const { envoyerConfirmationCommande, envoyerNotificationAdminNouvelleCommande } = require("../services/emailService");
 const { clearCachePattern } = require("../config/cache");
@@ -61,6 +61,8 @@ router.post("/", async (req, res) => {
 
         const orderId = session.metadata.orderId;
         let existingOrder = null;
+        let boutiqueObj = null;
+        if (boutiqueId) boutiqueObj = await Boutique.findByPk(boutiqueId);
         if (orderId) existingOrder = await Order.findByPk(orderId);
 
         if (existingOrder) {
@@ -87,6 +89,24 @@ router.post("/", async (req, res) => {
             }).catch(() => {});
             clearCachePattern("cache:/api/store").catch(() => {});
             broadcast("order_updated", { orderId: existingOrder.id, statut: "recuperee", clientId: userId, boutiqueId });
+            
+            // Notification email admin
+            const adminEmail = boutiqueObj?.emailContact || process.env.BREVO_SENDER_EMAIL;
+            if (adminEmail) {
+              const originUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+              envoyerNotificationAdminNouvelleCommande(adminEmail, existingOrder, boutiqueObj?.nom || "EasyMarket", originUrl).catch(() => {});
+            }
+
+            // Notification email client
+            let customerEmail = session.customer_details?.email;
+            if (!customerEmail && userId) {
+              const userObj = await User.findByPk(userId);
+              if (userObj) customerEmail = userObj.email;
+            }
+            if (customerEmail) {
+              envoyerConfirmationCommande(customerEmail, existingOrder, boutiqueObj?.nom || "EasyMarket").catch(() => {});
+            }
+
             console.log(`✅ Recharge Mobile ${phone} validée avec succès (#${existingOrder.id})`);
           }
         } else {
@@ -121,6 +141,24 @@ router.post("/", async (req, res) => {
           }).catch(() => {});
           clearCachePattern("cache:/api/store").catch(() => {});
           broadcast("order_created", { orderId: newOrder.id, statut: "recuperee", clientId: userId, boutiqueId });
+          
+          // Notification email admin
+          const adminEmail = boutiqueObj?.emailContact || process.env.BREVO_SENDER_EMAIL;
+          if (adminEmail) {
+            const originUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+            envoyerNotificationAdminNouvelleCommande(adminEmail, newOrder, boutiqueObj?.nom || "EasyMarket", originUrl).catch(() => {});
+          }
+
+          // Notification email client
+          let customerEmail = session.customer_details?.email;
+          if (!customerEmail && userId) {
+            const userObj = await User.findByPk(userId);
+            if (userObj) customerEmail = userObj.email;
+          }
+          if (customerEmail) {
+            envoyerConfirmationCommande(customerEmail, newOrder, boutiqueObj?.nom || "EasyMarket").catch(() => {});
+          }
+
           console.log(`✅ Recharge Mobile ${phone} enregistrée avec succès (#${newOrder.id})`);
         }
       } else {
@@ -172,6 +210,24 @@ router.post("/", async (req, res) => {
           clearCachePattern("cache:/api/store").catch(() => {});
           broadcast("order_updated", { orderId: order.id, statut: "en_attente", clientId: order.clientId, boutiqueId: order.boutiqueId });
           
+          // Notifications Emails
+          let boutiqueObj = null;
+          if (order.boutiqueId) boutiqueObj = await Boutique.findByPk(order.boutiqueId);
+
+          const adminEmail = boutiqueObj?.emailContact || process.env.BREVO_SENDER_EMAIL;
+          if (adminEmail) {
+            const originUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+            envoyerNotificationAdminNouvelleCommande(adminEmail, order, boutiqueObj?.nom || "EasyMarket", originUrl).catch(() => {});
+          }
+
+          let customerEmail = session.customer_details?.email;
+          if (!customerEmail && order.clientId) {
+            const userObj = await User.findByPk(order.clientId);
+            if (userObj) customerEmail = userObj.email;
+          }
+          if (customerEmail) {
+            envoyerConfirmationCommande(customerEmail, order, boutiqueObj?.nom || "EasyMarket").catch(() => {});
+          }
           console.log(`✅ Commande ${order.id} validée suite au paiement Stripe (${sessionId})`);
         }
       }

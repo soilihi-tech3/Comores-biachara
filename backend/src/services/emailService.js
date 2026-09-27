@@ -1,5 +1,6 @@
 require("dotenv").config();
 const { BrevoClient } = require("@getbrevo/brevo");
+const nodemailer = require("nodemailer");
 const { renderTemplate } = require("../utils/templateEngine");
 const { EmailLog } = require("../models");
 const { getCache, setCache } = require("../config/cache");
@@ -98,7 +99,35 @@ async function sendEmailCore({ to, subject, html, type = "general" }) {
     console.warn("⚠️ [EMAIL SERVICE] BREVO_API_KEY non configurée.");
   }
 
-  // 2. Fallback Mode Dev / Logs
+  // 2. Fallback SMTP (Gmail) si Brevo échoue ou n'est pas configuré
+  if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASS) {
+    try {
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.GMAIL_USER.trim(),
+          pass: process.env.GMAIL_APP_PASS.trim()
+        }
+      });
+      
+      const info = await transporter.sendMail({
+        from: process.env.GMAIL_USER.trim(), // Utiliser l'email exact pour éviter les alertes de spoofing
+        to,
+        subject,
+        html,
+        text: textContent
+      });
+      
+      console.log(`✉️ [GMAIL SMTP SUCCESS] E-mail "${type}" envoyé à ${to} (MessageId: ${info.messageId})`);
+      await logEmailSent(to, type, "succes");
+      return true;
+    } catch (err) {
+      console.error(`❌ [GMAIL SMTP ERROR] Échec d'envoi à ${to} :`, err.message);
+      await logEmailSent(to, type, "echec", err.message);
+    }
+  }
+
+  // 3. Fallback Mode Dev / Logs (Si les APIs et SMTP échouent)
   console.log("\n=================== ✉️ EMAIL TRANSACTIONNEL (DEV LOG FALLBACK) ===================");
   console.log(`Type         : ${type}`);
   console.log(`Destinataire : ${to}`);
@@ -155,11 +184,50 @@ async function envoyerConfirmationCommande(email, commande, boutiqueNom = "EasyM
     const clientNom = plainOrder.client?.nom || plainOrder.nomClient || "Cher Client";
     const totalValue = plainOrder.total !== undefined ? Number(plainOrder.total) : ((Number(plainOrder.sousTotal) || 0) + (Number(plainOrder.fraisLivraison) || 0));
     const totalFormatted = totalValue.toLocaleString('fr-FR');
-    const modeLiv = plainOrder.modeLivraison === 'domicile' ? 'Livraison à domicile' : 'Retrait en boutique';
-    const moyenPaiement = plainOrder.moyenPaiement || 'Carte bancaire / Espèces';
-
+    
     const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     const suiviUrl = rawId ? `${baseUrl}/mes-commandes?orderId=${rawId}` : `${baseUrl}/mes-commandes`;
+
+    const isRecharge = plainOrder.typeVente === 'recharge_mobile' || (plainOrder.notes && plainOrder.notes.includes("recharge_mobile"));
+    if (isRecharge) {
+      const phoneMatch = (plainOrder.notes || "").match(/\+?\d{7,15}/);
+      const kmfMatch = (plainOrder.notes || "").match(/(\d[\d\s]*)\s*KMF/i);
+      const phone = phoneMatch ? phoneMatch[0] : (plainOrder.client?.telephone || "Non renseigné");
+      const kmf = kmfMatch ? kmfMatch[1].trim() + " KMF" : "";
+
+      const htmlRecharge = `
+      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #f8fafc; border-radius: 16px;">
+        <div style="background: #0284C7; padding: 20px; border-radius: 12px; text-align: center; color: #ffffff; margin-bottom: 20px;">
+          <h2 style="margin: 0; font-size: 20px;">Votre Recharge est confirmée</h2>
+          <p style="margin: 6px 0 0; opacity: 0.9; font-size: 14px;">${boutiqueNom}</p>
+        </div>
+        <div style="background: #ffffff; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
+          <p style="font-size: 15px; color: #1e293b; margin-top: 0;">Bonjour <strong>${clientNom}</strong>,</p>
+          <p style="font-size: 15px; color: #1e293b;">Votre achat de crédit mobile a été traité avec succès. <strong>Le crédit sera disponible instantanément</strong> sur le téléphone du destinataire.</p>
+          <div style="background: #f1f5f9; padding: 16px; border-radius: 10px; margin: 18px 0; border-left: 4px solid #0284C7;">
+            <div style="font-size: 14px; color: #475569; margin-bottom: 6px;">N° de Commande : <strong style="color: #0F172A;">#${cmdId}</strong></div>
+            <div style="font-size: 14px; color: #475569; margin-bottom: 6px;">N° Destinataire : <strong style="color: #0F172A;">${phone}</strong></div>
+            ${kmf ? `<div style="font-size: 14px; color: #475569; margin-bottom: 6px;">Valeur du crédit : <strong style="color: #0284C7;">${kmf}</strong></div>` : ''}
+            <div style="font-size: 14px; color: #475569;">Total Réglé : <strong style="color: #0F172A;">${totalFormatted} €</strong></div>
+          </div>
+          <div style="text-align: center; margin-top: 24px;">
+            <a href="${suiviUrl}" style="background: #0284C7; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 30px; font-weight: bold; font-size: 14px; display: inline-block;">Voir mon reçu sur le site</a>
+          </div>
+          <p style="font-size: 11px; color: #94a3b8; text-align: center; margin-top: 30px;">Ceci est un e-mail automatique, merci de ne pas y répondre. Vous recevez ce message car vous avez effectué un achat sur ${boutiqueNom}.</p>
+        </div>
+      </div>
+      `;
+      const subject = `Confirmation de votre Recharge Mobile #${cmdId} - ${boutiqueNom}`;
+      return await sendEmailCore({ to: email, subject, html: htmlRecharge, type: "confirmation_recharge" });
+    }
+
+    const modeLiv = plainOrder.modeLivraison === 'domicile' ? 'Livraison à domicile' : 'Retrait en boutique';
+    let moyenPaiement = plainOrder.moyenPaiement || 'Standard';
+    if (moyenPaiement.toLowerCase() === 'cash' || moyenPaiement.toLowerCase() === 'especes' || moyenPaiement.toLowerCase() === 'espèces') {
+      moyenPaiement = 'Paiement à la livraison / retrait';
+    } else if (moyenPaiement.toLowerCase() === 'carte' || moyenPaiement.toLowerCase() === 'wero') {
+      moyenPaiement = 'Paiement en ligne (Carte)';
+    }
 
     const html = renderTemplate("confirmation-commande.html", {
       nom: clientNom,
@@ -172,7 +240,7 @@ async function envoyerConfirmationCommande(email, commande, boutiqueNom = "EasyM
       suiviUrl
     });
 
-    const subject = `Commande #${cmdId} confirmée — ${boutiqueNom}`;
+    const subject = `Confirmation de votre Commande #${cmdId} - ${boutiqueNom}`;
     return await sendEmailCore({ to: email, subject, html, type: "confirmation_commande" });
   } catch (err) {
     console.error("❌ [EMAIL CONFIRMATION ERROR]:", err.message);
@@ -191,31 +259,57 @@ async function envoyerNotificationAdminNouvelleCommande(adminEmail, commande, bo
     const clientNom = plainOrder.client?.nom || plainOrder.nomClient || "Client";
     const totalValue = plainOrder.total !== undefined ? Number(plainOrder.total) : ((Number(plainOrder.sousTotal) || 0) + (Number(plainOrder.fraisLivraison) || 0));
     const totalFormatted = totalValue.toLocaleString('fr-FR');
+    
+    const isPaid = plainOrder.statutPaiement === 'paye';
+    const isCard = plainOrder.moyenPaiement === 'carte' || plainOrder.moyenPaiement === 'wero';
+    const paymentMethodDisplay = isCard ? 'Paiement en ligne (Carte/Wero)' : 'Paiement à la livraison/retrait';
+    const paymentStatusDisplay = isPaid ? '<strong style="color: #059669;">✅ DÉJÀ PAYÉ</strong>' : '<strong style="color: #D97706;">⏳ NON PAYÉ (À encaisser)</strong>';
 
     const originUrl = baseUrl || process.env.FRONTEND_URL || "http://localhost:5173";
     const adminUrl = `${originUrl}/admin/commandes`;
 
+    const isRecharge = plainOrder.typeVente === 'recharge_mobile' || (plainOrder.notes && plainOrder.notes.includes("recharge_mobile"));
+    let rechargeDetailsHtml = '';
+    
+    if (isRecharge) {
+      const phoneMatch = (plainOrder.notes || "").match(/\+?\d{7,15}/);
+      const kmfMatch = (plainOrder.notes || "").match(/(\d[\d\s]*)\s*KMF/i);
+      const phone = phoneMatch ? phoneMatch[0] : (plainOrder.client?.telephone || "Non renseigné");
+      const kmf = kmfMatch ? kmfMatch[1].trim() + " KMF" : "";
+
+      rechargeDetailsHtml = `
+        <div style="background: #E0F2FE; border-left: 4px solid #0284C7; padding: 12px; margin-top: 12px; border-radius: 6px;">
+          <div style="font-size: 14px; color: #0369A1; margin-bottom: 6px;"><strong>📱 Service de Recharge Mobile</strong></div>
+          <div style="font-size: 14px; color: #0F172A; margin-bottom: 4px;">N° Destinataire : <strong>${phone}</strong></div>
+          ${kmf ? `<div style="font-size: 14px; color: #0F172A;">Valeur envoyée : <strong style="color: #0284C7;">${kmf}</strong></div>` : ''}
+        </div>
+      `;
+    }
+
     const html = `
       <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #f8fafc; border-radius: 16px;">
-        <div style="background: #163424; padding: 20px; border-radius: 12px; text-align: center; color: #ffffff; margin-bottom: 20px;">
-          <h2 style="margin: 0; font-size: 20px;">🎉 Nouvelle Commande Reçue !</h2>
+        <div style="background: ${isRecharge ? '#0284C7' : '#163424'}; padding: 20px; border-radius: 12px; text-align: center; color: #ffffff; margin-bottom: 20px;">
+          <h2 style="margin: 0; font-size: 20px;">${isRecharge ? 'Nouvelle Recharge Mobile' : 'Nouvelle Commande Reçue'}</h2>
           <p style="margin: 6px 0 0; opacity: 0.9; font-size: 14px;">${boutiqueNom}</p>
         </div>
         <div style="background: #ffffff; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
-          <p style="font-size: 15px; color: #1e293b; margin-top: 0;">Une nouvelle commande vient d'être effectuée sur votre boutique par <strong>${clientNom}</strong>.</p>
+          <p style="font-size: 15px; color: #1e293b; margin-top: 0;">Un achat vient d'être effectué sur votre boutique par <strong>${clientNom}</strong>.</p>
           <div style="background: #f1f5f9; padding: 16px; border-radius: 10px; margin: 18px 0;">
             <div style="font-size: 14px; color: #475569; margin-bottom: 6px;">N° de Commande : <strong style="color: #163424;">#${cmdId}</strong></div>
             <div style="font-size: 14px; color: #475569; margin-bottom: 6px;">Montant Total : <strong style="color: #163424;">${totalFormatted} €</strong></div>
-            <div style="font-size: 14px; color: #475569;">Mode de Livraison : <strong>${plainOrder.modeLivraison === 'domicile' ? 'Livraison à domicile' : 'Retrait en boutique'}</strong></div>
+            <div style="font-size: 14px; color: #475569; margin-bottom: 6px;">Méthode : <strong>${paymentMethodDisplay}</strong></div>
+            <div style="font-size: 14px; color: #475569; margin-bottom: 6px;">Statut : ${paymentStatusDisplay}</div>
+            ${isRecharge ? rechargeDetailsHtml : `<div style="font-size: 14px; color: #475569;">Mode de Livraison : <strong>${plainOrder.modeLivraison === 'domicile' ? 'Livraison à domicile' : 'Retrait en boutique'}</strong></div>`}
           </div>
           <div style="text-align: center; margin-top: 24px;">
-            <a href="${adminUrl}" style="background: #2D8653; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 30px; font-weight: bold; font-size: 14px; display: inline-block;">Gérer la commande dans l'Admin</a>
+            <a href="${adminUrl}" style="background: ${isRecharge ? '#0284C7' : '#2D8653'}; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 30px; font-weight: bold; font-size: 14px; display: inline-block;">Gérer la commande dans l'Admin</a>
           </div>
+          <p style="font-size: 11px; color: #94a3b8; text-align: center; margin-top: 30px;">Ceci est une notification automatique de votre boutique.</p>
         </div>
       </div>
     `;
 
-    const subject = `🔔 [Nouvelle Commande] #${cmdId} de ${clientNom} (${totalFormatted} €) — ${boutiqueNom}`;
+    const subject = `${isRecharge ? '[Recharge Mobile]' : '[Nouvelle Commande]'} #${cmdId} de ${clientNom} (${totalFormatted} EUR) - ${boutiqueNom}`;
     return await sendEmailCore({ to: adminEmail, subject, html, type: "admin_notification" });
   } catch (err) {
     console.error("❌ [EMAIL ADMIN NOTIFICATION ERROR]:", err.message);
