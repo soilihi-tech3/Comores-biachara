@@ -3,7 +3,7 @@ import { NavLink, Link, Outlet, useLocation, useNavigate } from "react-router-do
 import { 
   LayoutDashboard, Package, ShoppingCart, Users, Store, LogOut, Layers, 
   PanelLeftClose, PanelLeftOpen, User, Image, LayoutGrid, CreditCard, 
-  ShoppingBag, Truck, Scale, History, Menu, X, ExternalLink, ArrowLeft, Clock, Lock, UserCheck, Sun, Moon
+  ShoppingBag, Truck, Scale, History, Menu, X, ExternalLink, ArrowLeft, Clock, Lock, UserCheck, Sun, Moon, PhoneCall
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useCart } from "../../context/CartContext.jsx";
@@ -51,6 +51,7 @@ export default function AdminLayout() {
     { to: "/admin/commandes", label: "Commandes", icon: ShoppingCart, permKey: ["valider_commande", "changer_statut_commande", "assigner_commande", "gerer_commandes"], moduleKey: "commandes" },
     { to: "/admin/clients", label: "Clients", icon: UserCheck, permKey: ["gerer_commandes", "gerer_utilisateurs", "voir_dashboard"] },
     { to: "/admin/employes", label: "Équipe & Rôles", icon: Users, adminOnly: true, moduleKey: "employes" },
+    { to: "/admin/recharges", label: "Recharges Mobiles", icon: PhoneCall, permKey: "gerer_parametres", moduleKey: "recharges" },
     { to: "/admin/parametres", label: "Paramètres Boutique", icon: Store, permKey: "gerer_parametres", moduleKey: "parametres" },
   ];
 

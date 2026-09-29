@@ -76,19 +76,22 @@ export default function Catalogue() {
     api.get(`/store/${SLUG}/categories`).then((res) => {
       setData(key, res.data, 300000);
       setCategories(res.data);
+      try { localStorage.setItem(`cached_categories_${SLUG}`, JSON.stringify(res.data)); } catch(e) {}
     }).catch(() => {});
   }
 
   function loadProducts(force = false) {
-    const cacheKey = `products:${SLUG}:${categoryId}:${famille}:${search}`;
-    if (!force && !isStale(cacheKey)) {
-      const cached = getData(cacheKey);
+    const ck = `products:${SLUG}:${categoryId}:${famille}:${search}`;
+    if (!force && !isStale(ck)) {
+      const cached = getData(ck);
       if (cached && Array.isArray(cached) && cached.length > 0) {
         setProducts(cached);
         setLoading(false);
         return;
       }
     }
+    // Only show skeleton if we truly have nothing to show
+    const startTime = Date.now();
     if (products.length === 0) {
       setLoading(true);
     }
@@ -98,10 +101,18 @@ export default function Catalogue() {
     if (search) query.search = search;
     api.get(`/store/${SLUG}/products`, { params: query })
       .then((res) => {
-        setData(cacheKey, res.data, 120000);
+        setData(ck, res.data, 120000);
         setProducts(res.data);
+        // Persist base catalogue to localStorage for instant load next time
+        if (!categoryId && !famille && !search) {
+          try { localStorage.setItem(`cached_products_${SLUG}`, JSON.stringify(res.data)); } catch(e) {}
+        }
+        // Ensure skeleton shows at least 300ms to avoid flash
+        const elapsed = Date.now() - startTime;
+        const delay = Math.max(0, 300 - elapsed);
+        setTimeout(() => setLoading(false), delay);
       })
-      .finally(() => setLoading(false));
+      .catch(() => setLoading(false));
   }
 
   useEffect(() => {
@@ -125,18 +136,25 @@ export default function Catalogue() {
     return unsub;
   }, [categoryId, famille, search, invalidate]);
 
-  const stripAccents = (str) => (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const stripAccents = (str) =>
+    (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
   let displayedProducts = products;
   if (onlyFavoris) {
-    displayedProducts = displayedProducts.filter(p => favIds.includes(p.id));
+    displayedProducts = displayedProducts.filter((p) => favIds.includes(p.id));
   } else if (famille) {
     const fClean = stripAccents(famille);
-    displayedProducts = displayedProducts.filter(p => {
+    displayedProducts = displayedProducts.filter((p) => {
       const pFam = stripAccents(p.Category?.famille || p.famille);
       const pCatNom = stripAccents(p.Category?.nom);
       const pNom = stripAccents(p.nom);
-      return pFam.includes(fClean) || fClean.includes(pFam) || pCatNom.includes(fClean) || fClean.includes(pCatNom) || pNom.includes(fClean);
+      return (
+        pFam.includes(fClean) ||
+        fClean.includes(pFam) ||
+        pCatNom.includes(fClean) ||
+        fClean.includes(pCatNom) ||
+        pNom.includes(fClean)
+      );
     });
   }
 
@@ -145,69 +163,125 @@ export default function Catalogue() {
     const key = user && user.id ? `favorites_user_${user.id}` : "favorites_guest";
     localStorage.setItem(key, JSON.stringify([]));
     window.dispatchEvent(new Event("favorites_updated"));
-    showToast("Tous vos favoris ont été supprimés.", "info", "Favoris");
+    showToast("Tous vos favoris ont \u00e9t\u00e9 supprim\u00e9s.", "info", "Favoris");
   }
+
+  // ── SKELETON CARD ──
+  const SkeletonCard = ({ delay = 0 }) => (
+    <div className="bs-skeleton-card" style={{ animationDelay: `${delay}ms` }}>
+      <div className="bs-skeleton-img" />
+      <div className="bs-skeleton-body">
+        <div className="bs-skeleton-line bs-skeleton-title" />
+        <div className="bs-skeleton-line bs-skeleton-sub" />
+        <div className="bs-skeleton-line bs-skeleton-price" />
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ minHeight: "65vh" }}>
+      {/* Categories strip */}
       <div className="bs-cats">
-        <div 
-          className={"bs-cat-card" + (!categoryId && !famille && !onlyFavoris ? " on" : "")} 
+        <div
+          className={"bs-cat-card" + (!categoryId && !famille && !onlyFavoris ? " on" : "")}
           onClick={() => setParams({})}
         >
           <div className="bs-cat-name" style={{ padding: "20px 0" }}>Tout afficher</div>
         </div>
 
-        <div 
-          className={"bs-cat-card" + (onlyFavoris ? " on" : "")} 
+        <div
+          className={"bs-cat-card" + (onlyFavoris ? " on" : "")}
           onClick={() => setParams({ favoris: "1" })}
-          style={{ 
-            borderColor: onlyFavoris ? "#B4483A" : undefined, 
-            background: onlyFavoris ? "#FAD2CD" : undefined 
+          style={{
+            borderColor: onlyFavoris ? "#B4483A" : undefined,
+            background: onlyFavoris ? "#FAD2CD" : undefined,
           }}
         >
-          <div className="bs-cat-name" style={{ padding: "16px 0", color: onlyFavoris ? "#B4483A" : "var(--ink)", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-            <Heart size={16} fill={onlyFavoris ? "#B4483A" : "none"} color={onlyFavoris ? "#B4483A" : "var(--ink)"} /> Mes Favoris ({favIds.length})
+          <div
+            className="bs-cat-name"
+            style={{
+              padding: "16px 0",
+              color: onlyFavoris ? "#B4483A" : "var(--ink)",
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+            }}
+          >
+            <Heart
+              size={16}
+              fill={onlyFavoris ? "#B4483A" : "none"}
+              color={onlyFavoris ? "#B4483A" : "var(--ink)"}
+            />{" "}
+            Mes Favoris ({favIds.length})
           </div>
         </div>
 
         {categories.map((c) => (
-          <div 
-            key={c.id} 
+          <div
+            key={c.id}
             className={"bs-cat-card" + (categoryId == c.id && !onlyFavoris ? " on" : "")}
             onClick={() => setParams({ categoryId: c.id })}
           >
-            <img 
-              src={c.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300&q=80"} 
-              alt={c.nom} 
+            <img
+              src={
+                c.imageUrl ||
+                "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300&q=80"
+              }
+              alt={c.nom}
               loading="lazy"
               decoding="async"
-              className="bs-cat-img" 
+              className="bs-cat-img"
             />
             <div className="bs-cat-name">{c.nom}</div>
           </div>
         ))}
       </div>
 
-      <div className="bs-section-title" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <h2>
-          {loading 
-            ? "Chargement du catalogue..." 
-            : onlyFavoris 
-            ? `Mes produits favoris (${displayedProducts.length})` 
-            : famille
-            ? `Produits de la section "${famille}" (${displayedProducts.length})`
-            : `${displayedProducts.length} produit(s) trouvé(s)`}
-        </h2>
+      {/* Section header */}
+      <div
+        className="bs-section-title"
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+      >
+        {loading ? (
+          <div className="bs-catalogue-loading-header">
+            <div className="bs-loading-spinner-ring" />
+            <h2 style={{ margin: 0, fontSize: 20, color: "var(--muted)", fontWeight: 600 }}>
+              Chargement du catalogue
+              <span style={{ display: "inline-flex", gap: 4, marginLeft: 10, verticalAlign: "middle" }}>
+                <span className="bs-otp-dot" style={{ width: 6, height: 6 }} />
+                <span className="bs-otp-dot" style={{ width: 6, height: 6 }} />
+                <span className="bs-otp-dot" style={{ width: 6, height: 6 }} />
+              </span>
+            </h2>
+          </div>
+        ) : (
+          <h2>
+            {onlyFavoris
+              ? `Mes produits favoris (${displayedProducts.length})`
+              : famille
+              ? `Produits de la section "${famille}" (${displayedProducts.length})`
+              : `${displayedProducts.length} produit(s) trouv\u00e9(s)`}
+          </h2>
+        )}
 
         {onlyFavoris && displayedProducts.length > 0 && (
-          <button 
+          <button
             onClick={clearAllFavorites}
             style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              background: "#FDF2F0", color: "#B4483A", border: "1px solid #F8D7D2",
-              padding: "8px 16px", borderRadius: 20, fontWeight: 700, fontSize: 13,
-              cursor: "pointer", transition: "all 0.2s ease"
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              background: "#FDF2F0",
+              color: "#B4483A",
+              border: "1px solid #F8D7D2",
+              padding: "8px 16px",
+              borderRadius: 20,
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: "pointer",
+              transition: "all 0.2s ease",
             }}
             title="Supprimer tous les favoris"
           >
@@ -217,35 +291,64 @@ export default function Catalogue() {
       </div>
 
       {loading ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 20, padding: "20px 0" }}>
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <div key={i} style={{ background: "#fff", height: 280, borderRadius: 16, border: "1px solid var(--line)", animation: "pulse 1.2s infinite ease-in-out" }} />
+        /* ── PREMIUM SHIMMER SKELETON LOADER ── */
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+            gap: 20,
+            padding: "4px 0 20px",
+          }}
+        >
+          {[0, 80, 160, 240, 320, 400, 480, 560].map((delay, i) => (
+            <SkeletonCard key={i} delay={delay} />
           ))}
         </div>
       ) : (
-        <>
+        /* ── PRODUCTS GRID with fade-in ── */
+        <div style={{ animation: "catalogueReveal 0.4s ease" }}>
           {onlyFavoris && displayedProducts.length === 0 && (
-            <div style={{ padding: 60, textAlign: "center", color: "var(--muted)", background: "#fff", borderRadius: 16 }}>
+            <div
+              style={{
+                padding: 60,
+                textAlign: "center",
+                color: "var(--muted)",
+                background: "#fff",
+                borderRadius: 16,
+              }}
+            >
               <Heart size={44} color="#B4483A" style={{ marginBottom: 12, opacity: 0.8 }} />
-              <h3 style={{ margin: "0 0 8px", color: "var(--forest-dark)" }}>Aucun produit dans vos favoris</h3>
+              <h3 style={{ margin: "0 0 8px", color: "var(--forest-dark)" }}>
+                Aucun produit dans vos favoris
+              </h3>
               <p style={{ margin: 0, fontSize: 14 }}>
-                Parcourez le catalogue et cliquez sur l'icône cœur d'un produit pour l'ajouter à vos favoris personnels !
+                Parcourez le catalogue et cliquez sur l&apos;ic\u00f4ne c\u0153ur d&apos;un produit pour
+                l&apos;ajouter \u00e0 vos favoris personnels !
               </p>
             </div>
           )}
 
           {!onlyFavoris && displayedProducts.length === 0 && (
-            <div style={{ padding: 60, textAlign: "center", color: "var(--muted)", background: "#fff", borderRadius: 16 }}>
-              Aucun produit ne correspond à vos critères de recherche.
+            <div
+              style={{
+                padding: 60,
+                textAlign: "center",
+                color: "var(--muted)",
+                background: "#fff",
+                borderRadius: 16,
+              }}
+            >
+              Aucun produit ne correspond \u00e0 vos crit\u00e8res de recherche.
             </div>
           )}
 
           <div className="bs-grid">
-            {displayedProducts.map((p) => <ProductCard key={p.id} product={p} isFavorisPage={onlyFavoris} />)}
+            {displayedProducts.map((p) => (
+              <ProductCard key={p.id} product={p} isFavorisPage={onlyFavoris} />
+            ))}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
 }
-

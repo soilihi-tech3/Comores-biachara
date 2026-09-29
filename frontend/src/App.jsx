@@ -32,6 +32,7 @@ import AdminOrders from "./pages/admin/Orders.jsx";
 import AdminEmployees from "./pages/admin/Employees.jsx";
 import AdminClients from "./pages/admin/Clients.jsx";
 import AdminSettings from "./pages/admin/Settings.jsx";
+import AdminRecharge from "./pages/admin/AdminRecharge.jsx";
 
 import VenteDirecte from "./pages/admin/VenteDirecte.jsx";
 import Fournisseurs from "./pages/admin/Fournisseurs.jsx";
@@ -115,7 +116,7 @@ export default function App() {
         {/* --- Boutique (front-office) --- */}
         <Route path="/" element={<StoreLayout><Home /></StoreLayout>} />
         <Route path="/a-propos" element={<StoreLayout><About /></StoreLayout>} />
-        <Route path="/recharge-mobile" element={<StoreLayout><RechargeMobile /></StoreLayout>} />
+        <Route path="/recharge-mobile" element={<WideLayout><RechargeMobile /></WideLayout>} />
         <Route path="/catalogue" element={<StoreLayout><Catalogue /></StoreLayout>} />
         <Route path="/produit/:id" element={<StoreLayout><ProductDetail /></StoreLayout>} />
         <Route path="/connexion" element={<StoreLayout><Login /></StoreLayout>} />
@@ -150,6 +151,7 @@ export default function App() {
           <Route path="commandes" element={<AdminOrders />} />
           <Route path="clients" element={<AdminClients />} />
           <Route path="employes" element={<AdminEmployees />} />
+          <Route path="recharges" element={<AdminRecharge />} />
 
           <Route path="utilisateurs" element={<AdminEmployees />} />
           <Route path="parametres" element={<AdminSettings defaultTab="general" />} />

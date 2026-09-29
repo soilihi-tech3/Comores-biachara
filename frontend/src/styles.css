@@ -1214,6 +1214,16 @@ html[data-theme="dark"] .bs-side-btn.active .bs-side-label {
   min-height: calc(100vh - 160px);
 }
 
+@keyframes slideFromLeft {
+  0% { opacity: 0; transform: translateX(-30px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideFromRight {
+  0% { opacity: 0; transform: translateX(30px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
 .bs-auth-card {
   width: 100%;
   max-width: 480px;
@@ -1222,6 +1232,15 @@ html[data-theme="dark"] .bs-side-btn.active .bs-side-label {
   padding: 36px 32px;
   border: 1px solid var(--line);
   box-shadow: var(--shadow-lg);
+  will-change: transform, opacity;
+}
+
+.slide-from-left {
+  animation: slideFromLeft 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.slide-from-right {
+  animation: slideFromRight 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 .bs-auth-header {
@@ -1461,6 +1480,214 @@ html[data-theme="dark"] .bs-side-btn.active .bs-side-label {
   from { transform: scale(0.5); opacity: 0; }
   to   { transform: scale(1); opacity: 1; }
 }
+
+/* ── SHIMMER SKELETON ANIMATION ── */
+@keyframes shimmer {
+  0% { background-position: -600px 0; }
+  100% { background-position: 600px 0; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes catalogueReveal {
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes otpSlideUp {
+  0% { opacity: 0; transform: translateY(24px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes otpBoxFocus {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+@keyframes otpSuccess {
+  0% { transform: scale(1); background: var(--forest); }
+  50% { transform: scale(1.12); background: #22c55e; }
+  100% { transform: scale(1); background: var(--forest); }
+}
+
+@keyframes floatDot {
+  0%, 100% { transform: translateY(0px); opacity: 1; }
+  50% { transform: translateY(-8px); opacity: 0.6; }
+}
+
+@keyframes ringPulse {
+  0% { box-shadow: 0 0 0 0 rgba(34, 75, 53, 0.4); }
+  70% { box-shadow: 0 0 0 12px rgba(34, 75, 53, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 75, 53, 0); }
+}
+
+/* ── SKELETON CARD ── */
+.bs-skeleton-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  height: 310px;
+  position: relative;
+}
+
+.bs-skeleton-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,255,255,0.7) 40%,
+    rgba(255,255,255,0.9) 50%,
+    rgba(255,255,255,0.7) 60%,
+    transparent 100%
+  );
+  background-size: 600px 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+.bs-skeleton-img {
+  width: 100%;
+  height: 175px;
+  background: linear-gradient(135deg, #e8ede9 0%, #d4dbd6 50%, #e8ede9 100%);
+}
+
+.bs-skeleton-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bs-skeleton-line {
+  border-radius: 6px;
+  background: linear-gradient(135deg, #e8ede9 0%, #d4dbd6 50%, #e8ede9 100%);
+}
+
+.bs-skeleton-title { height: 16px; width: 75%; }
+.bs-skeleton-sub   { height: 12px; width: 50%; }
+.bs-skeleton-price { height: 20px; width: 40%; margin-top: 4px; }
+
+/* ── CATALOGUE LOADING STATE ── */
+.bs-catalogue-loading-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0 20px;
+}
+
+.bs-loading-spinner-ring {
+  width: 22px;
+  height: 22px;
+  border: 3px solid var(--line);
+  border-top-color: var(--forest);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+/* ── OTP INPUT BOXES ── */
+.bs-otp-container {
+  animation: otpSlideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.bs-otp-boxes {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 8px 0 6px;
+}
+
+.bs-otp-box {
+  width: 52px;
+  height: 62px;
+  border: 2.5px solid var(--line);
+  border-radius: 14px;
+  font-size: 26px;
+  font-weight: 900;
+  text-align: center;
+  color: var(--forest-dark);
+  background: var(--paper);
+  outline: none;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  caret-color: var(--forest);
+  letter-spacing: 0;
+  font-family: var(--font-main);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.bs-otp-box:focus {
+  border-color: var(--forest);
+  background: var(--card);
+  box-shadow: 0 0 0 4px rgba(34, 75, 53, 0.12);
+  transform: scale(1.06);
+  animation: ringPulse 1.5s ease infinite;
+}
+
+.bs-otp-box.filled {
+  border-color: var(--forest);
+  background: var(--forest-light);
+  color: var(--forest-dark);
+  font-weight: 900;
+}
+
+.bs-otp-box.error {
+  border-color: #B4483A;
+  background: #FDF2F0;
+  animation: otpBoxFocus 0.3s ease;
+}
+
+.bs-otp-box.success {
+  border-color: #22c55e;
+  background: #f0fdf4;
+  animation: otpSuccess 0.4s ease;
+}
+
+@media (max-width: 420px) {
+  .bs-otp-box { width: 42px; height: 52px; font-size: 20px; border-radius: 10px; }
+  .bs-otp-boxes { gap: 7px; }
+}
+
+/* ── OTP VERIFICATION ICON ── */
+.bs-otp-shield {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--forest-light) 0%, #d4e8da 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  position: relative;
+  animation: otpSlideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.bs-otp-shield::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px dashed rgba(34, 75, 53, 0.2);
+  animation: spin 8s linear infinite;
+}
+
+.bs-otp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--forest);
+  display: inline-block;
+}
+
+.bs-otp-dot:nth-child(1) { animation: floatDot 1.4s ease infinite 0s; }
+.bs-otp-dot:nth-child(2) { animation: floatDot 1.4s ease infinite 0.2s; }
+.bs-otp-dot:nth-child(3) { animation: floatDot 1.4s ease infinite 0.4s; }
 
 /* ===================================================
    RESPONSIVE — Tablet (≤ 900px)

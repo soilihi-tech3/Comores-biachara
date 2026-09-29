@@ -11,6 +11,7 @@ const Famille = require("./Famille");
 const Fournisseur = require("./Fournisseur");
 const UniteVente = require("./UniteVente");
 const Achat = require("./Achat");
+const RechargePlan = require("./RechargePlan")(sequelize);
 
 // --- Associations ---
 
@@ -73,8 +74,11 @@ Achat.belongsTo(Fournisseur, { foreignKey: "fournisseurId", as: "fournisseur" })
 
 const EmailLog = require("./EmailLog");
 
+Boutique.hasMany(RechargePlan, { foreignKey: "boutiqueId" });
+RechargePlan.belongsTo(Boutique, { foreignKey: "boutiqueId" });
+
 module.exports = { 
   sequelize, Boutique, User, Category, Product, Order, OrderItem, 
-  Review, Notification, Famille, Fournisseur, UniteVente, Achat, EmailLog 
+  Review, Notification, Famille, Fournisseur, UniteVente, Achat, EmailLog, RechargePlan 
 };
 

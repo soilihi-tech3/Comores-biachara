@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, Image, Layers, LayoutGrid, Store, Phone, MapPin, Mail, Info, Save, CreditCard, ToggleLeft, ToggleRight, Banknote, Smartphone, Globe, Key, CheckCircle2, HelpCircle } from "lucide-react";
+import { Plus, Trash2, Image, Layers, LayoutGrid, Store, Phone, MapPin, Mail, Info, Save, CreditCard, ToggleLeft, ToggleRight, Banknote, Smartphone, Globe, Key, CheckCircle2, HelpCircle, Database, AlertTriangle } from "lucide-react";
 import api from "../../api";
 import ImageUploader from "../../components/ImageUploader.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -219,6 +219,19 @@ export default function AdminSettings({ defaultTab = "general" }) {
           }}
         >
           <CreditCard size={17} /> Paiement & Stripe
+        </button>
+
+        <button
+          onClick={() => setActiveTab("cleanup")}
+          style={{
+            padding: "10px 18px", border: "none", background: "none", cursor: "pointer",
+            fontWeight: 700, fontSize: 13.5,
+            color: activeTab === "cleanup" ? "#E11D48" : "var(--muted)",
+            borderBottom: activeTab === "cleanup" ? "3px solid #E11D48" : "3px solid transparent",
+            marginBottom: -2, display: "flex", alignItems: "center", gap: 8
+          }}
+        >
+          <Database size={17} /> Nettoyage DB
         </button>
       </div>
 
@@ -707,10 +720,133 @@ export default function AdminSettings({ defaultTab = "general" }) {
         </div>
       )}
 
+      {/* TAB 5: NETTOYAGE DB */}
+      {activeTab === "cleanup" && (
+        <CleanupPanel />
+      )}
+
       <button className="bs-btn-primary" style={{ padding: "14px 28px", marginTop: 10 }} onClick={save}>
         Enregistrer toutes les modifications
       </button>
     </>
+  );
+}
+
+function CleanupPanel() {
+  const [selectedTables, setSelectedTables] = useState({
+    commandes: false,
+    achats: false,
+    produits: false,
+    categories: false,
+    clients: false,
+    fournisseurs: false,
+  });
+  const [isCleaning, setIsCleaning] = useState(false);
+  const [notification, setNotification] = useState(null);
+
+  const showNotification = (msg, type = "success") => {
+    setNotification({ msg, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  const handleToggle = (table) => {
+    setSelectedTables(prev => ({ ...prev, [table]: !prev[table] }));
+  };
+
+  const handleCleanup = async () => {
+    const toClean = Object.keys(selectedTables).filter(k => selectedTables[k]);
+    if (toClean.length === 0) {
+      showNotification("Veuillez sélectionner au moins une table à vider.", "error");
+      return;
+    }
+    const confirmMessage = "ATTENTION : Vous êtes sur le point de SUPPRIMER DÉFINITIVEMENT les données des tables suivantes :\n- " + toClean.join("\n- ") + "\n\nCette action est IRRÉVERSIBLE. Voulez-vous continuer ?";
+    if (!window.confirm(confirmMessage)) return;
+
+    // Double confirmation if products or clients are selected
+    if ((toClean.includes("produits") || toClean.includes("clients")) && !window.confirm("ÊTES-VOUS ABSOLUMENT SÛR ? La suppression des produits/clients peut impacter toute la boutique.")) {
+      return;
+    }
+
+    setIsCleaning(true);
+    try {
+      await api.post(`/admin/cleanup`, { tables: toClean });
+      showNotification("Nettoyage effectué avec succès !");
+      setSelectedTables({ commandes: false, achats: false, produits: false, categories: false, clients: false, fournisseurs: false });
+    } catch (err) {
+      console.error(err);
+      showNotification("Erreur lors du nettoyage : " + (err.response?.data?.message || err.message), "error");
+    } finally {
+      setIsCleaning(false);
+    }
+  };
+
+  return (
+    <div className="bs-panel" style={{ border: "2px solid #E11D48" }}>
+      <div style={{ marginBottom: 20 }}>
+        <h3 style={{ margin: "0 0 6px", fontSize: 18, color: "#E11D48", display: "flex", alignItems: "center", gap: 8 }}>
+          <AlertTriangle size={20} /> Zone de Danger : Nettoyage de la Base de Données
+        </h3>
+        <div style={{ fontSize: 13.5, color: "var(--muted)" }}>
+          Sélectionnez les données que vous souhaitez remettre à zéro. Cette action supprimera définitivement les éléments sélectionnés pour votre boutique.
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
+        {[
+          { key: "commandes", label: "Commandes & Ventes" },
+          { key: "achats", label: "Achats & Stocks" },
+          { key: "produits", label: "Produits du Catalogue" },
+          { key: "categories", label: "Catégories" },
+          { key: "clients", label: "Comptes Clients" },
+          { key: "fournisseurs", label: "Fournisseurs" },
+        ].map(item => (
+          <label key={item.key} style={{
+            display: "flex", alignItems: "center", gap: 10, padding: 16,
+            background: selectedTables[item.key] ? "#FFE4E6" : "var(--paper)",
+            border: `2px solid ${selectedTables[item.key] ? "#E11D48" : "var(--line)"}`,
+            borderRadius: 12, cursor: "pointer", fontWeight: 600, color: "var(--ink)"
+          }}>
+            <input type="checkbox" checked={selectedTables[item.key]} onChange={() => handleToggle(item.key)} style={{ width: 18, height: 18, accentColor: "#E11D48" }} />
+            {item.label}
+          </label>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button 
+          onClick={handleCleanup} 
+          disabled={isCleaning || !Object.values(selectedTables).some(v => v)}
+          style={{
+            background: "#E11D48", color: "#fff", border: "none", padding: "12px 24px",
+            borderRadius: 10, fontWeight: 700, fontSize: 15, cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 8, opacity: isCleaning ? 0.7 : 1
+          }}
+        >
+          <Trash2 size={18} /> {isCleaning ? "Nettoyage en cours..." : "Lancer le Nettoyage Sélectionné"}
+        </button>
+      </div>
+
+      {notification && (
+        <div style={{
+          position: "fixed",
+          bottom: 24,
+          right: 24,
+          background: notification.type === "error" ? "#EF4444" : "#10B981",
+          color: "#fff",
+          padding: "14px 24px",
+          borderRadius: 12,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+          fontWeight: 600,
+          fontSize: 14,
+          zIndex: 9999,
+          display: "flex",
+          alignItems: "center",
+          gap: 10
+        }}>
+          {notification.msg}
+        </div>
+      )}
+    </div>
   );
 }
 

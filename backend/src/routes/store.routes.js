@@ -1,6 +1,6 @@
 const express = require("express");
 const { Op } = require("sequelize");
-const { sequelize, Product, Category, Order, OrderItem, Review, User, Notification, Famille } = require("../models");
+const { sequelize, Product, Category, Order, OrderItem, Review, User, Notification, Famille, RechargePlan } = require("../models");
 const { authenticate, requireRole, loadBoutique } = require("../middleware/auth");
 const { cacheMiddleware, clearCachePattern } = require("../config/cache");
 const { sendOrderConfirmationEmail, sendOrderStatusEmail } = require("../services/email.service");
@@ -698,6 +698,71 @@ router.patch("/:slug/orders/:id/cancel", loadBoutique, authenticate, requireRole
   } catch (err) {
     await t.rollback();
     next(err);
+  }
+});
+
+// --- RECHARGE PLANS ROUTES ---
+
+// GET /api/store/:slug/recharge-plans
+router.get("/:slug/recharge-plans", loadBoutique, async (req, res, next) => {
+  try {
+    const plans = await RechargePlan.findAll({
+      where: { boutiqueId: req.boutique.id, active: true },
+      order: [["orderIndex", "ASC"], ["eur", "ASC"]]
+    });
+    res.json(plans);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/store/:slug/admin/recharge-plans
+router.get("/:slug/admin/recharge-plans", loadBoutique, authenticate, requireRole("super_admin", "admin", "employe"), async (req, res, next) => {
+  try {
+    const plans = await RechargePlan.findAll({
+      where: { boutiqueId: req.boutique.id },
+      order: [["orderIndex", "ASC"], ["eur", "ASC"]]
+    });
+    res.json(plans);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/store/:slug/admin/recharge-plans
+router.post("/:slug/admin/recharge-plans", loadBoutique, authenticate, requireRole("super_admin", "admin", "employe"), async (req, res, next) => {
+  try {
+    const plan = await RechargePlan.create({
+      ...req.body,
+      boutiqueId: req.boutique.id
+    });
+    res.status(201).json(plan);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/store/:slug/admin/recharge-plans/:id
+router.put("/:slug/admin/recharge-plans/:id", loadBoutique, authenticate, requireRole("super_admin", "admin", "employe"), async (req, res, next) => {
+  try {
+    const plan = await RechargePlan.findOne({ where: { id: req.params.id, boutiqueId: req.boutique.id } });
+    if (!plan) return res.status(404).json({ message: "Plan non trouvé" });
+    await plan.update(req.body);
+    res.json(plan);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE /api/store/:slug/admin/recharge-plans/:id
+router.delete("/:slug/admin/recharge-plans/:id", loadBoutique, authenticate, requireRole("super_admin", "admin", "employe"), async (req, res, next) => {
+  try {
+    const plan = await RechargePlan.findOne({ where: { id: req.params.id, boutiqueId: req.boutique.id } });
+    if (!plan) return res.status(404).json({ message: "Plan non trouvé" });
+    await plan.destroy();
+    res.json({ message: "Plan supprimé" });
+  } catch (error) {
+    next(error);
   }
 });
 

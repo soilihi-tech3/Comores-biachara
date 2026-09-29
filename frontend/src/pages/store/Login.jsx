@@ -95,7 +95,7 @@ export default function Login() {
 
   return (
     <div className="bs-auth-container">
-      <div className="bs-auth-card">
+      <div className="bs-auth-card slide-from-left">
         <div className="bs-auth-header">
           <div className="bs-auth-icon">
             <LogIn size={26} color="var(--forest)" />

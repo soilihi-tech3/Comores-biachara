@@ -151,12 +151,13 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
           </Link>
 
           {/* MAIN NAV LINKS (DESKTOP ONLY > 992px) */}
-          <nav className="bs-desktop-nav">
+          <nav className="bs-desktop-nav" style={{ flexShrink: 1, minWidth: 0, overflow: "hidden" }}>
             <Link
               to="/"
               style={{
                 fontSize: 14.5, fontWeight: 700, color: location.pathname === "/" ? "var(--forest)" : "var(--ink)",
-                textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease"
+                textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease",
+                whiteSpace: "nowrap"
               }}
             >
               <Home size={16} /> Accueil
@@ -166,7 +167,8 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
               to="/a-propos"
               style={{
                 fontSize: 14.5, fontWeight: 700, color: location.pathname === "/a-propos" ? "var(--forest)" : "var(--ink)",
-                textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease"
+                textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease",
+                whiteSpace: "nowrap"
               }}
             >
               <Info size={16} /> À propos
@@ -176,7 +178,8 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
               to="/recharge-mobile"
               style={{
                 fontSize: 14.5, fontWeight: 700, color: location.pathname === "/recharge-mobile" ? "var(--forest)" : "var(--ink)",
-                textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease"
+                textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease",
+                whiteSpace: "nowrap"
               }}
             >
               <Smartphone size={16} /> Recharge Crédit
@@ -186,7 +189,8 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
               to="/catalogue"
               style={{
                 fontSize: 14.5, fontWeight: 700, color: location.pathname === "/catalogue" && !location.search.includes("favoris=1") ? "var(--forest)" : "var(--ink)",
-                textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease"
+                textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease",
+                whiteSpace: "nowrap"
               }}
             >
               <Grid size={16} /> Catalogue
@@ -196,7 +200,8 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
               to="/catalogue?favoris=1"
               style={{
                 fontSize: 14.5, fontWeight: 700, color: location.search.includes("favoris=1") ? "#B4483A" : "var(--ink)",
-                textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease"
+                textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease",
+                whiteSpace: "nowrap"
               }}
             >
               <Heart size={16} color="#B4483A" fill={location.search.includes("favoris=1") ? "#B4483A" : "none"} /> Favoris
@@ -207,7 +212,8 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
                 to="/mes-commandes"
                 style={{
                   fontSize: 14.5, fontWeight: 700, color: location.pathname === "/mes-commandes" ? "var(--forest)" : "var(--ink)",
-                  textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease"
+                  textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease",
+                  whiteSpace: "nowrap"
                 }}
               >
                 <Package size={16} /> Mes commandes
@@ -230,7 +236,8 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
             
             {/* VISIBLE & PROMINENT SEARCH INPUT (DESKTOP) */}
             <div ref={searchRef} className="bs-header-search" style={{ 
-                width: user ? 120 : 180, height: 42, position: "relative", zIndex: 100
+                width: isSearchFocused ? 320 : (user ? 120 : 180), height: 42, position: "relative", zIndex: 100,
+                transition: "width 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2)"
             }}>
             {/* Overlay background when search is focused */}
             <div style={{
@@ -243,8 +250,7 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
               display: "flex", alignItems: "center", background: "var(--paper)",
               border: isSearchFocused ? "2px solid var(--forest)" : "1.5px solid var(--line)", 
               borderRadius: 24, padding: isSearchFocused ? "8px 16px" : "8px 12px",
-              position: "absolute", right: 0, top: 0, bottom: 0,
-              width: isSearchFocused ? 420 : "100%",
+              position: "absolute", left: 0, top: 0, bottom: 0, right: 0,
               boxShadow: isSearchFocused ? "0 12px 40px rgba(0,0,0,0.12)" : "none",
               transition: "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2)",
               zIndex: 20

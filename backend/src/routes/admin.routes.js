@@ -41,6 +41,54 @@ async function checkExpirationNotification(product, boutiqueId) {
 
 /* ---------------------- TABLEAU DE BORD ---------------------- */
 
+// DELETE /api/admin/cleanup - Nettoyage de la base de données
+router.post("/cleanup", async (req, res, next) => {
+  try {
+    const { tables } = req.body;
+    if (!tables || !Array.isArray(tables)) return res.status(400).json({ message: "Tables non spécifiées." });
+
+    const boutiqueId = req.boutiqueId;
+
+    // We must handle deletions safely and carefully.
+    if (tables.includes("commandes")) {
+      const orders = await Order.findAll({ where: { boutiqueId }, attributes: ["id"] });
+      const orderIds = orders.map(o => o.id);
+      if (orderIds.length > 0) {
+        await OrderItem.destroy({ where: { orderId: orderIds } });
+      }
+      await Order.destroy({ where: { boutiqueId } });
+    }
+    if (tables.includes("achats")) {
+      await Achat.destroy({ where: { boutiqueId } });
+    }
+    if (tables.includes("produits")) {
+      const products = await Product.findAll({ where: { boutiqueId }, attributes: ["id"] });
+      const productIds = products.map(p => p.id);
+      if (productIds.length > 0) {
+        await Review.destroy({ where: { productId: productIds } });
+        await Achat.destroy({ where: { productId: productIds } });
+      }
+      await Product.destroy({ where: { boutiqueId } });
+    }
+    if (tables.includes("categories")) {
+      await Category.destroy({ where: { boutiqueId } });
+    }
+    if (tables.includes("clients")) {
+      await User.destroy({ where: { boutiqueId, role: "client" } });
+    }
+    if (tables.includes("fournisseurs")) {
+      await Fournisseur.destroy({ where: { boutiqueId } });
+    }
+
+    purgeCache();
+    broadcast("boutique_updated", { boutiqueId });
+
+    res.json({ message: "Nettoyage effectué avec succès." });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/dashboard", async (req, res, next) => {
   try {
     const boutiqueId = req.boutiqueId;

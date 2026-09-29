@@ -59,8 +59,37 @@ export default function RechargeMobile() {
   const [operator, setOperator] = useState(OPERATORS[0]); // Comores Telecom par défaut
   const [phone, setPhone] = useState("");
 
+  const [dbPlans, setDbPlans] = useState([]);
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const res = await api.get(`/store/${SLUG}/recharge-plans`);
+        setDbPlans(res.data);
+      } catch (err) {
+        console.error("Erreur lors de la récupération des forfaits de recharge", err);
+      }
+    };
+    fetchPlans();
+  }, []);
+
   // Selection
-  const [selectedRecharge, setSelectedRecharge] = useState(OPERATORS[0].recharges[0]); // 1000 KMF par défaut
+  const [selectedRecharge, setSelectedRecharge] = useState(OPERATORS[0].recharges[0]);
+
+  const getRechargesFor = (opId) => {
+    const dbOp = opId === "comores_telecom" ? "hury" : "telma";
+    const opPlans = dbPlans.filter(p => p.operator === dbOp);
+    if (opPlans.length > 0) return opPlans;
+    return OPERATORS.find(o => o.id === opId).recharges;
+  };
+
+  useEffect(() => {
+    // Si les forfaits changent et que selectedRecharge n'est plus valide ou qu'on vient de charger
+    const plans = getRechargesFor(operator.id);
+    if (plans.length > 0) {
+      setSelectedRecharge(plans[0]);
+    }
+  }, [operator, dbPlans]);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -165,19 +194,22 @@ export default function RechargeMobile() {
   };
 
   return (
-    <div style={{ maxWidth: 860, margin: "24px auto 60px", padding: "0 16px" }}>
+    <div style={{ width: "100%", paddingBottom: 60 }}>
       {/* HEADER HERO SECTION */}
       <div style={{
-        background: "linear-gradient(135deg, #163424 0%, #224B35 100%)",
-        borderRadius: 24,
-        padding: "36px 28px",
+        background: "linear-gradient(135deg, #163424 0%, #224B35 60%, #2D6A4F 100%)",
+        borderRadius: 0,
+        padding: "48px 32px 52px",
         color: "#ffffff",
         textAlign: "center",
-        boxShadow: "0 12px 32px rgba(22, 52, 36, 0.18)",
-        marginBottom: 28,
+        boxShadow: "0 8px 32px rgba(22, 52, 36, 0.18)",
+        marginBottom: 32,
         position: "relative",
         overflow: "hidden"
       }}>
+        {/* décorations de fond */}
+        <div style={{ position: "absolute", top: -60, right: -60, width: 220, height: 220, borderRadius: "50%", background: "rgba(255,255,255,0.04)" }} />
+        <div style={{ position: "absolute", bottom: -40, left: -40, width: 160, height: 160, borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
         <div style={{
           display: "inline-flex",
           alignItems: "center",
@@ -190,24 +222,25 @@ export default function RechargeMobile() {
           fontWeight: 700,
           letterSpacing: "0.05em",
           textTransform: "uppercase",
-          marginBottom: 14
+          marginBottom: 18
         }}>
-          <Zap size={15} color="#A7F3D0" /> Service Comores Telecom (Huri) & YAS (Telma)
+          <Zap size={15} color="#A7F3D0" /> Service Comores Telecom (Huri) &amp; YAS (Telma)
         </div>
 
-        <h1 style={{ fontSize: "clamp(24px, 5vw, 34px)", fontWeight: 900, margin: 0, letterSpacing: "-0.5px" }}>
+        <h1 style={{ fontSize: "clamp(26px, 5vw, 40px)", fontWeight: 900, margin: "0 0 12px", letterSpacing: "-0.5px" }}>
           Recharge Crédit Mobile Comores
         </h1>
-        <p style={{ fontSize: 15, marginTop: 10, color: "#DDE8DF", maxWidth: 620, margin: "10px auto 0", lineHeight: 1.6 }}>
-          Envoyez du crédit d'appel instantanément pour vos proches aux Comores.
+        <p style={{ fontSize: 16, color: "#DDE8DF", maxWidth: 560, margin: "0 auto", lineHeight: 1.6 }}>
+          Envoyez du crédit d&apos;appel instantanément pour vos proches aux Comores.
         </p>
       </div>
 
+      {/* erreur */}
       {errorMsg && (
         <div style={{
           background: "#FDF2F0", border: "1px solid #F8D7D2", color: "#B4483A",
           padding: "14px 18px", borderRadius: 14, fontWeight: 700, fontSize: 14,
-          marginBottom: 20, display: "flex", alignItems: "center", gap: 10
+          margin: "0 24px 20px", display: "flex", alignItems: "center", gap: 10
         }}>
           <AlertCircle size={18} /> {errorMsg}
         </div>
@@ -218,8 +251,12 @@ export default function RechargeMobile() {
         background: "#ffffff",
         border: "1px solid var(--line)",
         borderRadius: 20,
-        padding: "28px 24px",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.05)"
+        padding: "32px 28px",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
+        maxWidth: 980,
+        margin: "0 auto",
+        width: "calc(100% - 48px)",
+        boxSizing: "border-box"
       }}>
         <form onSubmit={handleProceed}>
           {/* STEP 1: CHOOSE OPERATOR */}
@@ -328,11 +365,11 @@ export default function RechargeMobile() {
               3. Sélectionnez le montant du crédit :
             </label>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 14 }}>
-              {operator.recharges.map((rec) => {
+              {getRechargesFor(operator.id).map((rec) => {
                 const isSelected = selectedRecharge?.kmf === rec.kmf;
                 return (
                   <div
-                    key={rec.kmf}
+                    key={rec.id || rec.kmf}
                     onClick={() => setSelectedRecharge(rec)}
                     style={{
                       background: isSelected ? "var(--forest)" : "var(--card)",
@@ -347,12 +384,12 @@ export default function RechargeMobile() {
                       boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
                     }}
                   >
-                    {rec.popular && (
+                    {(rec.popular || rec.promo) && (
                       <span style={{
-                        position: "absolute", top: -9, right: 10, background: "#F59E0B", color: "#fff",
+                        position: "absolute", top: -9, right: 10, background: rec.promo ? "#E11D48" : "#F59E0B", color: "#fff",
                         fontSize: 9.5, fontWeight: 800, padding: "2px 6px", borderRadius: 8, textTransform: "uppercase"
                       }}>
-                        🔥 Populaire
+                        {rec.promo ? "🔥 Promo" : "⭐️ Populaire"}
                       </span>
                     )}
                     <div style={{ fontSize: 20, fontWeight: 900 }}>{rec.kmf.toLocaleString("fr-FR")} KMF</div>
