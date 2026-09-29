@@ -2532,12 +2532,16 @@ html[data-theme="dark"] .bs-side-btn.active .bs-side-label {
   cursor: pointer;
 }
 
-@media (max-width: 768px) {
+.bs-mobile-search-bar {
+  display: none;
+}
+
+@media (max-width: 992px) {
   .bs-header-search {
     display: none !important;
   }
-  .bs-mobile-search-trigger {
-    display: flex !important;
+  .bs-mobile-search-bar {
+    display: block !important;
   }
 }
 

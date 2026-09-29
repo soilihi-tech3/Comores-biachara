@@ -194,7 +194,29 @@ export default function RechargeMobile() {
   };
 
   return (
-    <div style={{ width: "100%", paddingBottom: 60 }}>
+    <div style={{ width: "100%", paddingBottom: 60, position: "relative" }}>
+      {/* PROFESSIONAL LOADING OVERLAY */}
+      {loading && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 9999,
+          background: "rgba(255,255,255,0.85)", backdropFilter: "blur(10px)",
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+          animation: "authCardEntrance 0.3s ease forwards"
+        }}>
+          <div style={{
+            background: "var(--forest-dark)", padding: "40px 50px", borderRadius: 24,
+            boxShadow: "0 20px 40px rgba(22, 52, 36, 0.25)", textAlign: "center", color: "#fff",
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 16
+          }}>
+            <span style={{ width: 44, height: 44, border: "4px solid rgba(255,255,255,0.2)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite" }} />
+            <div>
+              <h3 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 800 }}>Connexion sécurisée</h3>
+              <p style={{ margin: 0, fontSize: 14, color: "rgba(255,255,255,0.8)" }}>Redirection vers la caisse Stripe...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* HEADER HERO SECTION */}
       <div style={{
         background: "linear-gradient(135deg, #163424 0%, #224B35 60%, #2D6A4F 100%)",
@@ -450,18 +472,9 @@ export default function RechargeMobile() {
               boxShadow: "0 6px 20px rgba(22, 52, 36, 0.2)"
             }}
           >
-            {loading ? (
-              <>
-                <span style={{ width: 20, height: 20, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />
-                <span>Ouverture de la caisse Stripe...</span>
-              </>
-            ) : (
-              <>
-                <CreditCard size={20} />
-                <span>Acheter maintenant par Carte ({currentTotalEur.toFixed(2)} €)</span>
-                <ArrowRight size={18} />
-              </>
-            )}
+            <CreditCard size={20} />
+            <span>Acheter maintenant par Carte ({currentTotalEur.toFixed(2)} €)</span>
+            <ArrowRight size={18} />
           </button>
         </form>
 

@@ -515,22 +515,33 @@ router.post("/:slug/create-checkout-session", loadBoutique, authenticate, async 
     const stripe = require("stripe")(stripeSecretKey);
     const originUrl = req.headers.origin || process.env.FRONTEND_URL || "http://localhost:5173";
 
-    // Préparer les articles pour Stripe
-    const line_items = order.items.map(item => {
-      const img = item.product?.imageUrl;
-      const validImage = (img && typeof img === "string" && img.startsWith("http") && img.length <= 2048) ? [img] : [];
-      return {
+    let line_items = [];
+    if (order.typeVente === "recharge_mobile") {
+      line_items = [{
         price_data: {
-          currency: "eur", // Wero / Stripe nécessite obligatoirement de l'Euro
-          product_data: {
-            name: item.product.nom,
-            images: validImage,
-          },
-          unit_amount: Math.round(Number(item.prixUnitaire) * 100),
+          currency: "eur",
+          product_data: { name: order.notes || "Recharge Crédit Mobile" },
+          unit_amount: Math.round(Number(order.total) * 100),
         },
-        quantity: item.quantite,
-      };
-    });
+        quantity: 1
+      }];
+    } else {
+      line_items = order.items.map(item => {
+        const img = item.product?.imageUrl;
+        const validImage = (img && typeof img === "string" && img.startsWith("http") && img.length <= 2048) ? [img] : [];
+        return {
+          price_data: {
+            currency: "eur", // Wero / Stripe nécessite obligatoirement de l'Euro
+            product_data: {
+              name: item.product.nom,
+              images: validImage,
+            },
+            unit_amount: Math.round(Number(item.prixUnitaire) * 100),
+          },
+          quantity: item.quantite,
+        };
+      });
+    }
 
     if (Number(order.fraisLivraison) > 0) {
       line_items.push({

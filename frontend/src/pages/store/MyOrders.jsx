@@ -173,8 +173,8 @@ export default function MyOrders() {
       }
     });
 
-    // 2. Smart 4s polling interval
-    const interval = setInterval(fetchOrders, 4000);
+    // 2. Smart 60s polling interval (reduced to save resources, SSE handles real-time updates)
+    const interval = setInterval(fetchOrders, 60000);
 
     // 3. Window focus / tab active refresh
     const onFocus = () => fetchOrders();
