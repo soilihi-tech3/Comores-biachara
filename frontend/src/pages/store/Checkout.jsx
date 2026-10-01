@@ -4,7 +4,7 @@ import { Truck, Store, CreditCard, Banknote, Smartphone, ArrowLeft, Minus, Plus,
 import api, { SLUG } from "../../api";
 import { useCart } from "../../context/CartContext.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { processWhatsAppOrder } from "../../utils/whatsappOrder.js";
+import { processWhatsAppOrder, formatWhatsAppOrderMessage } from "../../utils/whatsappOrder.js";
 
 import { MvolaLogo, WeroLogo, OnlinePaymentBadges, CashLogo } from "../../components/PaymentLogos";
 
@@ -22,6 +22,9 @@ export default function Checkout() {
     adresseLivraison: user?.adresse || "",
     moyenPaiement: "cash"
   });
+
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentModalData, setPaymentModalData] = useState(null);
 
   // Gestion de l'affichage dépliable (Accordéon) pour libérer de l'espace à l'écran
   const [openSteps, setOpenSteps] = useState({ 1: true, 2: true, 3: true });
@@ -129,8 +132,18 @@ export default function Checkout() {
       const items = cart.map((l) => ({ productId: l.product.id, quantite: l.quantite }));
       const res = await api.post(`/store/${SLUG}/orders`, { items, ...form });
       
-      // Si le paiement est via Stripe (Carte ou Wero), rediriger vers Checkout
-      if (form.moyenPaiement === "carte" || form.moyenPaiement === "wero") {
+      if (form.moyenPaiement === "wero" || form.moyenPaiement === "holam" || form.moyenPaiement === "mvola") {
+        setPaymentModalData({
+          order: res.data,
+          moyenPaiement: form.moyenPaiement
+        });
+        setShowPaymentModal(true);
+        setLoading(false);
+        return;
+      }
+
+      // Si le paiement est via Stripe (Carte), rediriger vers Checkout
+      if (form.moyenPaiement === "carte") {
         const sessionRes = await api.post(`/store/${SLUG}/create-checkout-session`, { orderId: res.data.id });
         if (sessionRes.data.url) {
           clearCart();
@@ -551,6 +564,79 @@ export default function Checkout() {
           </div>
         </div>
       </div>
+
+      {/* MODAL DE PAIEMENT WERO / MVOLA */}
+      {showPaymentModal && paymentModalData && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 20 }}>
+          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 450, overflow: "hidden", boxShadow: "0 20px 40px rgba(0,0,0,0.2)" }}>
+            <div style={{ padding: "24px 24px 16px", textAlign: "center", borderBottom: "1px solid var(--line)" }}>
+              <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--paper)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                {(paymentModalData.moyenPaiement === "wero" || paymentModalData.moyenPaiement === "holam") ? (
+                  <WeroLogo height={32} />
+                ) : (
+                  <MvolaLogo height={32} />
+                )}
+              </div>
+              <h2 style={{ margin: 0, fontSize: 20, color: "var(--forest-dark)" }}>
+                Paiement {paymentModalData.moyenPaiement === "mvola" ? "MVola" : "Wero"}
+              </h2>
+            </div>
+            
+            <div style={{ padding: 24, fontSize: 15, color: "var(--forest-dark)", lineHeight: 1.5 }}>
+              <p style={{ margin: "0 0 16px" }}>
+                Veuillez envoyer le montant de <strong>{fcfa(total || subtotal + (fraisLivraison || 0))}</strong> au numéro suivant :
+              </p>
+              
+              <div style={{ background: "var(--paper)", padding: "16px", borderRadius: 12, textAlign: "center", marginBottom: 20, border: "1px dashed var(--muted)" }}>
+                <div style={{ fontSize: 24, fontWeight: 800, color: "var(--forest-dark)", letterSpacing: 1 }}>
+                  {(paymentModalData.moyenPaiement === "wero" || paymentModalData.moyenPaiement === "holam") ? "+337 74 85 43 18" : "+269 442 04 39"}
+                </div>
+              </div>
+
+              <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>
+                Une fois le transfert effectué, veuillez nous envoyer la <strong>capture d'écran</strong> de la transaction via WhatsApp pour validation.
+              </p>
+            </div>
+
+            <div style={{ padding: 24, background: "var(--paper)", display: "flex", flexDirection: "column", gap: 12 }}>
+              <button 
+                onClick={() => {
+                  const waNum = boutique?.whatsappNumber || boutique?.telephone;
+                  const cleanWaNum = waNum ? waNum.replace(/[^0-9]/g, "") : "";
+                  if (!cleanWaNum) {
+                    showToast("Numéro WhatsApp de la boutique non configuré.", "error");
+                    clearCart();
+                    navigate(`/confirmation/${paymentModalData.order.id}`);
+                    return;
+                  }
+                  
+                  const orderNumber = "COM-B" + String(paymentModalData.order.id).padStart(3, "0");
+                  const message = formatWhatsAppOrderMessage({
+                    boutique, user, cart, subtotal, fraisLivraison, total, orderNumber, form: { ...form, moyenPaiement: paymentModalData.moyenPaiement }
+                  });
+                  
+                  window.open(`https://wa.me/${cleanWaNum}?text=${encodeURIComponent(message)}`, "_blank");
+                  clearCart();
+                  navigate(`/confirmation/${paymentModalData.order.id}`);
+                }}
+                style={{ width: "100%", padding: 14, background: "#25D366", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+              >
+                <MessageCircle size={18} /> Envoyer la capture sur WhatsApp
+              </button>
+              
+              <button 
+                onClick={() => {
+                  clearCart();
+                  navigate(`/confirmation/${paymentModalData.order.id}`);
+                }}
+                style={{ width: "100%", padding: 14, background: "transparent", color: "var(--muted)", border: "1px solid var(--line)", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: "pointer" }}
+              >
+                Je le ferai plus tard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

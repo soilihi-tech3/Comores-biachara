@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Package, Truck, CheckCircle, XCircle, Clock, ShoppingBag, Search, ChevronRight, MapPin, CreditCard, ArrowLeft, PackageOpen, TrendingUp, RefreshCw, Receipt, Star, Smartphone } from "lucide-react";
+import { Package, Truck, CheckCircle, XCircle, Clock, ShoppingBag, Search, ChevronRight, MapPin, CreditCard, ArrowLeft, PackageOpen, TrendingUp, RefreshCw, Receipt, Star, Smartphone, MessageCircle } from "lucide-react";
 import api, { SLUG } from "../../api";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useCart } from "../../context/CartContext.jsx";
@@ -56,7 +56,7 @@ import { subscribeRealtime } from "../../utils/realtime.js";
 import ReceiptModal from "../../components/ReceiptModal.jsx";
 
 export default function MyOrders() {
-  const { boutique } = useAuth();
+  const { boutique, user } = useAuth();
   const { addMultipleToCart } = useCart();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -145,6 +145,21 @@ export default function MyOrders() {
     } catch (err) {
       alert(err.response?.data?.message || "Impossible de changer le moyen de paiement.");
     }
+  };
+
+  const sendWhatsAppCapture = (order) => {
+    const waNum = boutique?.whatsappNumber || boutique?.telephone;
+    const cleanWaNum = waNum ? waNum.replace(/[^0-9]/g, "") : "";
+    if (!cleanWaNum) {
+      alert("Numéro WhatsApp de la boutique non configuré.");
+      return;
+    }
+    const methode = (order.moyenPaiement === "mvola") ? "MVola" : "Wero";
+    const orderNumber = "COM-B" + String(order.id).padStart(3, "0");
+    const totalMsg = fcfa(order.total);
+    const msg = `Bonjour, voici ma commande *${orderNumber}* d'un montant de *${totalMsg}* payée par *${methode}*.\nJe vous joins la capture d'écran de la transaction pour validation !`;
+    
+    window.open(`https://wa.me/${cleanWaNum}?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
   const fetchOrders = () => {
@@ -574,9 +589,20 @@ export default function MyOrders() {
 
             {selected.statut === "en_attente_paiement" && (
               <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
-                <button onClick={() => payNow(selected.id)} style={{ width: "100%", background: "var(--forest)", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13.5, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
-                  <CreditCard size={18} /> Reprendre le paiement
-                </button>
+                {selected.moyenPaiement === "carte" ? (
+                  <button onClick={() => payNow(selected.id)} style={{ width: "100%", background: "var(--forest)", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13.5, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
+                    <CreditCard size={18} /> Reprendre le paiement
+                  </button>
+                ) : (selected.moyenPaiement === "wero" || selected.moyenPaiement === "holam" || selected.moyenPaiement === "mvola") ? (
+                  <button onClick={() => sendWhatsAppCapture(selected)} style={{ width: "100%", background: "#25D366", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13.5, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
+                    <MessageCircle size={18} /> Envoyer la capture sur WhatsApp
+                  </button>
+                ) : (
+                  <button onClick={() => payNow(selected.id)} style={{ width: "100%", background: "var(--forest)", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13.5, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
+                    <CreditCard size={18} /> Payer la commande
+                  </button>
+                )}
+                
                 <button onClick={() => switchToCash(selected)} style={{ width: "100%", background: "#fff", border: "1px solid var(--line)", borderRadius: 12, padding: "12px", color: "var(--ink)", fontWeight: 700, fontSize: 13.5, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
                   <Package size={18} /> Passer en Paiement à la livraison
                 </button>

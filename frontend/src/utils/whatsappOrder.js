@@ -60,7 +60,13 @@ export function formatWhatsAppOrderMessage({ boutique, user, cart, subtotal, fra
     text += `- Frais de livraison : ${fraisFormatted}\n`;
   }
   text += `- *Total Général : ${totalFormatted}*\n\n`;
-  text += `Merci de bien vouloir confirmer la réception et le traitement de ma commande !`;
+
+  if (form.moyenPaiement === "wero" || form.moyenPaiement === "holam" || form.moyenPaiement === "mvola") {
+    const methode = (form.moyenPaiement === "mvola") ? "MVola" : "Wero";
+    text += `Voici ma commande payée par ${methode}. Vous trouverez ci-joint la capture de la transaction !`;
+  } else {
+    text += `Merci de bien vouloir confirmer la réception et le traitement de ma commande !`;
+  }
 
   return text;
 }
@@ -89,7 +95,7 @@ export async function processWhatsAppOrder({ boutique, user, cart, subtotal, fra
           items,
           modeLivraison: form.modeLivraison || "domicile",
           adresseLivraison: form.adresseLivraison || user.adresse || "Commande WhatsApp",
-          moyenPaiement: "whatsapp"
+          moyenPaiement: form.moyenPaiement || "whatsapp"
         };
         const res = await api.post(`/store/${SLUG}/orders`, orderData);
         createdOrder = res.data;
