@@ -165,7 +165,10 @@ router.post("/", async (req, res) => {
         // CAS 2: COMMANDE BOUTIQUE CLASSIQUE
         const order = await Order.findOne({ 
           where: { stripeSessionId: sessionId },
-          include: [{ model: OrderItem, as: "items", include: [{ model: Product, as: "product" }] }]
+          include: [
+            { model: User, as: "client", attributes: ["id", "nom", "email", "telephone"] },
+            { model: OrderItem, as: "items", include: [{ model: Product, as: "product" }] }
+          ]
         });
 
         if (order && order.statut === "en_attente_paiement") {

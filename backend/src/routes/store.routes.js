@@ -286,7 +286,12 @@ router.post("/:slug/orders", loadBoutique, authenticate, requireRole("client"), 
     }
 
     await t.commit();
-    const complete = await Order.findByPk(order.id, { include: [{ model: OrderItem, as: "items", include: [{ model: Product, as: "product" }] }] });
+    const complete = await Order.findByPk(order.id, {
+      include: [
+        { model: User, as: "client", attributes: ["id", "nom", "email", "telephone"] },
+        { model: OrderItem, as: "items", include: [{ model: Product, as: "product" }] }
+      ]
+    });
     
     // Notifications automatiques
     const cmdNum = "COM-B" + String(order.id).padStart(3, "0");

@@ -170,7 +170,7 @@ export default function ProductDetail() {
 
   const noteMoyenne = product.avis?.length
     ? product.avis.reduce((s, a) => s + a.note, 0) / product.avis.length 
-    : 0;
+    : (product.noteEtoiles !== undefined && product.noteEtoiles !== null ? Number(product.noteEtoiles) : 5.0);
 
   return (
     <div style={{ minHeight: "75vh" }}>

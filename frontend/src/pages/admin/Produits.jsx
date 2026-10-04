@@ -54,6 +54,7 @@ export default function AdminProduits() {
     prixPromo: "",
     enPromo: false,
     isNouveau: false,
+    noteEtoiles: "5",
     dateExpiration: "",
     poids: "1",
     unite: "Kg",
@@ -110,6 +111,7 @@ export default function AdminProduits() {
       prixPromo: product.prixPromo ?? "",
       enPromo: Boolean(product.enPromo || product.prixPromo),
       isNouveau: Boolean(product.isNouveau),
+      noteEtoiles: product.noteEtoiles !== undefined && product.noteEtoiles !== null ? String(product.noteEtoiles) : "5",
       dateExpiration: product.dateExpiration || "",
       poids: product.poids || "1",
       unite: product.unite || "Kg",
@@ -149,6 +151,7 @@ export default function AdminProduits() {
       prixPromo: form.enPromo && form.prixPromo !== "" && form.prixPromo !== null ? Number(form.prixPromo) : null,
       enPromo: Boolean(form.enPromo),
       isNouveau: Boolean(form.isNouveau),
+      noteEtoiles: form.noteEtoiles !== "" ? Number(form.noteEtoiles) : 5.0,
       coutAchat: form.coutAchat !== "" ? Number(form.coutAchat) : 0,
       stock: form.stock !== "" ? Number(form.stock) : 0,
       seuilAlerte: form.seuilAlerte !== "" ? Number(form.seuilAlerte) : 5,
@@ -442,7 +445,13 @@ export default function AdminProduits() {
                         style={{ width: 46, height: 46, borderRadius: 8, objectFit: "cover", border: "1px solid var(--line)" }}
                       />
                     </td>
-                    <td style={{ fontWeight: 700, color: "var(--ink)" }}>{p.nom}</td>
+                    <td style={{ fontWeight: 700, color: "var(--ink)" }}>
+                      <div>{p.nom}</div>
+                      <div style={{ fontSize: 11.5, color: "#F59E0B", marginTop: 2, display: "flex", alignItems: "center", gap: 3 }}>
+                        ⭐ <strong>{(p.avis?.length ? (p.avis.reduce((s, a) => s + a.note, 0) / p.avis.length) : (p.noteEtoiles !== undefined && p.noteEtoiles !== null ? Number(p.noteEtoiles) : 5.0)).toFixed(1)}</strong>
+                        <span style={{ color: "var(--muted)", fontWeight: 400 }}>({p.avis?.length || 0} avis)</span>
+                      </div>
+                    </td>
                     <td>
                       <span style={{ background: "var(--forest-light)", color: "var(--forest-dark)", padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700, border: "1px solid var(--line)" }}>
                         {p.Category?.nom || "Non classé"}
@@ -601,8 +610,8 @@ export default function AdminProduits() {
               </div>
             </div>
 
-            {/* SECTION CLASSEMENT NOUVEAUTÉ */}
-            <div style={{ background: "var(--paper)", padding: 16, borderRadius: 12, border: "1px solid var(--line)" }}>
+            {/* SECTION CLASSEMENT NOUVEAUTÉ ET ÉTOILES */}
+            <div style={{ background: "var(--paper)", padding: 16, borderRadius: 12, border: "1px solid var(--line)", display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <input
                   type="checkbox"
@@ -619,6 +628,33 @@ export default function AdminProduits() {
                     Si cette option est activée, le produit apparaîtra dans la section "Nouveaux Produits" sur la page d'accueil avec un badge NOUVEAU.
                   </div>
                 </div>
+              </div>
+
+              <div style={{ borderTop: "1px solid var(--line)", paddingTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                <div>
+                  <label htmlFor="noteEtoiles" style={{ fontWeight: 700, fontSize: 13.5, color: "var(--forest-dark)", display: "block" }}>
+                    ⭐ Étoiles du produit (Note par défaut)
+                  </label>
+                  <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
+                    Attribuez une note initiale entre 1 et 5 étoiles (ex: 5 étoiles pour une qualité maximale).
+                  </div>
+                </div>
+                <select
+                  id="noteEtoiles"
+                  className="bs-select"
+                  style={{ width: 150, fontWeight: 700 }}
+                  value={form.noteEtoiles}
+                  onChange={(e) => set("noteEtoiles", e.target.value)}
+                >
+                  <option value="5">⭐⭐⭐⭐⭐ (5.0 / 5)</option>
+                  <option value="4.5">⭐⭐⭐⭐½ (4.5 / 5)</option>
+                  <option value="4">⭐⭐⭐⭐ (4.0 / 5)</option>
+                  <option value="3.5">⭐⭐⭐½ (3.5 / 5)</option>
+                  <option value="3">⭐⭐⭐ (3.0 / 5)</option>
+                  <option value="2.5">⭐⭐½ (2.5 / 5)</option>
+                  <option value="2">⭐⭐ (2.0 / 5)</option>
+                  <option value="1">⭐ (1.0 / 5)</option>
+                </select>
               </div>
             </div>
 

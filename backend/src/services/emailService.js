@@ -293,8 +293,9 @@ async function envoyerNotificationAdminNouvelleCommande(adminEmail, commande, bo
           <p style="margin: 6px 0 0; opacity: 0.9; font-size: 14px;">${boutiqueNom}</p>
         </div>
         <div style="background: #ffffff; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
-          <p style="font-size: 15px; color: #1e293b; margin-top: 0;">Un achat vient d'être effectué sur votre boutique par <strong>${clientNom}</strong>.</p>
+          <p style="font-size: 15px; color: #1e293b; margin-top: 0;">Un achat vient d'être effectué sur votre boutique par le client <strong>${clientNom}</strong>.</p>
           <div style="background: #f1f5f9; padding: 16px; border-radius: 10px; margin: 18px 0;">
+            <div style="font-size: 14px; color: #475569; margin-bottom: 6px;">Client : <strong style="color: #163424;">${clientNom}</strong></div>
             <div style="font-size: 14px; color: #475569; margin-bottom: 6px;">N° de Commande : <strong style="color: #163424;">#${cmdId}</strong></div>
             <div style="font-size: 14px; color: #475569; margin-bottom: 6px;">Montant Total : <strong style="color: #163424;">${totalFormatted} €</strong></div>
             <div style="font-size: 14px; color: #475569; margin-bottom: 6px;">Méthode : <strong>${paymentMethodDisplay}</strong></div>

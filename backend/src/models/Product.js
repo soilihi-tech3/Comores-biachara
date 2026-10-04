@@ -21,6 +21,7 @@ const Product = sequelize.define("Product", {
   imageUrl2: { type: DataTypes.TEXT("long"), allowNull: true },
   ventesCount: { type: DataTypes.INTEGER, defaultValue: 0 },
   isNouveau: { type: DataTypes.BOOLEAN, defaultValue: false },
+  noteEtoiles: { type: DataTypes.DECIMAL(2, 1), defaultValue: 5.0 },
 }, { tableName: "products" });
 
 module.exports = Product;

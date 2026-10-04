@@ -48,25 +48,52 @@ export default function NotificationMenu() {
 
   if (!user) return null;
 
-  const unreadCount = notifications.filter((n) => !n.lu).length;
+  // Seules les notifications non lues sont conservées dans le menu
+  const unreadNotifications = notifications.filter((n) => !n.lu);
+  const unreadCount = unreadNotifications.length;
 
   async function handleNotificationClick(n) {
-    // Immediately mark as read locally so badge & notification update/disappear instantly
-    setNotifications((prev) =>
-      prev.map((item) => (item.id === n.id ? { ...item, lu: true } : item))
-    );
+    // Faire disparaître immédiatement CETTE notification spécifique de la liste
+    setNotifications((prev) => prev.filter((item) => item.id !== n.id));
     api.patch(`/notifications/${n.id}/read`).catch(() => {});
     setOpen(false);
 
-    if (user.role === "client") {
-      navigate("/mes-commandes");
-    } else if (user.role === "admin" || user.role === "employe") {
-      navigate("/admin/commandes");
+    const titleLower = (n.title || "").toLowerCase();
+    const msgLower = (n.message || "").toLowerCase();
+    const typeLower = (n.type || "").toLowerCase();
+
+    const isProductRelated =
+      n.productId ||
+      typeLower.includes("product") ||
+      typeLower.includes("stock") ||
+      typeLower.includes("exspir") ||
+      titleLower.includes("produit") ||
+      titleLower.includes("stock") ||
+      titleLower.includes("expir") ||
+      msgLower.includes("produit") ||
+      msgLower.includes("stock") ||
+      msgLower.includes("expir");
+
+    if (isProductRelated) {
+      if (user.role === "admin" || user.role === "employe") {
+        navigate("/admin/produits");
+      } else if (n.productId) {
+        navigate(`/produit/${n.productId}`);
+      } else {
+        navigate("/catalogue");
+      }
+    } else {
+      if (user.role === "client") {
+        navigate("/mes-commandes");
+      } else if (user.role === "admin" || user.role === "employe") {
+        navigate("/admin/commandes");
+      }
     }
   }
 
   async function markAllRead() {
-    setNotifications((prev) => prev.map((n) => ({ ...n, lu: true })));
+    // Vider la liste immédiatement en marquant tout comme lu
+    setNotifications([]);
     api.patch("/notifications/read-all").catch(() => {});
   }
 
@@ -140,7 +167,7 @@ export default function NotificationMenu() {
             }}
           >
             <div style={{ fontWeight: 700, fontSize: 14, color: "var(--forest-dark)" }}>
-              Notifications ({unreadCount} non lue{unreadCount > 1 ? "s" : ""})
+              Notifications ({unreadCount > 0 ? `${unreadCount} non lue${unreadCount > 1 ? "s" : ""}` : "Toutes lues"})
             </div>
             {unreadCount > 0 && (
               <button
@@ -150,7 +177,7 @@ export default function NotificationMenu() {
                   border: "none",
                   color: "var(--forest)",
                   fontSize: 12,
-                  fontWeight: 600,
+                  fontWeight: 700,
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
@@ -164,27 +191,27 @@ export default function NotificationMenu() {
 
           {/* LIST */}
           <div style={{ maxHeight: 340, overflowY: "auto" }}>
-            {notifications.length === 0 ? (
+            {unreadNotifications.length === 0 ? (
               <div style={{ padding: "28px 18px", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
                 Aucune notification pour le moment.
               </div>
             ) : (
-              notifications.map((n) => (
+              unreadNotifications.map((n) => (
                 <div
                   key={n.id}
                   onClick={() => handleNotificationClick(n)}
                   style={{
                     padding: "12px 16px",
                     borderBottom: "1px solid var(--line)",
-                    background: n.lu ? "#fff" : "var(--forest-light)",
+                    background: "var(--forest-light)",
                     cursor: "pointer",
                     display: "flex",
                     gap: 12,
                     alignItems: "flex-start",
                     transition: "background 0.15s"
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = n.lu ? "var(--paper)" : "#E2EFE7")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = n.lu ? "#fff" : "var(--forest-light)")}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#E2EFE7")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "var(--forest-light)")}
                 >
                   <div
                     style={{
@@ -203,7 +230,7 @@ export default function NotificationMenu() {
                     <ShoppingBag size={16} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: n.lu ? 600 : 700, fontSize: 13, color: "var(--ink)" }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)" }}>
                       {n.title}
                     </div>
                     <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2, lineHeight: 1.4 }}>
@@ -213,18 +240,16 @@ export default function NotificationMenu() {
                       {new Date(n.createdAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </div>
-                  {!n.lu && (
-                    <div
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        background: "var(--accent)",
-                        flexShrink: 0,
-                        marginTop: 6
-                      }}
-                    />
-                  )}
+                  <div
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: "var(--accent)",
+                      flexShrink: 0,
+                      marginTop: 6
+                    }}
+                  />
                 </div>
               ))
             )}

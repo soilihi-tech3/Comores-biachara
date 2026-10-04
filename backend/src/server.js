@@ -238,6 +238,10 @@ async function ensureColumns() {
       console.log("[MIGRATION] Ajout colonne is_nouveau sur products");
       await sequelize.query(`ALTER TABLE products ADD COLUMN is_nouveau TINYINT(1) DEFAULT 0;`);
     }
+    if (!tableProducts["note_etoiles"]) {
+      console.log("[MIGRATION] Ajout colonne note_etoiles sur products");
+      await sequelize.query(`ALTER TABLE products ADD COLUMN note_etoiles DECIMAL(2, 1) DEFAULT 5.0;`);
+    }
 
     const tableOrders = await queryInterface.describeTable("orders");
     if (!tableOrders["stripe_session_id"]) {

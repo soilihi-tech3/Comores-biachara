@@ -14,7 +14,7 @@ export default function ProductCard({ product, isFavorisPage }) {
   
   const noteMoyenne = product.avis?.length
     ? product.avis.reduce((s, a) => s + a.note, 0) / product.avis.length
-    : 0;
+    : (product.noteEtoiles !== undefined && product.noteEtoiles !== null ? Number(product.noteEtoiles) : 5.0);
 
   const defaultImg = "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80";
   const mainImage = product.imageUrl || defaultImg;
