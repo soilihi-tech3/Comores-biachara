@@ -811,7 +811,8 @@ router.put("/boutique", requireRole("admin"), async (req, res, next) => {
       bannerSlides, sideBanners, telephone, telephone2, adresse, adresse2, adresseRetrait, 
       emailContact, aProposText, horairesOuverture, facebookUrl, instagramUrl, 
       tiktokUrl, whatsappNumber, modesPaiement, modulesActifs,
-      customDomain, stripePublishableKey, stripeSecretKey, stripeAccountId
+      customDomain, stripePublishableKey, stripeSecretKey, stripeAccountId,
+      paydunyaMasterKey, paydunyaPrivateKey, paydunyaToken
     } = req.body;
 
     let targetCustomDomain = boutique.customDomain;
@@ -834,7 +835,10 @@ router.put("/boutique", requireRole("admin"), async (req, res, next) => {
       customDomain: targetCustomDomain,
       ...(stripePublishableKey !== undefined && { stripePublishableKey }),
       ...(stripeSecretKey !== undefined && { stripeSecretKey }),
-      ...(stripeAccountId !== undefined && { stripeAccountId })
+      ...(stripeAccountId !== undefined && { stripeAccountId }),
+      ...(paydunyaMasterKey !== undefined && { paydunyaMasterKey }),
+      ...(paydunyaPrivateKey !== undefined && { paydunyaPrivateKey }),
+      ...(paydunyaToken !== undefined && { paydunyaToken })
     });
     purgeCache();
     broadcast("boutique_updated", { boutiqueId: req.boutiqueId });

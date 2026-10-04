@@ -220,7 +220,10 @@ async function ensureColumns() {
       { name: "stripe_publishable_key", type: "VARCHAR(255) NULL" },
       { name: "stripe_secret_key", type: "VARCHAR(255) NULL" },
       { name: "stripe_account_id", type: "VARCHAR(255) NULL" },
-      { name: "stripe_onboarding_complete", type: "TINYINT(1) DEFAULT 0" }
+      { name: "stripe_onboarding_complete", type: "TINYINT(1) DEFAULT 0" },
+      { name: "paydunya_master_key", type: "VARCHAR(255) NULL" },
+      { name: "paydunya_private_key", type: "VARCHAR(255) NULL" },
+      { name: "paydunya_token", type: "VARCHAR(255) NULL" }
     ];
 
     for (const col of columnsToAddBoutique) {

@@ -79,7 +79,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
   const set = (k, v) => setBoutique((b) => ({ ...b, [k]: v }));
   const slidesList = Array.isArray(boutique.bannerSlides) ? boutique.bannerSlides : [];
   const sideList = Array.isArray(boutique.sideBanners) ? boutique.sideBanners : [];
-  const modesPaiement = boutique.modesPaiement || { especes: true, mvola: true, holam: true, carte: false };
+  const modesPaiement = boutique.modesPaiement || { especes: true, mvola: true, holam: true, carte: false, orange: true, wave: true };
 
   function togglePaymentMode(key) {
     set("modesPaiement", {

@@ -4,6 +4,8 @@ import { Zap, CheckCircle2, CreditCard, Lock, AlertCircle, Info, ArrowRight, Use
 import api, { SLUG } from "../../api";
 import { useCart } from "../../context/CartContext.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { MessageCircle } from "lucide-react";
+import { WeroLogo, OnlinePaymentBadges } from "../../components/PaymentLogos";
 
 const OPERATORS = [
   {
@@ -48,7 +50,7 @@ const OPERATORS = [
 
 export default function RechargeMobile() {
   const { showToast } = useCart();
-  const { user } = useAuth();
+  const { user, boutique } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -58,6 +60,16 @@ export default function RechargeMobile() {
 
   const [operator, setOperator] = useState(OPERATORS[0]); // Comores Telecom par défaut
   const [phone, setPhone] = useState("");
+
+  const defaultModes = { holam: true, carte: true };
+  const modesPaiement = { ...defaultModes, ...(boutique?.modesPaiement || {}) };
+  const weroAvailable = !!modesPaiement.holam;
+  const carteAvailable = !!modesPaiement.carte;
+
+  const [moyenPaiement, setMoyenPaiement] = useState(carteAvailable ? "carte" : "wero");
+  
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentModalData, setPaymentModalData] = useState(null);
 
   const [dbPlans, setDbPlans] = useState([]);
 
@@ -177,8 +189,20 @@ export default function RechargeMobile() {
       const res = await api.post(`/store/${SLUG}/create-recharge-session`, {
         operatorName: `${operator.name} - ${titleItem}`,
         phone: `+269${phone}`,
-        amountEur: currentTotalEur
+        amountEur: currentTotalEur,
+        moyenPaiement: moyenPaiement
       });
+
+      if (moyenPaiement === "wero") {
+        setPaymentModalData({
+          operatorName: `${operator.name} - ${titleItem}`,
+          phone: `+269${phone}`,
+          amountEur: currentTotalEur,
+          orderId: res.data.orderId
+        });
+        setShowPaymentModal(true);
+        return;
+      }
 
       if (res.data.url) {
         window.location.href = res.data.url;
@@ -455,6 +479,62 @@ export default function RechargeMobile() {
             </div>
           </div>
 
+          {/* SÉLECTION DU MOYEN DE PAIEMENT */}
+          <div style={{ marginBottom: 24 }}>
+            <label style={{ display: "block", fontSize: 14, fontWeight: 800, color: "var(--forest-dark)", marginBottom: 12 }}>
+              4. Choisissez votre moyen de paiement :
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
+              {carteAvailable && (
+                <div 
+                  onClick={() => setMoyenPaiement("carte")}
+                  style={{
+                    background: moyenPaiement === "carte" ? "#F0FDF4" : "var(--paper)",
+                    border: `1.5px solid ${moyenPaiement === "carte" ? "var(--forest)" : "var(--line)"}`,
+                    borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, cursor: "pointer", transition: "all 0.15s ease"
+                  }}
+                >
+                  <div style={{ flexShrink: 0, width: 22, height: 22, borderRadius: "50%", border: `2px solid ${moyenPaiement === "carte" ? "var(--forest)" : "var(--muted)"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {moyenPaiement === "carte" && <div style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--forest)" }} />}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                      <div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: "var(--forest-dark)" }}>Carte bancaire</div>
+                        <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>Paiement sécurisé en ligne (Stripe)</div>
+                      </div>
+                      <OnlinePaymentBadges />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {weroAvailable && (
+                <div 
+                  onClick={() => setMoyenPaiement("wero")}
+                  style={{
+                    background: moyenPaiement === "wero" ? "#F0FDF4" : "var(--paper)",
+                    border: `1.5px solid ${moyenPaiement === "wero" ? "var(--forest)" : "var(--line)"}`,
+                    borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, cursor: "pointer", transition: "all 0.15s ease"
+                  }}
+                >
+                  <div style={{ flexShrink: 0, width: 22, height: 22, borderRadius: "50%", border: `2px solid ${moyenPaiement === "wero" ? "var(--forest)" : "var(--muted)"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {moyenPaiement === "wero" && <div style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--forest)" }} />}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                      <div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: "var(--forest-dark)" }}>Wero</div>
+                        <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>Paiement instantané européen</div>
+                      </div>
+                      <WeroLogo height={28} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* SUBMIT BUTTON */}
           <button
             type="submit"
@@ -473,7 +553,7 @@ export default function RechargeMobile() {
             }}
           >
             <CreditCard size={20} />
-            <span>Acheter maintenant par Carte ({currentTotalEur.toFixed(2)} €)</span>
+            <span>Acheter maintenant {moyenPaiement === "wero" ? "par Wero" : "par Carte"} ({currentTotalEur.toFixed(2)} €)</span>
             <ArrowRight size={18} />
           </button>
         </form>
@@ -492,10 +572,79 @@ export default function RechargeMobile() {
         }}>
           <Lock size={18} color="var(--forest)" style={{ flexShrink: 0 }} />
           <span>
-            Paiement 100% sécurisé en Euro par Carte Bancaire (Visa, Mastercard). Crédit activé immédiatement aux Comores.
+            Paiement sécurisé. Crédit activé immédiatement aux Comores.
           </span>
         </div>
       </div>
+
+      {/* MODAL DE PAIEMENT WERO (RECHARGE) */}
+      {showPaymentModal && paymentModalData && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 20 }}>
+          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 450, overflow: "hidden", boxShadow: "0 20px 40px rgba(0,0,0,0.2)" }}>
+            <div style={{ padding: "24px 24px 16px", textAlign: "center", borderBottom: "1px solid var(--line)" }}>
+              <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--paper)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                <WeroLogo height={32} />
+              </div>
+              <h2 style={{ margin: 0, fontSize: 20, color: "var(--forest-dark)" }}>
+                Paiement Wero
+              </h2>
+            </div>
+            
+            <div style={{ padding: 24, fontSize: 15, color: "var(--forest-dark)", lineHeight: 1.5 }}>
+              <p style={{ margin: "0 0 16px" }}>
+                Veuillez envoyer le montant de <strong>{paymentModalData.amountEur.toFixed(2)} €</strong> au numéro suivant :
+              </p>
+              
+              <div style={{ background: "var(--paper)", padding: "16px", borderRadius: 12, textAlign: "center", marginBottom: 20, border: "1px dashed var(--muted)" }}>
+                <div style={{ fontSize: 24, fontWeight: 800, color: "var(--forest-dark)", letterSpacing: 1 }}>
+                  +337 74 85 43 18
+                </div>
+              </div>
+
+              <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>
+                Une fois le transfert effectué, veuillez nous envoyer la <strong>capture d'écran</strong> de la transaction via WhatsApp pour validation de votre recharge.
+              </p>
+            </div>
+
+            <div style={{ padding: 24, background: "var(--paper)", display: "flex", flexDirection: "column", gap: 12 }}>
+              <button 
+                onClick={() => {
+                  const waNum = boutique?.whatsappNumber || boutique?.telephone;
+                  const cleanWaNum = waNum ? waNum.replace(/[^0-9]/g, "") : "";
+                  if (!cleanWaNum) {
+                    showToast("Numéro WhatsApp de la boutique non configuré.", "error");
+                    setShowPaymentModal(false);
+                    return;
+                  }
+                  
+                  const msg = `Bonjour, je viens de payer *${paymentModalData.amountEur.toFixed(2)} €* via *Wero* pour une recharge.\n\n📱 *Détails :*\n- ${paymentModalData.operatorName}\n- Numéro à recharger : *${paymentModalData.phone}*\n- Commande : *COM-B${String(paymentModalData.orderId).padStart(3, '0')}*\n\nJe vous joins la capture d'écran de la transaction pour validation !`;
+                  
+                  window.open(`https://wa.me/${cleanWaNum}?text=${encodeURIComponent(msg)}`, "_blank");
+                  setShowPaymentModal(false);
+                  
+                  // Clean form to prevent spam
+                  setPhone("");
+                  navigate("/mes-commandes");
+                }}
+                style={{ width: "100%", padding: 14, background: "#25D366", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+              >
+                <MessageCircle size={18} /> Envoyer la capture sur WhatsApp
+              </button>
+              
+              <button 
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setPhone("");
+                  navigate("/mes-commandes");
+                }}
+                style={{ width: "100%", padding: 14, background: "transparent", color: "var(--muted)", border: "1px solid var(--line)", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: "pointer" }}
+              >
+                Plus tard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

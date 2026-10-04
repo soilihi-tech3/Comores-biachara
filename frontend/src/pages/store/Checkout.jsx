@@ -43,7 +43,8 @@ export default function Checkout() {
     }
   }, [user]);
 
-  const modesPaiement = boutique?.modesPaiement || { especes: true, mvola: true, holam: true, carte: false };
+  const defaultModes = { especes: true, mvola: true, holam: true, carte: false };
+  const modesPaiement = { ...defaultModes, ...(boutique?.modesPaiement || {}) };
   const isWhatsAppEnabled = boutique?.modulesActifs?.commanderWhatsapp !== false;
 
   const PAYMENT_OPTIONS = [
@@ -142,7 +143,7 @@ export default function Checkout() {
         return;
       }
 
-      // Si le paiement est via Stripe (Carte), rediriger vers Checkout
+      // Si le paiement est via Stripe (Carte), rediriger vers l'URL retournée
       if (form.moyenPaiement === "carte") {
         const sessionRes = await api.post(`/store/${SLUG}/create-checkout-session`, { orderId: res.data.id });
         if (sessionRes.data.url) {

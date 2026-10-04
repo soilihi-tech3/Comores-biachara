@@ -149,3 +149,39 @@ export function OnlinePaymentBadges({ style = {} }) {
     </div>
   );
 }
+
+// 9. Orange Money Logo
+export function OrangeMoneyLogo({ height = 26, style = {} }) {
+  return (
+    <div style={{
+      background: "#FF7900", borderRadius: 8,
+      padding: "3px 10px", display: "inline-flex", alignItems: "center", justifyContent: "center",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.1)", height, ...style
+    }}>
+      <span style={{
+        fontFamily: "'Helvetica Neue', sans-serif", fontWeight: 900, fontSize: Math.round(height * 0.55),
+        color: "#FFFFFF", lineHeight: 1
+      }}>
+        Orange <br/>Money
+      </span>
+    </div>
+  );
+}
+
+// 10. Wave Logo
+export function WaveLogo({ height = 26, style = {} }) {
+  return (
+    <div style={{
+      background: "#000000", borderRadius: 8,
+      padding: "3px 12px", display: "inline-flex", alignItems: "center", justifyContent: "center",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.1)", height, ...style
+    }}>
+      <span style={{
+        fontFamily: "sans-serif", fontWeight: 900, fontSize: Math.round(height * 0.7),
+        color: "#37D3E2", letterSpacing: "0.5px", lineHeight: 1
+      }}>
+        wave
+      </span>
+    </div>
+  );
+}

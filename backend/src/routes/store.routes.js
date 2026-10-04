@@ -263,10 +263,10 @@ router.post("/:slug/orders", loadBoutique, authenticate, requireRole("client"), 
 
     const fraisLivraison = modeLivraison === "domicile" ? Number(req.boutique.fraisLivraison) : 0;
     
-    // Si paiement par carte ou wero (via Stripe), on met en attente de paiement
-    const statutInit = (moyenPaiement === "carte" || moyenPaiement === "wero") ? "en_attente_paiement" : "en_attente";
+    // Si paiement par carte Stripe, on met en attente de paiement (attente de redirection). Pour Wero, Cash et Mvola, la commande est en_attente directe.
+    const statutInit = (moyenPaiement === "carte") ? "en_attente_paiement" : "en_attente";
 
-    if (moyenPaiement === "carte" || moyenPaiement === "wero") {
+    if (moyenPaiement === "carte") {
       const stripeSecretKey = getStripeSecretKey(req.boutique);
       if (!stripeSecretKey || (!stripeSecretKey.startsWith("sk_") && !stripeSecretKey.startsWith("rk_"))) {
         await t.rollback();
@@ -290,17 +290,18 @@ router.post("/:slug/orders", loadBoutique, authenticate, requireRole("client"), 
     
     // Notifications automatiques
     const cmdNum = "COM-B" + String(order.id).padStart(3, "0");
+    const totalFormateeur = Number(sousTotal + fraisLivraison).toFixed(2);
     Notification.create({
       userId: req.user.id, boutiqueId: req.boutique.id, orderId: order.id,
       title: "Commande enregistrée",
-      message: `Votre commande #${cmdNum} (${sousTotal + fraisLivraison} F CFA) a été enregistrée avec succès.`,
+      message: `Votre commande #${cmdNum} (${totalFormateeur} €) a été enregistrée avec succès.`,
       type: "order"
     }).catch(() => {});
 
     Notification.create({
       userId: null, boutiqueId: req.boutique.id, orderId: order.id,
       title: "Nouvelle commande reçue !",
-      message: `Nouvelle commande #${cmdNum} reçue de ${req.user.nom} (${sousTotal + fraisLivraison} F CFA).`,
+      message: `Nouvelle commande #${cmdNum} reçue de ${req.user.nom} (${totalFormateeur} €).`,
       type: "order"
     }).catch(() => {});
 
@@ -506,6 +507,59 @@ router.post("/:slug/create-checkout-session", loadBoutique, authenticate, async 
     if (!order) return res.status(404).json({ message: "Commande introuvable ou déjà payée." });
 
     const userEmail = order.client?.email || req.user?.email || undefined;
+    const originUrl = req.headers.origin || process.env.FRONTEND_URL || "http://localhost:5173";
+
+    if (order.moyenPaiement === "paydunya" || order.moyenPaiement === "orange" || order.moyenPaiement === "wave") {
+      try {
+        const paydunyaMasterKey = req.boutique.paydunyaMasterKey;
+        const paydunyaPrivateKey = req.boutique.paydunyaPrivateKey;
+        const paydunyaToken = req.boutique.paydunyaToken;
+
+        if (!paydunyaMasterKey || !paydunyaPrivateKey || !paydunyaToken) {
+          return res.status(400).json({ message: "Les clés PayDunya ne sont pas configurées pour cette boutique." });
+        }
+
+        const invoiceData = {
+          invoice: {
+            total_amount: Math.round(Number(order.total)), // Paydunya works in local currency (XOF/XAF typically, check your account settings, usually XOF)
+            description: `Commande ${order.id} - ${req.boutique.nom}`
+          },
+          store: {
+            name: req.boutique.nom,
+            website_url: originUrl
+          },
+          actions: {
+            cancel_url: `${originUrl}/confirmation/${order.id}?canceled=true`,
+            return_url: `${originUrl}/confirmation/${order.id}?success=true`,
+            callback_url: `${originUrl.replace('5173', '3000')}/api/store/${req.boutique.slug}/paydunya-webhook` // Optional, or point to backend URL
+          }
+        };
+
+        const response = await fetch("https://app.paydunya.com/api/v1/checkout-invoice/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "PAYDUNYA-MASTER-KEY": paydunyaMasterKey,
+            "PAYDUNYA-PRIVATE-KEY": paydunyaPrivateKey,
+            "PAYDUNYA-TOKEN": paydunyaToken
+          },
+          body: JSON.stringify(invoiceData)
+        });
+
+        const data = await response.json();
+        
+        if (data.response_code === "00") {
+          // Update order with the token as session ID
+          await order.update({ stripeSessionId: data.token });
+          return res.json({ url: data.url });
+        } else {
+          return res.status(400).json({ message: "Erreur PayDunya: " + (data.response_text || "Inconnue") });
+        }
+      } catch (err) {
+        console.error("PayDunya Error:", err);
+        return res.status(500).json({ message: "Erreur lors de la création de la session PayDunya." });
+      }
+    }
 
     const stripeSecretKey = getStripeSecretKey(req.boutique);
     if (!stripeSecretKey || (!stripeSecretKey.startsWith("sk_") && !stripeSecretKey.startsWith("rk_"))) {
@@ -513,7 +567,6 @@ router.post("/:slug/create-checkout-session", loadBoutique, authenticate, async 
     }
 
     const stripe = require("stripe")(stripeSecretKey);
-    const originUrl = req.headers.origin || process.env.FRONTEND_URL || "http://localhost:5173";
 
     let line_items = [];
     if (order.typeVente === "recharge_mobile") {
@@ -580,7 +633,7 @@ router.post("/:slug/create-checkout-session", loadBoutique, authenticate, async 
 // POST /api/store/:slug/create-recharge-session (Paiement direct carte Stripe pour Recharge Crédit Mobile - Authentifié)
 router.post("/:slug/create-recharge-session", loadBoutique, authenticate, async (req, res, next) => {
   try {
-    const { operatorName, phone, amountEur } = req.body;
+    const { operatorName, phone, amountEur, moyenPaiement = "carte" } = req.body;
     if (!phone || !amountEur) {
       return res.status(400).json({ message: "Numéro de téléphone et montant requis." });
     }
@@ -603,12 +656,66 @@ router.post("/:slug/create-recharge-session", loadBoutique, authenticate, async 
       clientId: req.user.id,
       statut: "en_attente_paiement",
       typeVente: "recharge_mobile",
-      moyenPaiement: "carte",
+      moyenPaiement: moyenPaiement,
       total: amountEur,
       sousTotal: amountEur,
       fraisLivraison: 0,
       notes: `Recharge Crédit Mobile ${operatorName} pour le numéro +${cleanPhone}`
     });
+
+    if (moyenPaiement === "wero" || moyenPaiement === "holam") {
+      return res.json({ orderId: order.id, order });
+    }
+
+    if (moyenPaiement === "paydunya" || moyenPaiement === "orange" || moyenPaiement === "wave") {
+      try {
+        const paydunyaMasterKey = req.boutique.paydunyaMasterKey;
+        const paydunyaPrivateKey = req.boutique.paydunyaPrivateKey;
+        const paydunyaToken = req.boutique.paydunyaToken;
+
+        if (!paydunyaMasterKey || !paydunyaPrivateKey || !paydunyaToken) {
+          return res.status(400).json({ message: "Les clés PayDunya ne sont pas configurées pour cette boutique." });
+        }
+
+        const invoiceData = {
+          invoice: {
+            total_amount: Math.round(Number(amountEur)), // En devises de compte, ex: XOF ou EUR selon la config
+            description: `Recharge Crédit Mobile ${operatorName} - ${req.boutique.nom}`
+          },
+          store: {
+            name: req.boutique.nom,
+            website_url: originUrl
+          },
+          actions: {
+            cancel_url: `${originUrl}/recharge-mobile?status=canceled`,
+            return_url: `${originUrl}/recharge-mobile?status=success&phone=${encodeURIComponent(cleanPhone.replace(/^269/, ''))}&order_id=${order.id}`,
+            callback_url: `${originUrl.replace('5173', '3000')}/api/store/${req.boutique.slug}/paydunya-webhook`
+          }
+        };
+
+        const response = await fetch("https://app.paydunya.com/api/v1/checkout-invoice/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "PAYDUNYA-MASTER-KEY": paydunyaMasterKey,
+            "PAYDUNYA-PRIVATE-KEY": paydunyaPrivateKey,
+            "PAYDUNYA-TOKEN": paydunyaToken
+          },
+          body: JSON.stringify(invoiceData)
+        });
+
+        const data = await response.json();
+        if (data.response_code === "00") {
+          await order.update({ stripeSessionId: data.token });
+          return res.json({ url: data.url });
+        } else {
+          return res.status(400).json({ message: "Erreur PayDunya: " + (data.response_text || "Inconnue") });
+        }
+      } catch (err) {
+        console.error("PayDunya Error:", err);
+        return res.status(500).json({ message: "Erreur création session PayDunya." });
+      }
+    }
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],

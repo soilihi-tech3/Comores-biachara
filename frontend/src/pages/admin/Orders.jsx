@@ -113,8 +113,8 @@ export default function AdminOrders() {
       }
     });
 
-    // 2. Smart 4s polling interval
-    const interval = setInterval(load, 4000);
+    // 2. Smart 1.5s polling interval (ultra-rapide pour garantir le rafraîchissement sans aucun retard)
+    const interval = setInterval(load, 1500);
 
     // 3. Window focus refresh
     const onFocus = () => load();

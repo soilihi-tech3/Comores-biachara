@@ -53,7 +53,10 @@ const Boutique = sequelize.define("Boutique", {
   stripePublishableKey: { type: DataTypes.STRING(255), allowNull: true, field: "stripe_publishable_key" },
   stripeSecretKey: { type: DataTypes.STRING(255), allowNull: true, field: "stripe_secret_key" },
   stripeAccountId: { type: DataTypes.STRING(255), allowNull: true, field: "stripe_account_id" },
-  stripeOnboardingComplete: { type: DataTypes.BOOLEAN, defaultValue: false, field: "stripe_onboarding_complete" }
+  stripeOnboardingComplete: { type: DataTypes.BOOLEAN, defaultValue: false, field: "stripe_onboarding_complete" },
+  paydunyaMasterKey: { type: DataTypes.STRING(255), allowNull: true },
+  paydunyaPrivateKey: { type: DataTypes.STRING(255), allowNull: true },
+  paydunyaToken: { type: DataTypes.STRING(255), allowNull: true }
 }, { tableName: "boutiques" });
 
 module.exports = Boutique;
