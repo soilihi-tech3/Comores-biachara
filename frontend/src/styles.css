@@ -753,8 +753,6 @@ html[data-theme="dark"] .bs-operator-logo-box img {
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--line);
-  content-visibility: auto;
-  contain-intrinsic-size: 1px 360px;
   display: flex;
   flex-direction: column;
   cursor: pointer;
@@ -1972,9 +1970,11 @@ html[data-theme="dark"] .bs-side-btn.active .bs-side-label {
   transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) !important;
 }
 
-.bs-thumb-container:hover .zoom-hover,
-.bs-card:hover .zoom-hover {
-  transform: scale(1.18) !important;
+@media (hover: hover) {
+  .bs-thumb-container:hover .zoom-hover,
+  .bs-card:hover .zoom-hover {
+    transform: scale(1.18) !important;
+  }
 }
 
 
@@ -2659,3 +2659,22 @@ html[data-theme="dark"] .bs-my-orders-sidebar {
 [data-theme="dark"] .skel::after,.dark .skel::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent)}
 @keyframes skel-shimmer{100%{transform:translateX(100%)}}
 @media (prefers-reduced-motion:reduce){.skel::after{animation:none}}
+
+/* Admin Loading Fallback */
+.bs-admin-loading-spinner {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--page-bg);
+  width: 100%;
+}
+.bs-admin-loading-spinner::after {
+  content: "";
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(34, 75, 53, 0.1);
+  border-left-color: var(--forest);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
