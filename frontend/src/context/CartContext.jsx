@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { AlertTriangle, CheckCircle2, X, Info } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 const CartContext = createContext(null);
 
@@ -12,7 +12,7 @@ export function CartProvider({ children }) {
       return [];
     }
   });
-  const [toast, setToast] = useState(null); // { message, type }
+
 
   useEffect(() => {
     try {
@@ -21,10 +21,13 @@ export function CartProvider({ children }) {
   }, [cart]);
 
   function showToast(message, type = "warning") {
-    setToast({ message, type, id: Date.now() });
-    setTimeout(() => {
-      setToast(null);
-    }, 4500);
+    if (type === "success") {
+      toast.success(message);
+    } else if (type === "error") {
+      toast.error(message);
+    } else {
+      toast(message, { icon: "ℹ️" });
+    }
   }
 
   function addToCart(product, quantite = 1) {
@@ -208,23 +211,6 @@ export function CartProvider({ children }) {
     >
       {children}
 
-      {/* FLOATING TOAST NOTIFICATION (BOTTOM SLEEK PILL) */}
-      {toast && (
-        <div className={`bs-toast-banner ${toast.type}`}>
-          <div className="bs-toast-icon">
-            {toast.type === "success" && <CheckCircle2 size={19} color="#10B981" />}
-            {toast.type === "warning" && <AlertTriangle size={19} color="#F59E0B" />}
-            {toast.type === "error" && <AlertTriangle size={19} color="#EF4444" />}
-            {toast.type === "info" && <Info size={19} color="#3B82F6" />}
-          </div>
-          <div className="bs-toast-body">
-            <div className="bs-toast-msg">{toast.message}</div>
-          </div>
-          <button className="bs-toast-close-btn" onClick={() => setToast(null)}>
-            <X size={15} />
-          </button>
-        </div>
-      )}
     </CartContext.Provider>
   );
 }

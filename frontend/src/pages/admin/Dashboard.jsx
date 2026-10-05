@@ -6,12 +6,14 @@ import api from "../../api";
 import Stars from "../../components/Stars.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { subscribeRealtime } from "../../utils/realtime.js";
+import { Skel, SkeletonStatCards } from "../../components/Skeleton.jsx";
+import { readCache, writeCache } from "../../utils/swrCache.js";
 
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 
 export default function Dashboard() {
   const { user, boutique, theme } = useAuth();
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(() => readCache("admin_dashboard") || null);
   const [prodChartTab, setProdChartTab] = useState("top"); // "top" | "flop"
   const isDark = theme === "dark";
 
@@ -30,7 +32,7 @@ export default function Dashboard() {
   };
 
   function loadDashboard() {
-    api.get("/admin/dashboard").then((res) => setData(res.data)).catch(() => {});
+    api.get("/admin/dashboard").then((res) => { setData(res.data); writeCache("admin_dashboard", res.data); }).catch(() => {});
   }
 
   useEffect(() => { 
@@ -49,7 +51,17 @@ export default function Dashboard() {
     return unsub;
   }, []);
 
-  if (!data) return <div style={{ padding: 40, color: "var(--muted)" }}>Chargement du tableau de bord...</div>;
+  if (!data) return (
+    <div role="status" aria-label="Chargement">
+      <Skel w={280} h={26} style={{ marginBottom: 10 }} />
+      <Skel w={360} h={12} style={{ marginBottom: 24 }} />
+      <SkeletonStatCards count={8} />
+      <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1.2fr", gap: 20 }}>
+        <div className="bs-panel" style={{ padding: 20 }}><Skel h={250} r={12} /></div>
+        <div className="bs-panel" style={{ padding: 20 }}><Skel h={250} r={12} /></div>
+      </div>
+    </div>
+  );
 
   // ── 1. DASHBOARD SPÉCIFIQUE À L'EMPLOYÉ ──
   if (data.isEmploye || user?.role === "employe") {

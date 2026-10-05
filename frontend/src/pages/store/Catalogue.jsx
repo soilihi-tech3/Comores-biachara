@@ -7,6 +7,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { useCart } from "../../context/CartContext.jsx";
 import { useData } from "../../context/DataContext.jsx";
 import { subscribeRealtime } from "../../utils/realtime.js";
+import { Skel } from "../../components/Skeleton.jsx";
 
 export default function Catalogue() {
   const [params, setParams] = useSearchParams();
@@ -91,7 +92,6 @@ export default function Catalogue() {
       }
     }
     // Only show skeleton if we truly have nothing to show
-    const startTime = Date.now();
     if (products.length === 0) {
       setLoading(true);
     }
@@ -107,10 +107,7 @@ export default function Catalogue() {
         if (!categoryId && !famille && !search) {
           try { localStorage.setItem(`cached_products_${SLUG}`, JSON.stringify(res.data)); } catch(e) {}
         }
-        // Ensure skeleton shows at least 300ms to avoid flash
-        const elapsed = Date.now() - startTime;
-        const delay = Math.max(0, 300 - elapsed);
-        setTimeout(() => setLoading(false), delay);
+        setLoading(false);
       })
       .catch(() => setLoading(false));
   }
@@ -245,17 +242,7 @@ export default function Catalogue() {
         style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
       >
         {loading ? (
-          <div className="bs-catalogue-loading-header">
-            <div className="bs-loading-spinner-ring" />
-            <h2 style={{ margin: 0, fontSize: 20, color: "var(--muted)", fontWeight: 600 }}>
-              Chargement du catalogue
-              <span style={{ display: "inline-flex", gap: 4, marginLeft: 10, verticalAlign: "middle" }}>
-                <span className="bs-otp-dot" style={{ width: 6, height: 6 }} />
-                <span className="bs-otp-dot" style={{ width: 6, height: 6 }} />
-                <span className="bs-otp-dot" style={{ width: 6, height: 6 }} />
-              </span>
-            </h2>
-          </div>
+          <Skel w={240} h={22} />
         ) : (
           <h2>
             {onlyFavoris

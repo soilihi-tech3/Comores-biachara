@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
+import { SkeletonOrdersPage } from "../../components/Skeleton.jsx";
+import { readCache, writeCache } from "../../utils/swrCache.js";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Package, Truck, CheckCircle, XCircle, Clock, ShoppingBag, Search, ChevronRight, MapPin, CreditCard, ArrowLeft, PackageOpen, TrendingUp, RefreshCw, Receipt, Star, Smartphone, MessageCircle } from "lucide-react";
 import api, { SLUG } from "../../api";
@@ -62,8 +65,8 @@ export default function MyOrders() {
   const [searchParams] = useSearchParams();
   const targetOrderId = searchParams.get("orderId") || searchParams.get("id");
 
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState(() => readCache("my_orders") || []);
+  const [loading, setLoading] = useState(() => readCache("my_orders") === undefined);
   const [selected, setSelected] = useState(null);
   const [receiptOrder, setReceiptOrder] = useState(null);
   const [search, setSearch] = useState("");
@@ -81,7 +84,7 @@ export default function MyOrders() {
   const openReviewModal = (product, orderId) => {
     const validId = product?.id || product?.productId || product?.product_id;
     if (!product || !validId) {
-      alert("Impossible de trouver le produit sélectionné.");
+      toast.error("Impossible de trouver le produit sélectionné.");
       return;
     }
     const cleanProduct = {
@@ -130,7 +133,7 @@ export default function MyOrders() {
         window.location.href = res.data.url;
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Erreur lors de l'initialisation du paiement.");
+      toast.error(err.response?.data?.message || "Erreur lors de l'initialisation du paiement.");
     }
   };
 
@@ -143,7 +146,7 @@ export default function MyOrders() {
         setSelected((prev) => ({ ...prev, statut: "en_attente", moyenPaiement: "cash" }));
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Impossible de changer le moyen de paiement.");
+      toast.error(err.response?.data?.message || "Impossible de changer le moyen de paiement.");
     }
   };
 
@@ -151,7 +154,7 @@ export default function MyOrders() {
     const waNum = boutique?.whatsappNumber || boutique?.telephone;
     const cleanWaNum = waNum ? waNum.replace(/[^0-9]/g, "") : "";
     if (!cleanWaNum) {
-      alert("Numéro WhatsApp de la boutique non configuré.");
+      toast.error("Numéro WhatsApp de la boutique non configuré.");
       return;
     }
     const methode = (order.moyenPaiement === "mvola") ? "MVola" : "Wero";
@@ -167,6 +170,7 @@ export default function MyOrders() {
       .then(res => {
         const freshOrders = res.data || [];
         setOrders(freshOrders);
+        writeCache("my_orders", freshOrders);
 
         // Auto-sélection si une commande est spécifiée dans l'URL (?orderId=18)
         if (targetOrderId && !selected) {
@@ -238,19 +242,14 @@ export default function MyOrders() {
         setSelected((prev) => ({ ...prev, statut: "annulee" }));
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Impossible d'annuler cette commande.");
+      toast.error(err.response?.data?.message || "Impossible d'annuler cette commande.");
     }
   }
 
   // ─── RENDERING ─────────────────────────────────────────────────────────────
 
   // ─── LIST VIEW ─────────────────────────────────────────────────────────────
-  if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh", color: "var(--muted)", gap: 12, fontSize: 15 }}>
-      <span style={{ width: 20, height: 20, border: "2.5px solid var(--line)", borderTopColor: "var(--forest)", borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite" }} />
-      Chargement de vos commandes...
-    </div>
-  );
+  if (loading) return <SkeletonOrdersPage />;
 
   return (
     <>

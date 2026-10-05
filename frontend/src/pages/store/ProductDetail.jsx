@@ -7,6 +7,8 @@ import ProductCard from "../../components/ProductCard.jsx";
 import { useCart } from "../../context/CartContext.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { subscribeRealtime } from "../../utils/realtime.js";
+import { Skel } from "../../components/Skeleton.jsx";
+import { readCache, writeCache } from "../../utils/swrCache.js";
 
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 
@@ -18,7 +20,7 @@ export default function ProductDetail() {
   const { user } = useAuth();
   
   // Instant render using passed state from ProductCard, fallback to null
-  const [product, setProduct] = useState(() => location.state?.product || null);
+  const [product, setProduct] = useState(() => location.state?.product || readCache(`product:${id}`) || null);
   const [selectedImgIndex, setSelectedImgIndex] = useState(0);
   const [reviewDraft, setReviewDraft] = useState({ note: 5, commentaire: "" });
   const [erreur, setErreur] = useState("");
@@ -89,6 +91,7 @@ export default function ProductDetail() {
     // If product was passed via location.state, we already have it rendered instantly!
     api.get(`/store/${SLUG}/products/${id}`).then((res) => {
       setProduct(res.data);
+      writeCache(`product:${id}`, res.data);
       if (res.data.categoryId) {
         api.get(`/store/${SLUG}/products?categoryId=${res.data.categoryId}`).then(r => {
           setRelated(r.data.filter(p => p.id !== res.data.id).slice(0, 10));
@@ -132,7 +135,18 @@ export default function ProductDetail() {
     setZoomPos({ x, y });
   }
 
-  if (!product) return <div style={{ minHeight: "75vh", padding: 60, textAlign: "center" }}>Chargement...</div>;
+  if (!product) return (
+    <div className="container" role="status" aria-label="Chargement" style={{ minHeight: "75vh", padding: "32px 16px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 32 }}>
+      <Skel h={420} r={18} />
+      <div style={{ display: "grid", gap: 14, alignContent: "start" }}>
+        <Skel w="70%" h={28} />
+        <Skel w="30%" h={14} />
+        <Skel w="40%" h={30} />
+        <Skel h={12} /><Skel h={12} /><Skel w="80%" h={12} />
+        <Skel w="60%" h={48} r={14} style={{ marginTop: 12 }} />
+      </div>
+    </div>
+  );
 
   // Cart quantity check
   const itemInCart = cart.find(l => l.product.id === product.id);

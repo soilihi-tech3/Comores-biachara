@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { Plus, Trash2, Image, Layers, LayoutGrid, Store, Phone, MapPin, Mail, Info, Save, CreditCard, ToggleLeft, ToggleRight, Banknote, Smartphone, Globe, Key, CheckCircle2, HelpCircle, Database, AlertTriangle } from "lucide-react";
 import api from "../../api";
 import ImageUploader from "../../components/ImageUploader.jsx";
@@ -70,7 +71,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
     } catch (err) {
       console.error(err);
       const msg = err.response?.data?.message || err.message;
-      alert("Erreur lors de l'enregistrement: " + msg);
+      toast.error("Erreur lors de l'enregistrement: " + msg);
       showToast("Erreur: " + msg, "error");
     }
   }

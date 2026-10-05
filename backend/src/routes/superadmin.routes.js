@@ -11,7 +11,7 @@ const { clearCachePattern } = require("../config/cache");
 const { broadcast } = require("../utils/broadcaster");
 
 function purgeCache() {
-  clearCachePattern("cache:/api/store").catch(() => {});
+  clearCachePattern("/api/store").catch(() => {});
 }
 
 // GET /api/superadmin/boutiques

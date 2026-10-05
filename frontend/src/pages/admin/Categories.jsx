@@ -1,4 +1,6 @@
+import { SkeletonTableRows } from "../../components/Skeleton.jsx";
 import React, { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { PlusCircle, List, Pencil, Trash2, CheckCircle, Image as ImageIcon, Layers } from "lucide-react";
 import api from "../../api";
 import ImageUploader from "../../components/ImageUploader.jsx";
@@ -12,7 +14,7 @@ export default function AdminCategories() {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [editingFamilleId, setEditingFamilleId] = useState(null);
-  const [toast, setToast] = useState("");
+
   const [search, setSearch] = useState("");
 
   const initialCategoryForm = {
@@ -63,9 +65,12 @@ export default function AdminCategories() {
     return () => unsub();
   }, []);
 
-  function showToast(msg) {
-    setToast(msg);
-    setTimeout(() => setToast(""), 3000);
+  function showToast(msg, type = "success") {
+    if (type === "success") {
+      toast.success(msg);
+    } else {
+      toast.error(msg);
+    }
   }
 
   // --- CATEGORY ACTIONS ---
@@ -258,11 +263,7 @@ export default function AdminCategories() {
         </div>
       </div>
 
-      {toast && (
-        <div style={{ background: "var(--forest-light)", color: "var(--forest-dark)", padding: "12px 18px", borderRadius: 10, fontWeight: 700, marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
-          <CheckCircle size={18} /> {toast}
-        </div>
-      )}
+
 
       {/* ONGLET 1: LISTE DES CATÉGORIES */}
       {activeTab === "liste" && (
@@ -302,11 +303,7 @@ export default function AdminCategories() {
             </thead>
             <tbody>
               {loading && (
-                <tr>
-                  <td colSpan={4} style={{ textAlign: "center", padding: 30, color: "var(--muted)" }}>
-                    Chargement des catégories...
-                  </td>
-                </tr>
+                <SkeletonTableRows rows={6} cols={4} />
               )}
               {!loading && paginatedCategories.length === 0 && (
                 <tr>

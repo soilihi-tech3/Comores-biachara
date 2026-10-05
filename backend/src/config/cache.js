@@ -78,7 +78,13 @@ async function setCache(key, value, ttlSeconds = 300) {
 async function clearCachePattern(patternKey) {
   if (isRedisAvailable && redis) {
     try {
-      const keys = await redis.keys(`*${patternKey}*`);
+      const keys = [];
+      await new Promise((resolve, reject) => {
+        const stream = redis.scanStream({ match: `*${patternKey}*`, count: 200 });
+        stream.on("data", (batch) => keys.push(...batch));
+        stream.on("end", resolve);
+        stream.on("error", reject);
+      });
       if (keys.length > 0) {
         await redis.del(keys);
       }

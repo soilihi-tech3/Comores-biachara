@@ -1,4 +1,6 @@
+import { SkeletonTableRows } from "../../components/Skeleton.jsx";
 import React, { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { PlusCircle, List, Pencil, Trash2, AlertTriangle, CheckCircle, Package, X } from "lucide-react";
 import api from "../../api";
 import ImageUploader from "../../components/ImageUploader.jsx";
@@ -27,7 +29,7 @@ export default function AdminProduits() {
   const [fournisseurs, setFournisseurs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
-  const [toast, setToast] = useState("");
+
   
   // États de filtre
   const [search, setSearch] = useState("");
@@ -95,9 +97,12 @@ export default function AdminProduits() {
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  function showToast(msg) {
-    setToast(msg);
-    setTimeout(() => setToast(""), 3500);
+  function showToast(msg, type = "success") {
+    if (type === "success") {
+      toast.success(msg);
+    } else {
+      toast.error(msg);
+    }
   }
 
   function startEdit(product) {
@@ -139,7 +144,7 @@ export default function AdminProduits() {
       const todayMidnight = new Date();
       todayMidnight.setHours(0, 0, 0, 0);
       if (selectedDate < todayMidnight) {
-        alert("Impossible d'ajouter un produit dont la date d'expiration est déjà dépassée ! Veuillez choisir une date valide.");
+        toast.error("Impossible d'ajouter un produit dont la date d'expiration est déjà dépassée ! Veuillez choisir une date valide.");
         return;
       }
     }
@@ -332,11 +337,7 @@ export default function AdminProduits() {
         </div>
       </div>
 
-      {toast && (
-        <div style={{ background: "var(--forest-light)", color: "var(--forest-dark)", padding: "12px 18px", borderRadius: 10, fontWeight: 700, marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
-          <CheckCircle size={18} /> {toast}
-        </div>
-      )}
+
 
       {/* CONTENUS DES ONGLETS */}
       {activeTab === "liste" && (
@@ -420,11 +421,7 @@ export default function AdminProduits() {
             </thead>
             <tbody>
               {loading && (
-                <tr>
-                  <td colSpan={8} style={{ textAlign: "center", padding: 30, color: "var(--muted)" }}>
-                    Chargement des produits...
-                  </td>
-                </tr>
+                <SkeletonTableRows rows={6} cols={8} />
               )}
               {!loading && paginatedProducts.length === 0 && (
                 <tr>

@@ -1842,7 +1842,7 @@ html[data-theme="dark"] .bs-side-btn.active .bs-side-label {
   display: none;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 992px) {
   body {
     padding-bottom: 66px;
   }
@@ -1977,97 +1977,7 @@ html[data-theme="dark"] .bs-side-btn.active .bs-side-label {
   transform: scale(1.18) !important;
 }
 
-/* Global Floating Toast Banner (Bottom Positioned, Clean Pill Style) */
-.bs-toast-banner {
-  position: fixed;
-  bottom: 28px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 99999;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--forest-dark);
-  color: #ffffff;
-  padding: 12px 20px;
-  border-radius: 40px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(22, 52, 36, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  max-width: 540px;
-  width: calc(100% - 32px);
-  animation: slideUpToast 0.35s cubic-bezier(0.165, 0.84, 0.44, 1);
-  backdrop-filter: blur(10px);
-}
 
-@media (max-width: 768px) {
-  .bs-toast-banner {
-    bottom: 82px;
-  }
-}
-
-@keyframes slideUpToast {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 24px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-  }
-}
-
-.bs-toast-banner.warning {
-  border-left: 4px solid #F59E0B;
-}
-.bs-toast-banner.error {
-  border-left: 4px solid #EF4444;
-}
-.bs-toast-banner.success {
-  border-left: 4px solid #10B981;
-}
-.bs-toast-banner.info {
-  border-left: 4px solid #3B82F6;
-}
-
-.bs-toast-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.bs-toast-body {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.bs-toast-msg {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: #F6F8F5;
-  line-height: 1.35;
-}
-
-.bs-toast-close-btn {
-  background: rgba(255, 255, 255, 0.15);
-  border: none;
-  color: #DDE8DF;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
-  flex-shrink: 0;
-}
-
-.bs-toast-close-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  color: #ffffff;
-}
 
 /* ===================================================
    ADMIN LAYOUT & POS RESPONSIVE RULES
@@ -2741,3 +2651,11 @@ html[data-theme="dark"] .bs-my-orders-sidebar {
 
 
 
+
+/* ── Skeleton loaders ── */
+.skel{display:block;position:relative;overflow:hidden;background:rgba(22,52,36,.08)}
+.skel::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:skel-shimmer 1.2s ease-in-out infinite}
+[data-theme="dark"] .skel,.dark .skel{background:rgba(255,255,255,.08)}
+[data-theme="dark"] .skel::after,.dark .skel::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent)}
+@keyframes skel-shimmer{100%{transform:translateX(100%)}}
+@media (prefers-reduced-motion:reduce){.skel::after{animation:none}}

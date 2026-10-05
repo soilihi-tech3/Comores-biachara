@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { PlusCircle, Edit, Trash2, Building, Phone, Mail, MapPin, X, CheckCircle, AlertCircle, Search } from "lucide-react";
 import api from "../../api";
 import TablePagination from "../../components/TablePagination";
@@ -80,7 +81,7 @@ export default function Fournisseurs() {
       await api.delete(`/admin/fournisseurs/${id}`);
       load();
     } catch (err) {
-      alert(err.response?.data?.message || "Impossible de supprimer ce fournisseur.");
+      toast.error(err.response?.data?.message || "Impossible de supprimer ce fournisseur.");
     }
   }
 

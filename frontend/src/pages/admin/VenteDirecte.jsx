@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { 
   ShoppingCart, Search, Plus, Minus, Trash2, CheckCircle, Printer, X, CreditCard, DollarSign, Phone, User, Tag
 } from "lucide-react";
@@ -43,14 +44,14 @@ export default function VenteDirecte() {
 
   function addToCart(p) {
     if (p.stock <= 0) {
-      alert("Ce produit est en rupture de stock.");
+      toast.error("Ce produit est en rupture de stock.");
       return;
     }
     setCart(prev => {
       const exist = prev.find(item => item.product.id === p.id);
       if (exist) {
         if (exist.quantite >= p.stock) {
-          alert(`Stock insuffisant. Seules ${p.stock} unités sont disponibles.`);
+          toast.error(`Stock insuffisant. Seules ${p.stock} unités sont disponibles.`);
           return prev;
         }
         return prev.map(item => item.product.id === p.id ? { ...item, quantite: item.quantite + 1 } : item);
@@ -64,7 +65,7 @@ export default function VenteDirecte() {
       if (item.product.id === productId) {
         const newQty = item.quantite + delta;
         if (newQty > item.product.stock) {
-          alert(`Stock insuffisant. Maximum : ${item.product.stock}`);
+          toast.error(`Stock insuffisant. Maximum : ${item.product.stock}`);
           return item;
         }
         return newQty > 0 ? { ...item, quantite: newQty } : null;
@@ -104,7 +105,7 @@ export default function VenteDirecte() {
       setClientTelephone("");
       load(); // Reload stock
     } catch (err) {
-      alert(err.response?.data?.message || "Erreur lors de la validation de la vente.");
+      toast.error(err.response?.data?.message || "Erreur lors de la validation de la vente.");
     } finally {
       setLoading(false);
     }

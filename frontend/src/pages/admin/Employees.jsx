@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { PlusCircle, Edit, Trash2, Shield, Lock, CheckCircle, Ban, User, AlertCircle, X, ShieldCheck, UserCheck, Key, Settings, Layers, Package, ShoppingCart, Image, Eye, EyeOff, Copy, RefreshCw, Send } from "lucide-react";
 import api from "../../api";
 import TablePagination from "../../components/TablePagination";
@@ -132,7 +133,7 @@ export default function AdminEmployees() {
 
   async function toggleStatus(u) {
     if (currentUser && currentUser.id === u.id) {
-      alert("Vous ne pouvez pas suspendre votre propre compte administrateur actuellement connecté.");
+      toast.error("Vous ne pouvez pas suspendre votre propre compte administrateur actuellement connecté.");
       return;
     }
 
@@ -145,7 +146,7 @@ export default function AdminEmployees() {
       await api.patch(`/admin/employees/${u.id}/status`);
       load();
     } catch (err) {
-      alert(err.response?.data?.message || "Erreur lors de la modification du statut.");
+      toast.error(err.response?.data?.message || "Erreur lors de la modification du statut.");
     }
   }
 
@@ -155,7 +156,7 @@ export default function AdminEmployees() {
       await api.delete(`/admin/employees/${id}`);
       load();
     } catch (err) {
-      alert(err.response?.data?.message || "Impossible de supprimer cet utilisateur.");
+      toast.error(err.response?.data?.message || "Impossible de supprimer cet utilisateur.");
     }
   }
 

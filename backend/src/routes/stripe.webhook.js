@@ -87,7 +87,7 @@ router.post("/", async (req, res) => {
               message: `Recharge de ${totalEur} € effectuée par carte pour le numéro ${phone}.`,
               type: "order"
             }).catch(() => {});
-            clearCachePattern("cache:/api/store").catch(() => {});
+            clearCachePattern("/api/store").catch(() => {});
             broadcast("order_updated", { orderId: existingOrder.id, statut: "recuperee", clientId: userId, boutiqueId });
             
             // Notification email admin
@@ -139,7 +139,7 @@ router.post("/", async (req, res) => {
             message: `Recharge de ${totalEur} € effectuée par carte pour le numéro ${phone}.`,
             type: "order"
           }).catch(() => {});
-          clearCachePattern("cache:/api/store").catch(() => {});
+          clearCachePattern("/api/store").catch(() => {});
           broadcast("order_created", { orderId: newOrder.id, statut: "recuperee", clientId: userId, boutiqueId });
           
           // Notification email admin
@@ -210,7 +210,7 @@ router.post("/", async (req, res) => {
             type: "order"
           }).catch(() => {});
 
-          clearCachePattern("cache:/api/store").catch(() => {});
+          clearCachePattern("/api/store").catch(() => {});
           broadcast("order_updated", { orderId: order.id, statut: "en_attente", clientId: order.clientId, boutiqueId: order.boutiqueId });
           
           // Notifications Emails

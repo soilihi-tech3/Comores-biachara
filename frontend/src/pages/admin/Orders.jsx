@@ -5,6 +5,8 @@ import {
 } from "lucide-react";
 import api from "../../api";
 import TablePagination from "../../components/TablePagination";
+import { SkeletonStatCards, SkeletonTableRows } from "../../components/Skeleton.jsx";
+import { readCache, writeCache } from "../../utils/swrCache.js";
 
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
 const formatOrderNum = (id) => `COM-B${String(id).padStart(3, "0")}`;
@@ -74,7 +76,8 @@ import { subscribeRealtime } from "../../utils/realtime.js";
 export default function AdminOrders() {
   const { showToast } = useCart();
   const { user } = useAuth();
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState(() => readCache("admin_orders:tous") || []);
+  const [loaded, setLoaded] = useState(() => readCache("admin_orders:tous") !== undefined);
   const [employees, setEmployees] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("tous");
@@ -88,11 +91,14 @@ export default function AdminOrders() {
   const [pageSize, setPageSize] = useState(10);
 
   function load() {
+    const cacheKey = `admin_orders:${statusFilter}`;
     api.get("/admin/orders", {
       params: statusFilter !== "tous" ? { statut: statusFilter } : {}
     }).then((res) => {
       const freshOrders = res.data || [];
       setOrders(freshOrders);
+      writeCache(cacheKey, freshOrders);
+      setLoaded(true);
 
       // Auto update selected order if modal is open
       setSelectedOrder(prev => {
@@ -100,8 +106,14 @@ export default function AdminOrders() {
         const found = freshOrders.find(o => o.id === prev.id);
         return found || prev;
       });
-    });
+    }).catch(() => setLoaded(true));
   }
+
+  useEffect(() => {
+    const cached = readCache(`admin_orders:${statusFilter}`);
+    if (cached) { setOrders(cached); setLoaded(true); }
+    else setLoaded(false);
+  }, [statusFilter]);
 
   useEffect(() => {
     load();
@@ -113,11 +125,11 @@ export default function AdminOrders() {
       }
     });
 
-    // 2. Smart 1.5s polling interval (ultra-rapide pour garantir le rafraîchissement sans aucun retard)
-    const interval = setInterval(load, 1500);
+    // 2. Filet de sécurité léger (le SSE assure le temps réel)
+    const interval = setInterval(() => { if (!document.hidden) load(); }, 30000);
 
     // 3. Window focus refresh
-    const onFocus = () => load();
+    const onFocus = () => { if (!document.hidden) load(); };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
 
@@ -282,6 +294,7 @@ export default function AdminOrders() {
       </div>
 
       {/* ── SUMMARY KPI CARDS ── */}
+      {!loaded ? <SkeletonStatCards count={4} /> : (
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 28 }}>
         <div className="bs-panel" style={{ padding: 18, display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ background: "var(--forest-light)", color: "var(--forest)", borderRadius: 12, padding: 12 }}>
@@ -323,6 +336,7 @@ export default function AdminOrders() {
           </div>
         </div>
       </div>
+      )}
 
       {/* ── SEARCH & FILTER CONTROLS ── */}
       <div className="bs-panel" style={{ padding: 18, marginBottom: 20 }}>
@@ -484,7 +498,9 @@ export default function AdminOrders() {
             </tr>
           </thead>
           <tbody>
-            {paginatedOrders.length === 0 ? (
+            {!loaded ? (
+              <SkeletonTableRows rows={6} cols={10} />
+            ) : paginatedOrders.length === 0 ? (
               <tr>
                 <td colSpan={10} style={{ textAlign: "center", padding: 36, color: "var(--muted)" }}>
                   Aucune commande ne correspond aux filtres sélectionnés.

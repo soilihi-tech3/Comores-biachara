@@ -168,7 +168,7 @@ router.get("/:slug/products", loadBoutique, cacheMiddleware(120), async (req, re
 });
 
 // GET /api/store/:slug/products/:id
-router.get("/:slug/products/:id", loadBoutique, async (req, res, next) => {
+router.get("/:slug/products/:id", loadBoutique, cacheMiddleware(120), async (req, res, next) => {
   try {
     const product = await Product.findOne({
       where: { id: req.params.id, boutiqueId: req.boutique.id },
@@ -326,7 +326,7 @@ router.post("/:slug/orders", loadBoutique, authenticate, requireRole("client"), 
       }
     }
 
-    clearCachePattern("cache:/api/store").catch(() => {});
+    clearCachePattern("/api/store").catch(() => {});
     broadcast("order_created", { orderId: order.id, clientId: req.user.id, boutiqueId: req.boutique.id });
     broadcast("product_updated", { boutiqueId: req.boutique.id });
 
@@ -437,7 +437,7 @@ router.post("/:slug/orders/:id/verify-payment", loadBoutique, authenticate, asyn
         }
       }
 
-      clearCachePattern("cache:/api/store").catch(() => {});
+      clearCachePattern("/api/store").catch(() => {});
       broadcast("order_updated", { orderId: order.id, statut: nextStatut, clientId: order.clientId, boutiqueId: order.boutiqueId });
       
       return res.json({ verified: true, order });
@@ -483,7 +483,7 @@ router.patch("/:slug/orders/:id/switch-to-cash", loadBoutique, authenticate, asy
       type: "order"
     }).catch(() => {});
 
-    clearCachePattern("cache:/api/store").catch(() => {});
+    clearCachePattern("/api/store").catch(() => {});
     broadcast("order_updated", { orderId: order.id, statut: "en_attente", clientId: order.clientId, boutiqueId: order.boutiqueId });
     
     // Si on veut envoyer l'e-mail à l'admin, on pourrait le faire ici, 
@@ -813,7 +813,7 @@ router.patch("/:slug/orders/:id/cancel", loadBoutique, authenticate, requireRole
       sendOrderStatusEmail(req.user.email, req.user.nom, order, "annulee", req.boutique.nom).catch(() => {});
     }
 
-    clearCachePattern("cache:/api/store").catch(() => {});
+    clearCachePattern("/api/store").catch(() => {});
     broadcast("order_updated", { orderId: order.id, statut: "annulee", clientId: req.user.id, boutiqueId: req.boutique.id });
     broadcast("product_updated", { boutiqueId: req.boutique.id });
 

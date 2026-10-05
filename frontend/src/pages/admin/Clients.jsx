@@ -1,3 +1,5 @@
+import { SkeletonTableRows } from "../../components/Skeleton.jsx";
+import { toast } from "react-hot-toast";
 import React, { useEffect, useState } from "react";
 import { UserCheck, Edit, Trash2, Ban, CheckCircle, Search, UserPlus, Key, Mail, Phone, Calendar, AlertCircle, X, ShieldCheck } from "lucide-react";
 import api from "../../api";
@@ -99,7 +101,7 @@ export default function AdminClients() {
       showToast(`Compte client ${c.statut === "actif" ? "suspendu" : "réactivé"}`, "info");
       loadClients();
     } catch (err) {
-      alert(err.response?.data?.message || "Erreur lors de la modification du statut.");
+      toast.error(err.response?.data?.message || "Erreur lors de la modification du statut.");
     }
   }
 
@@ -111,7 +113,7 @@ export default function AdminClients() {
       showToast("Compte client supprimé", "info");
       loadClients();
     } catch (err) {
-      alert(err.response?.data?.message || "Impossible de supprimer ce client.");
+      toast.error(err.response?.data?.message || "Impossible de supprimer ce client.");
     }
   }
 
@@ -229,9 +231,7 @@ export default function AdminClients() {
       {/* ── CLIENTS TABLE ── */}
       <div className="bs-panel" style={{ padding: 0, overflow: "hidden" }}>
         {loading ? (
-          <div style={{ padding: 48, textAlign: "center", color: "var(--muted)", fontSize: 14 }}>
-            Chargement de la liste des clients...
-          </div>
+          <table className="bs-table" style={{ width: "100%" }}><tbody><SkeletonTableRows rows={6} cols={6} /></tbody></table>
         ) : (
           <table className="bs-table" style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>

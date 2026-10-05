@@ -24,23 +24,23 @@ import Register from "./pages/store/Register.jsx";
 import About from "./pages/store/About.jsx";
 import Profile from "./pages/store/Profile.jsx";
 
-import AdminLayout from "./pages/admin/AdminLayout.jsx";
-import Dashboard from "./pages/admin/Dashboard.jsx";
-import AdminProduits from "./pages/admin/Produits.jsx";
-import AdminCategories from "./pages/admin/Categories.jsx";
-import AdminOrders from "./pages/admin/Orders.jsx";
-import AdminEmployees from "./pages/admin/Employees.jsx";
-import AdminClients from "./pages/admin/Clients.jsx";
-import AdminSettings from "./pages/admin/Settings.jsx";
-import AdminRecharge from "./pages/admin/AdminRecharge.jsx";
+const AdminLayout = React.lazy(() => import("./pages/admin/AdminLayout.jsx"));
+const Dashboard = React.lazy(() => import("./pages/admin/Dashboard.jsx"));
+const AdminProduits = React.lazy(() => import("./pages/admin/Produits.jsx"));
+const AdminCategories = React.lazy(() => import("./pages/admin/Categories.jsx"));
+const AdminOrders = React.lazy(() => import("./pages/admin/Orders.jsx"));
+const AdminEmployees = React.lazy(() => import("./pages/admin/Employees.jsx"));
+const AdminClients = React.lazy(() => import("./pages/admin/Clients.jsx"));
+const AdminSettings = React.lazy(() => import("./pages/admin/Settings.jsx"));
+const AdminRecharge = React.lazy(() => import("./pages/admin/AdminRecharge.jsx"));
 
-import VenteDirecte from "./pages/admin/VenteDirecte.jsx";
-import Fournisseurs from "./pages/admin/Fournisseurs.jsx";
-import UnitesVente from "./pages/admin/UnitesVente.jsx";
-import Achats from "./pages/admin/Achats.jsx";
-import SalesHistory from "./pages/admin/SalesHistory.jsx";
+const VenteDirecte = React.lazy(() => import("./pages/admin/VenteDirecte.jsx"));
+const Fournisseurs = React.lazy(() => import("./pages/admin/Fournisseurs.jsx"));
+const UnitesVente = React.lazy(() => import("./pages/admin/UnitesVente.jsx"));
+const Achats = React.lazy(() => import("./pages/admin/Achats.jsx"));
+const SalesHistory = React.lazy(() => import("./pages/admin/SalesHistory.jsx"));
 
-import SuperAdmin from "./pages/superadmin/SuperAdmin.jsx";
+const SuperAdmin = React.lazy(() => import("./pages/superadmin/SuperAdmin.jsx"));
 
 import BoutiqueGuard from "./components/BoutiqueGuard.jsx";
 import Footer from "./components/Footer.jsx";
@@ -72,31 +72,25 @@ function WideLayout({ children }) {
 import PWAInstallPrompt from "./components/PWAInstallPrompt.jsx";
 import MustChangePasswordModal from "./components/MustChangePasswordModal.jsx";
 import { initRealtimeSync, subscribeRealtime } from "./utils/realtime.js";
-import { useCart } from "./context/CartContext.jsx";
+import { Toaster, toast } from "react-hot-toast";
 
 function RealtimeToastNotifier() {
-  const { showToast } = useCart();
-
   React.useEffect(() => {
     const unsub = subscribeRealtime((detail) => {
       if (!detail || !detail.type) return;
       const type = detail.type;
 
       if (type === "order_created") {
-        showToast("Nouvelle commande enregistrée en direct !", "info");
+        toast("Nouvelle commande enregistrée en direct !", { icon: "ℹ️" });
       } else if (type === "order_updated") {
-        showToast("Statut de commande mis à jour !", "info");
-      } else if (type === "product_updated") {
-        showToast("Le catalogue et les stocks ont été mis à jour.", "info");
-      } else if (type === "category_updated") {
-        showToast("Nouvelle mise à jour des catégories.", "info");
-      } else if (type === "boutique_updated") {
-        showToast("Informations de la boutique mises à jour.", "info");
+        // Optionnel : ne pas afficher de toast pour order_updated si ça spamme, 
+        // ou le garder s'il est jugé utile
+        // toast("Statut de commande mis à jour !", { icon: "ℹ️" });
       }
     });
 
     return unsub;
-  }, [showToast]);
+  }, []);
 
   return null;
 }
@@ -109,6 +103,20 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      <Toaster 
+        position="top-center" 
+        toastOptions={{
+          style: {
+            borderRadius: '12px',
+            background: '#333',
+            color: '#fff',
+            fontSize: '14px',
+            fontWeight: 500,
+            padding: '12px 20px',
+            boxShadow: '0 8px 16px rgba(0,0,0,0.15)'
+          },
+        }} 
+      />
       <PWAInstallPrompt />
       <MustChangePasswordModal />
       <RealtimeToastNotifier />
@@ -136,30 +144,30 @@ export default function App() {
 
         {/* --- Back-office Admin / Employé --- */}
         <Route path="/admin" element={
-          <ProtectedRoute roles={["admin", "employe"]}><AdminLayout /></ProtectedRoute>
+          <ProtectedRoute roles={["admin", "employe"]}><React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><AdminLayout /></React.Suspense></ProtectedRoute>
         }>
-          <Route index element={<Dashboard />} />
-          <Route path="vente" element={<VenteDirecte />} />
-          <Route path="ventes-historique" element={<SalesHistory />} />
-          <Route path="achats" element={<Achats />} />
-          <Route path="fournisseurs" element={<Fournisseurs />} />
-          <Route path="unites" element={<UnitesVente />} />
-          <Route path="home-banners" element={<AdminSettings defaultTab="home_banners" />} />
-          <Route path="side-banners" element={<AdminSettings defaultTab="side_banners" />} />
-          <Route path="produits" element={<AdminProduits />} />
-          <Route path="categories" element={<AdminCategories />} />
-          <Route path="commandes" element={<AdminOrders />} />
-          <Route path="clients" element={<AdminClients />} />
-          <Route path="employes" element={<AdminEmployees />} />
-          <Route path="recharges" element={<AdminRecharge />} />
+          <Route index element={<React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><Dashboard /></React.Suspense>} />
+          <Route path="vente" element={<React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><VenteDirecte /></React.Suspense>} />
+          <Route path="ventes-historique" element={<React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><SalesHistory /></React.Suspense>} />
+          <Route path="achats" element={<React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><Achats /></React.Suspense>} />
+          <Route path="fournisseurs" element={<React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><Fournisseurs /></React.Suspense>} />
+          <Route path="unites" element={<React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><UnitesVente /></React.Suspense>} />
+          <Route path="home-banners" element={<React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><AdminSettings defaultTab="home_banners" /></React.Suspense>} />
+          <Route path="side-banners" element={<React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><AdminSettings defaultTab="side_banners" /></React.Suspense>} />
+          <Route path="produits" element={<React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><AdminProduits /></React.Suspense>} />
+          <Route path="categories" element={<React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><AdminCategories /></React.Suspense>} />
+          <Route path="commandes" element={<React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><AdminOrders /></React.Suspense>} />
+          <Route path="clients" element={<React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><AdminClients /></React.Suspense>} />
+          <Route path="employes" element={<React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><AdminEmployees /></React.Suspense>} />
+          <Route path="recharges" element={<React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><AdminRecharge /></React.Suspense>} />
 
-          <Route path="utilisateurs" element={<AdminEmployees />} />
-          <Route path="parametres" element={<AdminSettings defaultTab="general" />} />
+          <Route path="utilisateurs" element={<React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><AdminEmployees /></React.Suspense>} />
+          <Route path="parametres" element={<React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><AdminSettings defaultTab="general" /></React.Suspense>} />
         </Route>
 
         {/* --- Console Super Admin --- */}
         <Route path="/super-admin" element={
-          <ProtectedRoute roles={["super_admin"]}><SuperAdmin /></ProtectedRoute>
+          <ProtectedRoute roles={["super_admin"]}><React.Suspense fallback={<div className="bs-admin-loading-spinner" />}><SuperAdmin /></React.Suspense></ProtectedRoute>
         } />
       </Routes>
     </>

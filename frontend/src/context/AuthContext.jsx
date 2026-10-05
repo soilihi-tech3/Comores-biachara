@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import api, { SLUG } from "../api";
+import { clearSwrCache } from "../utils/swrCache.js";
 
 export const AuthContext = createContext(null);
 
@@ -93,16 +94,35 @@ export function AuthProvider({ children }) {
       setLoading(false); 
       return; 
     }
+    // Restauration instantanée de la session (affichage uniquement ; le serveur vérifie chaque requête)
+    try {
+      const cachedUser = JSON.parse(localStorage.getItem("cached_user") || "null");
+      if (cachedUser) {
+        setUser(cachedUser);
+        setLoading(false);
+      }
+    } catch (e) {}
     api.get("/auth/me").then((res) => {
       setUser(res.data.user);
+      try { localStorage.setItem("cached_user", JSON.stringify(res.data.user)); } catch (e) {}
     })
-      .catch(() => localStorage.removeItem("token"))
+      .catch((err) => {
+        // Jeton invalide/expiré → déconnexion. Erreur réseau → on garde la session en cache.
+        if (err?.response && [401, 403].includes(err.response.status)) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("cached_user");
+          clearSwrCache();
+          setUser(null);
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 
   async function login(identifiant, motDePasse) {
     const res = await api.post("/auth/login", { identifiant, email: identifiant, telephone: identifiant, motDePasse });
+    clearSwrCache();
     localStorage.setItem("token", res.data.token);
+    try { localStorage.setItem("cached_user", JSON.stringify(res.data.user)); } catch (e) {}
     setUser(res.data.user);
     refreshBoutique();
     return res.data.user;
@@ -135,6 +155,8 @@ export function AuthProvider({ children }) {
 
   function logout() {
     localStorage.removeItem("token");
+    localStorage.removeItem("cached_user");
+    clearSwrCache();
     setUser(null);
   }
 

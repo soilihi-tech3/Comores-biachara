@@ -1,3 +1,4 @@
+import { SkeletonTableRows } from "../../components/Skeleton.jsx";
 import React, { useEffect, useState } from "react";
 import { 
   Search, FileText, Download, Printer, Eye, Calendar, DollarSign, 
@@ -404,11 +405,7 @@ export default function SalesHistory() {
           </thead>
           <tbody>
             {loading && (
-              <tr>
-                <td colSpan={8} style={{ textAlign: "center", padding: 30, color: "var(--muted)" }}>
-                  Chargement de l'historique des ventes...
-                </td>
-              </tr>
+              <SkeletonTableRows rows={6} cols={8} />
             )}
             {!loading && paginatedOrders.length === 0 && (
               <tr>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { PlusCircle, Edit, Trash2, Scale, X, CheckCircle, AlertCircle } from "lucide-react";
 import api from "../../api";
 import TablePagination from "../../components/TablePagination";
@@ -71,7 +72,7 @@ export default function UnitesVente() {
       await api.delete(`/admin/unites/${id}`);
       load();
     } catch (err) {
-      alert(err.response?.data?.message || "Impossible de supprimer cette unité.");
+      toast.error(err.response?.data?.message || "Impossible de supprimer cette unité.");
     }
   }
 

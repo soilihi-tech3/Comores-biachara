@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { useParams, useNavigate } from "react-router-dom";
 import { CheckCircle, ShoppingBag, ArrowRight, Package, Truck, MapPin, Store } from "lucide-react";
 import api, { SLUG } from "../../api";
@@ -26,7 +27,7 @@ export default function Confirmation() {
         }).catch(() => {});
       }).catch(() => {});
     } else if (params.get("canceled") === "true") {
-      alert("Le paiement a été annulé. Vous pourrez réessayer depuis la section 'Mes Commandes'.");
+      toast.error("Le paiement a été annulé. Vous pourrez réessayer depuis la section 'Mes Commandes'.");
     }
 
     api.get(`/store/${SLUG}/orders/mine`).then(res => {
