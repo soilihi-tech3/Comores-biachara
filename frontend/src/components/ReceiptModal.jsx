@@ -161,10 +161,10 @@ export default function ReceiptModal({ order, boutique, onClose }) {
             <span style={{ color: "#475569" }}>Sous-Total:</span>
             <span style={{ fontWeight: 700 }}>{fcfa(order.sousTotal || order.total)}</span>
           </div>
-          {Number(order.fraisLivraison || 0) > 0 && (
+          {(order.fraisLivraison && order.fraisLivraison !== 0 && order.fraisLivraison !== "0") && (
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ color: "#475569" }}>Frais de livraison:</span>
-              <span style={{ fontWeight: 700 }}>{fcfa(order.fraisLivraison)}</span>
+              <span style={{ fontWeight: 700 }}>{isNaN(Number(order.fraisLivraison)) ? order.fraisLivraison : fcfa(Number(order.fraisLivraison))}</span>
             </div>
           )}
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 900, color: "#0F172A", borderTop: "1px dashed #64748B", paddingTop: 8, marginTop: 4 }}>

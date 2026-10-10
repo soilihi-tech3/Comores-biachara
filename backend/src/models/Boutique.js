@@ -11,7 +11,7 @@ const Boutique = sequelize.define("Boutique", {
     defaultValue: "standard",
   },
   statut: { type: DataTypes.ENUM("active", "suspendue"), defaultValue: "active" },
-  fraisLivraison: { type: DataTypes.DECIMAL(10, 2), defaultValue: 1000 },
+  fraisLivraison: { type: DataTypes.STRING(255), defaultValue: "1000" },
   zonesLivraison: { type: DataTypes.STRING(255), defaultValue: "" },
   telephone: { type: DataTypes.STRING(20) },
   telephone2: { type: DataTypes.STRING(20) },

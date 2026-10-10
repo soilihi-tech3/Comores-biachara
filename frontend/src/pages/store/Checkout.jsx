@@ -81,9 +81,10 @@ export default function Checkout() {
     }
   }, [boutique]);
 
-  const tarifLivraisonConfig = boutique?.fraisLivraison !== undefined ? Number(boutique.fraisLivraison) : 10;
+  const tarifLivraisonConfig = boutique?.fraisLivraison || "0";
   const fraisLivraison = form.modeLivraison === "domicile" ? tarifLivraisonConfig : 0;
-  const total = subtotal + fraisLivraison;
+  const numericFrais = isNaN(Number(fraisLivraison)) ? 0 : Number(fraisLivraison);
+  const total = subtotal + numericFrais;
   const totalItems = cart.reduce((s, l) => s + l.quantite, 0);
 
   function handleSelectPayment(m) {
@@ -284,7 +285,7 @@ export default function Checkout() {
                 <h2 style={{ margin: 0, fontSize: 18, color: "var(--ink)" }}>Mode de livraison</h2>
                 {!openSteps[2] && (
                   <span style={{ fontSize: 13, color: "var(--forest)", fontWeight: 700, marginLeft: 8 }}>
-                    ({form.modeLivraison === "domicile" ? `Livraison à domicile : +${fcfa(tarifLivraisonConfig)}` : "Retrait gratuit en boutique"})
+                    ({form.modeLivraison === "domicile" ? `Livraison à domicile : ${isNaN(Number(tarifLivraisonConfig)) ? tarifLivraisonConfig : "+" + fcfa(Number(tarifLivraisonConfig))}` : "Retrait gratuit en boutique"})
                   </span>
                 )}
               </div>
@@ -297,7 +298,7 @@ export default function Checkout() {
             {openSteps[2] && (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {[
-                  { id: "domicile", label: "Livraison à domicile", sub: "Livré directement chez vous", price: `+${fcfa(tarifLivraisonConfig)}`, Icon: Truck, color: "#2D8653" },
+                  { id: "domicile", label: "Livraison à domicile", sub: "Livré directement chez vous", price: isNaN(Number(tarifLivraisonConfig)) ? tarifLivraisonConfig : `+${fcfa(Number(tarifLivraisonConfig))}`, Icon: Truck, color: "#2D8653" },
                   { id: "retrait", label: "Retrait en boutique", sub: "Récupérez votre commande en magasin", price: "Gratuit", Icon: Store, color: "#6C47FF" },
                 ].map((opt) => (
                   <div key={opt.id} onClick={() => setForm(f => ({ ...f, modeLivraison: opt.id }))} style={{
@@ -492,8 +493,8 @@ export default function Checkout() {
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, fontSize: 14 }}>
               <span style={{ color: "var(--muted)" }}>Livraison</span>
-              <span style={{ fontWeight: 600, color: fraisLivraison === 0 ? "#2D8653" : "var(--ink)" }}>
-                {fraisLivraison === 0 ? "Gratuite" : fcfa(fraisLivraison)}
+              <span style={{ fontWeight: 600, color: (fraisLivraison === 0 || fraisLivraison === "0") ? "#2D8653" : "var(--ink)" }}>
+                {fraisLivraison === 0 || fraisLivraison === "0" ? "Gratuite" : (isNaN(Number(fraisLivraison)) ? fraisLivraison : fcfa(Number(fraisLivraison)))}
               </span>
             </div>
 
@@ -585,7 +586,7 @@ export default function Checkout() {
             
             <div style={{ padding: 24, fontSize: 15, color: "var(--forest-dark)", lineHeight: 1.5 }}>
               <p style={{ margin: "0 0 16px" }}>
-                Veuillez envoyer le montant de <strong>{fcfa(total || subtotal + (fraisLivraison || 0))}</strong> au numéro suivant :
+                Veuillez envoyer le montant de <strong>{fcfa(total)}</strong> au numéro suivant :
               </p>
               
               <div style={{ background: "var(--paper)", padding: "16px", borderRadius: 12, textAlign: "center", marginBottom: 20, border: "1px dashed var(--muted)" }}>

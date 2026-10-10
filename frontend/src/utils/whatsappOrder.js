@@ -55,8 +55,8 @@ export function formatWhatsAppOrderMessage({ boutique, user, cart, subtotal, fra
 
   text += `\n💰 *Résumé financier :*\n`;
   text += `- Sous-total : ${subtotalFormatted}\n`;
-  if (fraisLivraison !== undefined && fraisLivraison > 0) {
-    const fraisFormatted = Number(fraisLivraison).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
+  if (fraisLivraison !== undefined && fraisLivraison !== 0 && fraisLivraison !== "0") {
+    const fraisFormatted = isNaN(Number(fraisLivraison)) ? fraisLivraison : Number(fraisLivraison).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
     text += `- Frais de livraison : ${fraisFormatted}\n`;
   }
   text += `- *Total Général : ${totalFormatted}*\n\n`;
@@ -111,7 +111,7 @@ export async function processWhatsAppOrder({ boutique, user, cart, subtotal, fra
       user,
       cart,
       subtotal,
-      fraisLivraison: fraisLivraison || 0,
+      fraisLivraison: fraisLivraison || "0",
       total: total || subtotal,
       orderNumber,
       form

@@ -254,7 +254,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
 
             <div className="bs-field">
               <label>Frais de livraison à domicile (€)</label>
-              <input className="bs-input" type="number" step="0.01" value={boutique.fraisLivraison ?? 10} onChange={(e) => set("fraisLivraison", parseFloat(e.target.value) || 0)} placeholder="ex: 10" />
+              <input className="bs-input" type="text" value={boutique.fraisLivraison ?? "10"} onChange={(e) => set("fraisLivraison", e.target.value)} placeholder="ex: 5€ à 50€ ou 10" />
             </div>
           </div>
 
