@@ -369,6 +369,13 @@ export default function AdminSettings({ defaultTab = "general" }) {
               style={{ padding: 12 }}
             />
           </div>
+          <div style={{ marginTop: 16 }}>
+            <ImageUploader
+              label="Photo / Flyer de présentation (À propos de nous)"
+              value={boutique.aProposImageUrl || ""}
+              onChange={(url) => set("aProposImageUrl", url)}
+            />
+          </div>
         </div>
       )}
 

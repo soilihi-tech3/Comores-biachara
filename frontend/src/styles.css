@@ -1901,9 +1901,9 @@ html[data-theme="dark"] .bs-side-btn.active .bs-side-label {
 /* About page responsive grid */
 .bs-about-grid {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: 1.35fr 0.65fr;
   gap: 40px;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .bs-about-cards-grid {

@@ -809,7 +809,7 @@ router.put("/boutique", requireRole("admin"), async (req, res, next) => {
     const { 
       nom, logoUrl, couleurPrincipale, fraisLivraison, zonesLivraison, 
       bannerSlides, sideBanners, telephone, telephone2, adresse, adresse2, adresseRetrait, 
-      emailContact, aProposText, horairesOuverture, facebookUrl, instagramUrl, 
+      emailContact, aProposText, aProposImageUrl, horairesOuverture, facebookUrl, instagramUrl, 
       tiktokUrl, whatsappNumber, modesPaiement, modulesActifs,
       customDomain, stripePublishableKey, stripeSecretKey, stripeAccountId,
       paydunyaMasterKey, paydunyaPrivateKey, paydunyaToken
@@ -830,7 +830,7 @@ router.put("/boutique", requireRole("admin"), async (req, res, next) => {
     await boutique.update({ 
       nom, logoUrl, couleurPrincipale, fraisLivraison, zonesLivraison, 
       bannerSlides, sideBanners, telephone, telephone2, adresse, adresse2, adresseRetrait, 
-      emailContact, aProposText, horairesOuverture, facebookUrl, instagramUrl, 
+      emailContact, aProposText, aProposImageUrl, horairesOuverture, facebookUrl, instagramUrl, 
       tiktokUrl, whatsappNumber, modesPaiement, modulesActifs,
       customDomain: targetCustomDomain,
       ...(stripePublishableKey !== undefined && { stripePublishableKey }),

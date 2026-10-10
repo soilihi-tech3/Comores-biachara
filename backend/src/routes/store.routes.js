@@ -73,6 +73,7 @@ router.get("/:slug", loadBoutique, cacheMiddleware(300), (req, res) => {
     adresseRetrait: b.adresseRetrait || "",
     emailContact: b.emailContact,
     aProposText: b.aProposText,
+    aProposImageUrl: b.aProposImageUrl,
     horairesOuverture: b.horairesOuverture || "Tous les jours de 08h30 à 23h00",
     facebookUrl: b.facebookUrl || "",
     instagramUrl: b.instagramUrl || "",

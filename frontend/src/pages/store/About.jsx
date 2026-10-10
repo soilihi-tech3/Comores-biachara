@@ -1,10 +1,38 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Store, ShieldCheck, Truck, Leaf, Phone, MapPin, Mail, ArrowRight, Award } from "lucide-react";
+import { Store, ShieldCheck, Truck, Leaf, Phone, MapPin, Mail, ArrowRight, Award, Check, Smartphone, Package, Shield } from "lucide-react";
 import api, { SLUG } from "../../api";
+
+function CountUp({ end, duration = 2000 }) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let startTime = null;
+    let animationFrameId = null;
+
+    const animate = (time) => {
+      if (!startTime) startTime = time;
+      const progress = Math.min((time - startTime) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 4); // easeOutQuart
+      setCount(Math.floor(ease * end));
+      
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(animate);
+      } else {
+        setCount(end);
+      }
+    };
+    
+    animationFrameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [end, duration]);
+
+  return <>{count.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")}</>;
+}
 
 export default function About() {
   const [boutique, setBoutique] = useState(null);
+  const [isZoomed, setIsZoomed] = useState(false);
 
   useEffect(() => {
     api.get(`/store/${SLUG}`).then(res => setBoutique(res.data)).catch(() => {});
@@ -12,6 +40,29 @@ export default function About() {
 
   return (
     <div style={{ paddingBottom: 60 }}>
+      <style>{`
+        .modern-service-card {
+          background: #fff;
+          border-radius: 16px;
+          padding: 24px;
+          box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          border: 1px solid var(--line);
+        }
+        .modern-service-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+        }
+        .services-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 24px;
+          margin-bottom: 40px;
+        }
+      `}</style>
       {/* BANNIÈRE HÉRO À PROPOS */}
       <div className="bs-about-hero" style={{
         position: "relative",
@@ -61,47 +112,104 @@ export default function About() {
             }
           </p>
           
-          <div className="bs-about-cards-grid" style={{ marginTop: 20 }}>
-            <div style={{ background: "var(--paper)", padding: 18, borderRadius: 14, border: "1px solid var(--line)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--forest-dark)", fontWeight: 800, marginBottom: 6, fontSize: 14 }}>
-                <ShieldCheck size={18} color="var(--forest)" /> 100% Qualité Garantie
+          <div style={{ marginTop: 30, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+            {/* Card 1 */}
+            <div className="modern-service-card" style={{ padding: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--forest-dark)", fontWeight: 800, marginBottom: 8, fontSize: 15 }}>
+                <ShieldCheck size={20} color="var(--forest)" /> 100% Qualité
               </div>
-              <p style={{ margin: 0, fontSize: 12.5, color: "var(--muted)", lineHeight: 1.5 }}>
+              <p style={{ margin: 0, fontSize: 13, color: "var(--muted)", lineHeight: 1.5 }}>
                 Articles contrôlés et certifiés pour une fraîcheur irréprochable.
               </p>
             </div>
 
-            <div style={{ background: "var(--paper)", padding: 18, borderRadius: 14, border: "1px solid var(--line)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--forest-dark)", fontWeight: 800, marginBottom: 6, fontSize: 14 }}>
-                <Truck size={18} color="var(--forest)" /> Livraison Rapide
+            {/* Card 2 */}
+            <div className="modern-service-card" style={{ padding: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--forest-dark)", fontWeight: 800, marginBottom: 8, fontSize: 15 }}>
+                <Truck size={20} color="var(--forest)" /> Livraison Rapide
               </div>
-              <p style={{ margin: 0, fontSize: 12.5, color: "var(--muted)", lineHeight: 1.5 }}>
-                Livraison express directement à domicile ou en point de retrait.
+              <p style={{ margin: 0, fontSize: 13, color: "var(--muted)", lineHeight: 1.5 }}>
+                Livraison express à domicile ou en point de retrait.
               </p>
+            </div>
+
+            {/* Card 3 */}
+            <div className="modern-service-card" style={{ padding: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--forest-dark)", fontWeight: 800, marginBottom: 8, fontSize: 15 }}>
+                <Package size={20} color="var(--accent)" /> Suivi de Colis
+              </div>
+              <p style={{ margin: 0, fontSize: 13, color: "var(--muted)", lineHeight: 1.5 }}>
+                Suivez votre colis de la France aux Comores en temps réel.
+              </p>
+            </div>
+
+            {/* Card 4 */}
+            <div className="modern-service-card" style={{ padding: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--forest-dark)", fontWeight: 800, marginBottom: 8, fontSize: 15 }}>
+                <Shield size={20} color="#0284C7" /> Emballage Sécurisé
+              </div>
+              <p style={{ margin: 0, fontSize: 13, color: "var(--muted)", lineHeight: 1.5 }}>
+                Vos produits sont emballés avec le plus grand soin.
+              </p>
+            </div>
+          </div>
+
+          {/* STATS SECTION */}
+          <div style={{ marginTop: 24, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 16 }}>
+            <div className="modern-service-card" style={{ padding: "16px 10px", alignItems: "center", textAlign: "center" }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: "var(--forest)", marginBottom: 4 }}><CountUp end={6759} />+</div>
+              <div style={{ fontSize: 12, color: "var(--forest-dark)", fontWeight: 700, lineHeight: 1.3 }}>Personnes<br/>Satisfaites</div>
+            </div>
+            <div className="modern-service-card" style={{ padding: "16px 10px", alignItems: "center", textAlign: "center" }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: "var(--accent)", marginBottom: 4 }}><CountUp end={35009} />+</div>
+              <div style={{ fontSize: 12, color: "var(--forest-dark)", fontWeight: 700, lineHeight: 1.3 }}>Retours<br/>Positifs</div>
+            </div>
+            <div className="modern-service-card" style={{ padding: "16px 10px", alignItems: "center", textAlign: "center" }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: "#0284C7", marginBottom: 4 }}><CountUp end={47995} />+</div>
+              <div style={{ fontSize: 12, color: "var(--forest-dark)", fontWeight: 700, lineHeight: 1.3 }}>Commandes<br/>Livrées</div>
+            </div>
+            <div className="modern-service-card" style={{ padding: "16px 10px", alignItems: "center", textAlign: "center" }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: "#7C3AED", marginBottom: 4 }}><CountUp end={67595} />+</div>
+              <div style={{ fontSize: 12, color: "var(--forest-dark)", fontWeight: 700, lineHeight: 1.3 }}>Colis<br/>Envoyés</div>
             </div>
           </div>
         </div>
 
-        <div style={{ position: "relative", marginTop: 12 }}>
+        <div style={{ position: "relative", marginTop: 12, display: "flex", justifyContent: "center" }}>
           <img 
-            src="https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=800&q=80" 
-            alt="Produits bio" 
-            style={{ width: "100%", height: 260, objectFit: "cover", borderRadius: 18, boxShadow: "0 8px 20px rgba(0,0,0,0.08)" }}
+            src={boutique?.aProposImageUrl || "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=800&q=80"} 
+            alt="À propos" 
+            onClick={() => {
+              if (boutique?.aProposImageUrl) setIsZoomed(true);
+            }}
+            style={{ 
+              width: "100%", 
+              maxWidth: 420,
+              height: boutique?.aProposImageUrl ? "auto" : 340, 
+              objectFit: boutique?.aProposImageUrl ? "contain" : "cover", 
+              borderRadius: 18, 
+              boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+              cursor: boutique?.aProposImageUrl ? "zoom-in" : "default" 
+            }}
           />
-          <div style={{
-            position: "absolute", bottom: -14, left: 14, right: 14,
-            background: "#fff", padding: "12px 16px", borderRadius: 14,
-            boxShadow: "0 6px 20px rgba(0,0,0,0.1)", border: "1px solid var(--line)",
-            display: "flex", alignItems: "center", gap: 12
-          }}>
-            <div style={{ width: 38, height: 38, borderRadius: 10, background: "var(--forest-light)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <Award size={20} color="var(--forest-dark)" />
+          {!boutique?.aProposImageUrl && (
+            <div style={{
+              position: "absolute", bottom: -14, left: 14, right: 14,
+              background: "#fff", padding: "12px 16px", borderRadius: 14,
+              boxShadow: "0 6px 20px rgba(0,0,0,0.1)", border: "1px solid var(--line)",
+              display: "flex", alignItems: "center", gap: 12,
+              maxWidth: 392,
+              margin: "0 auto"
+            }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: "var(--forest-light)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Award size={20} color="var(--forest-dark)" />
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 13.5, color: "var(--forest-dark)" }}>Direct Producteurs</div>
+                <div style={{ fontSize: 11.5, color: "var(--muted)" }}>Produits de saison & éco-responsables</div>
+              </div>
             </div>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: 13.5, color: "var(--forest-dark)" }}>Direct Producteurs</div>
-              <div style={{ fontSize: 11.5, color: "var(--muted)" }}>Produits de saison & éco-responsables</div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -161,6 +269,24 @@ export default function About() {
           </Link>
         </div>
       </div>
+
+      {isZoomed && (
+        <div 
+          style={{
+            position: "fixed", inset: 0, zIndex: 99999,
+            backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 20, cursor: "zoom-out"
+          }}
+          onClick={() => setIsZoomed(false)}
+        >
+          <img 
+            src={boutique?.aProposImageUrl} 
+            alt="Zoom"
+            style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 8, boxShadow: "0 10px 40px rgba(0,0,0,0.5)" }}
+          />
+        </div>
+      )}
     </div>
   );
 }

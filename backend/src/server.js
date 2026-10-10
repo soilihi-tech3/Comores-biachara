@@ -118,6 +118,7 @@ app.get("/api/boutique/current", (req, res) => {
     adresseRetrait: b.adresseRetrait,
     emailContact: b.emailContact,
     aProposText: b.aProposText,
+    aProposImageUrl: b.aProposImageUrl,
     horairesOuverture: b.horairesOuverture,
     facebookUrl: b.facebookUrl,
     instagramUrl: b.instagramUrl,
@@ -223,7 +224,8 @@ async function ensureColumns() {
       { name: "stripe_onboarding_complete", type: "TINYINT(1) DEFAULT 0" },
       { name: "paydunya_master_key", type: "VARCHAR(255) NULL" },
       { name: "paydunya_private_key", type: "VARCHAR(255) NULL" },
-      { name: "paydunya_token", type: "VARCHAR(255) NULL" }
+      { name: "paydunya_token", type: "VARCHAR(255) NULL" },
+      { name: "a_propos_image_url", type: "LONGTEXT NULL" }
     ];
 
     for (const col of columnsToAddBoutique) {
