@@ -57,6 +57,7 @@ const FILTERS = [
 
 import { subscribeRealtime } from "../../utils/realtime.js";
 import ReceiptModal from "../../components/ReceiptModal.jsx";
+import { WeroLogo, MvolaLogo } from "../../components/PaymentLogos.jsx";
 
 export default function MyOrders() {
   const { boutique, user } = useAuth();
@@ -69,6 +70,7 @@ export default function MyOrders() {
   const [loading, setLoading] = useState(() => readCache("my_orders") === undefined);
   const [selected, setSelected] = useState(null);
   const [receiptOrder, setReceiptOrder] = useState(null);
+  const [paymentModalOrder, setPaymentModalOrder] = useState(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
 
@@ -580,6 +582,23 @@ export default function MyOrders() {
               </button>
             )}
 
+            {/* BOUTON ENVOYER CAPTURE WERO / MVOLA (WHATSAPP) */}
+            {(selected.moyenPaiement === "wero" || selected.moyenPaiement === "holam" || selected.moyenPaiement === "mvola") &&
+             selected.statut !== "annulee" && selected.statutPaiement !== "paye" && !["livree", "recuperee"].includes(selected.statut) && (
+              <button
+                type="button"
+                onClick={() => setPaymentModalOrder(selected)}
+                style={{
+                  display: "flex", justifyContent: "center", alignItems: "center", gap: 8,
+                  marginTop: 10, width: "100%", background: "#25D366", border: "none",
+                  borderRadius: 12, padding: "13px", color: "#FFFFFF", fontWeight: 800, fontSize: 13.5,
+                  cursor: "pointer", boxShadow: "0 2px 8px rgba(37,211,102,0.25)"
+                }}
+              >
+                <MessageCircle size={18} /> Envoyer la capture {selected.moyenPaiement === "mvola" ? "MVola" : "Wero"}
+              </button>
+            )}
+
             {selected.receiptUrl && (
               <a href={selected.receiptUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 10, background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 12, padding: "12px", textDecoration: "none", color: "var(--forest-dark)", fontWeight: 700, fontSize: 13.5 }}>
                 <Receipt size={18} /> Reçu Stripe sécurisé
@@ -593,7 +612,7 @@ export default function MyOrders() {
                     <CreditCard size={18} /> Reprendre le paiement
                   </button>
                 ) : (selected.moyenPaiement === "wero" || selected.moyenPaiement === "holam" || selected.moyenPaiement === "mvola") ? (
-                  <button onClick={() => sendWhatsAppCapture(selected)} style={{ width: "100%", background: "#25D366", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13.5, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
+                  <button onClick={() => setPaymentModalOrder(selected)} style={{ width: "100%", background: "#25D366", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13.5, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
                     <MessageCircle size={18} /> Envoyer la capture sur WhatsApp
                   </button>
                 ) : (
@@ -783,6 +802,69 @@ export default function MyOrders() {
           boutique={boutique}
           onClose={() => setReceiptOrder(null)}
         />
+      )}
+
+      {/* MODAL PAIEMENT WERO / MVOLA (CAPTURE WHATSAPP) */}
+      {paymentModalOrder && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 9999, padding: 16
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 16, maxWidth: 440, width: "100%",
+            overflow: "hidden", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)"
+          }}>
+            <div style={{ padding: 24, textAlign: "center", borderBottom: "1px solid var(--line)" }}>
+              <div style={{ display: "inline-flex", marginBottom: 12 }}>
+                {paymentModalOrder.moyenPaiement === "mvola" ? (
+                  <MvolaLogo height={36} />
+                ) : (
+                  <WeroLogo height={36} />
+                )}
+              </div>
+              <h2 style={{ margin: 0, fontSize: 20, color: "var(--forest-dark)" }}>
+                Paiement {paymentModalOrder.moyenPaiement === "mvola" ? "MVola" : "Wero"}
+              </h2>
+            </div>
+            
+            <div style={{ padding: 24, fontSize: 15, color: "var(--forest-dark)", lineHeight: 1.5 }}>
+              <p style={{ margin: "0 0 16px" }}>
+                Veuillez envoyer le montant de <strong>{fcfa(paymentModalOrder.total)}</strong> au numéro suivant :
+              </p>
+              
+              <div style={{ background: "var(--paper)", padding: "16px", borderRadius: 12, textAlign: "center", marginBottom: 20, border: "1px dashed var(--muted)" }}>
+                <div style={{ fontSize: 24, fontWeight: 800, color: "var(--forest-dark)", letterSpacing: 1 }}>
+                  {(paymentModalOrder.moyenPaiement === "wero" || paymentModalOrder.moyenPaiement === "holam") ? "+337 74 85 43 18" : "+269 442 04 39"}
+                </div>
+              </div>
+
+              <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>
+                Une fois le transfert effectué, veuillez nous envoyer la <strong>capture d'écran</strong> de la transaction via WhatsApp pour validation.
+              </p>
+            </div>
+
+            <div style={{ padding: 24, background: "var(--paper)", display: "flex", flexDirection: "column", gap: 12 }}>
+              <button 
+                onClick={() => {
+                  sendWhatsAppCapture(paymentModalOrder);
+                  setPaymentModalOrder(null);
+                }}
+                style={{ width: "100%", padding: 14, background: "#25D366", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+              >
+                <MessageCircle size={18} /> Envoyer la capture sur WhatsApp
+              </button>
+              
+              <button 
+                onClick={() => setPaymentModalOrder(null)}
+                style={{ width: "100%", padding: 14, background: "transparent", color: "var(--muted)", border: "1px solid var(--line)", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: "pointer" }}
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

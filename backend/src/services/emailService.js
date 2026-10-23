@@ -182,7 +182,8 @@ async function envoyerConfirmationCommande(email, commande, boutiqueNom = "EasyM
     }).join("");
 
     const clientNom = plainOrder.client?.nom || plainOrder.nomClient || "Cher Client";
-    const totalValue = plainOrder.total !== undefined ? Number(plainOrder.total) : ((Number(plainOrder.sousTotal) || 0) + (Number(plainOrder.fraisLivraison) || 0));
+    const deliveryFee = isNaN(Number(plainOrder.fraisLivraison)) ? 0 : Number(plainOrder.fraisLivraison);
+    const totalValue = plainOrder.total !== undefined ? Number(plainOrder.total) : ((Number(plainOrder.sousTotal) || 0) + deliveryFee);
     const totalFormatted = totalValue.toLocaleString('fr-FR');
     
     const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
@@ -257,7 +258,8 @@ async function envoyerNotificationAdminNouvelleCommande(adminEmail, commande, bo
     const rawId = plainOrder.id || plainOrder.orderId || 0;
     const cmdId = "COM-B" + String(rawId).padStart(3, "0");
     const clientNom = plainOrder.client?.nom || plainOrder.nomClient || "Client";
-    const totalValue = plainOrder.total !== undefined ? Number(plainOrder.total) : ((Number(plainOrder.sousTotal) || 0) + (Number(plainOrder.fraisLivraison) || 0));
+    const deliveryFee = isNaN(Number(plainOrder.fraisLivraison)) ? 0 : Number(plainOrder.fraisLivraison);
+    const totalValue = plainOrder.total !== undefined ? Number(plainOrder.total) : ((Number(plainOrder.sousTotal) || 0) + deliveryFee);
     const totalFormatted = totalValue.toLocaleString('fr-FR');
     
     const isPaid = plainOrder.statutPaiement === 'paye';

@@ -47,7 +47,7 @@ const Boutique = sequelize.define("Boutique", {
       especes: true,
       mvola: true,
       holam: true,
-      carte: false
+      carte: false,
     }
   },
   customDomain: { type: DataTypes.STRING(255), allowNull: true },
@@ -55,9 +55,13 @@ const Boutique = sequelize.define("Boutique", {
   stripeSecretKey: { type: DataTypes.STRING(255), allowNull: true, field: "stripe_secret_key" },
   stripeAccountId: { type: DataTypes.STRING(255), allowNull: true, field: "stripe_account_id" },
   stripeOnboardingComplete: { type: DataTypes.BOOLEAN, defaultValue: false, field: "stripe_onboarding_complete" },
+  // PayDunya (ancien — conservé pour compatibilité)
   paydunyaMasterKey: { type: DataTypes.STRING(255), allowNull: true },
   paydunyaPrivateKey: { type: DataTypes.STRING(255), allowNull: true },
-  paydunyaToken: { type: DataTypes.STRING(255), allowNull: true }
+  paydunyaToken: { type: DataTypes.STRING(255), allowNull: true },
+  // PayTech — Wave & Orange Money
+  paytechApiKey:    { type: DataTypes.STRING(255), allowNull: true, field: "paytech_api_key" },
+  paytechApiSecret: { type: DataTypes.STRING(255), allowNull: true, field: "paytech_api_secret" }
 }, { tableName: "boutiques" });
 
 module.exports = Boutique;

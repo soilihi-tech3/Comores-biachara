@@ -2678,3 +2678,30 @@ html[data-theme="dark"] .bs-my-orders-sidebar {
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
+
+/* ── PRINT STYLES FOR OFFICIAL RECEIPT ── */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  #official-receipt-printable, #official-receipt-printable * {
+    visibility: visible !important;
+  }
+  #official-receipt-printable {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 16px !important;
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+    box-shadow: none !important;
+    border: none !important;
+    z-index: 999999 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

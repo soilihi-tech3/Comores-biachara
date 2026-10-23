@@ -144,7 +144,8 @@ export default function Checkout() {
         return;
       }
 
-      // Si le paiement est via Stripe (Carte), rediriger vers l'URL retournée
+
+      // Paiement via Stripe (Carte) → redirection
       if (form.moyenPaiement === "carte") {
         const sessionRes = await api.post(`/store/${SLUG}/create-checkout-session`, { orderId: res.data.id });
         if (sessionRes.data.url) {

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
-import { Zap, CheckCircle2, CreditCard, Lock, AlertCircle, Info, ArrowRight, UserCheck } from "lucide-react";
+import { Zap, CheckCircle2, CreditCard, Lock, AlertCircle, Info, ArrowRight, UserCheck, Smartphone } from "lucide-react";
 import api, { SLUG } from "../../api";
 import { useCart } from "../../context/CartContext.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { MessageCircle } from "lucide-react";
 import { WeroLogo, OnlinePaymentBadges } from "../../components/PaymentLogos";
+
 
 const OPERATORS = [
   {
@@ -66,8 +67,10 @@ export default function RechargeMobile() {
   const weroAvailable = !!modesPaiement.holam;
   const carteAvailable = !!modesPaiement.carte;
 
-  const [moyenPaiement, setMoyenPaiement] = useState(carteAvailable ? "carte" : "wero");
-  
+  // Sélection du moyen de paiement par défaut : carte > wero
+  const defaultPayment = carteAvailable ? "carte" : "wero";
+  const [moyenPaiement, setMoyenPaiement] = useState(defaultPayment);
+
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentModalData, setPaymentModalData] = useState(null);
 
@@ -235,7 +238,9 @@ export default function RechargeMobile() {
             <span style={{ width: 44, height: 44, border: "4px solid rgba(255,255,255,0.2)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite" }} />
             <div>
               <h3 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 800 }}>Connexion sécurisée</h3>
-              <p style={{ margin: 0, fontSize: 14, color: "rgba(255,255,255,0.8)" }}>Redirection vers la caisse Stripe...</p>
+              <p style={{ margin: 0, fontSize: 14, color: "rgba(255,255,255,0.8)" }}>
+                Redirection vers la caisse sécurisée...
+              </p>
             </div>
           </div>
         </div>
@@ -484,9 +489,12 @@ export default function RechargeMobile() {
             <label style={{ display: "block", fontSize: 14, fontWeight: 800, color: "var(--forest-dark)", marginBottom: 12 }}>
               4. Choisissez votre moyen de paiement :
             </label>
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
+
+              {/* CARTE BANCAIRE — Stripe */}
               {carteAvailable && (
-                <div 
+                <div
                   onClick={() => setMoyenPaiement("carte")}
                   style={{
                     background: moyenPaiement === "carte" ? "#F0FDF4" : "var(--paper)",
@@ -500,8 +508,8 @@ export default function RechargeMobile() {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
                       <div>
-                        <div style={{ fontSize: 15, fontWeight: 800, color: "var(--forest-dark)" }}>Carte bancaire</div>
-                        <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>Paiement sécurisé en ligne (Stripe)</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: "var(--forest-dark)" }}>Carte bancaire (€)</div>
+                        <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4 }}>Paiement sécurisé en ligne (Stripe) — en Euros</div>
                       </div>
                       <OnlinePaymentBadges />
                     </div>
@@ -509,8 +517,9 @@ export default function RechargeMobile() {
                 </div>
               )}
 
+              {/* WERO */}
               {weroAvailable && (
-                <div 
+                <div
                   onClick={() => setMoyenPaiement("wero")}
                   style={{
                     background: moyenPaiement === "wero" ? "#F0FDF4" : "var(--paper)",
@@ -525,7 +534,7 @@ export default function RechargeMobile() {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
                       <div>
                         <div style={{ fontSize: 15, fontWeight: 800, color: "var(--forest-dark)" }}>Wero</div>
-                        <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>Paiement instantané européen</div>
+                        <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4 }}>Paiement instantané européen</div>
                       </div>
                       <WeroLogo height={28} />
                     </div>
@@ -553,7 +562,10 @@ export default function RechargeMobile() {
             }}
           >
             <CreditCard size={20} />
-            <span>Acheter maintenant {moyenPaiement === "wero" ? "par Wero" : "par Carte"} ({currentTotalEur.toFixed(2)} €)</span>
+            <span>
+              {moyenPaiement === "wero" ? `Acheter par Wero (${currentTotalEur.toFixed(2)} €)` :
+               `Acheter par Carte (${currentTotalEur.toFixed(2)} €)`}
+            </span>
             <ArrowRight size={18} />
           </button>
         </form>

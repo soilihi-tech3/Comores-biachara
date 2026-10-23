@@ -80,7 +80,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
   const set = (k, v) => setBoutique((b) => ({ ...b, [k]: v }));
   const slidesList = Array.isArray(boutique.bannerSlides) ? boutique.bannerSlides : [];
   const sideList = Array.isArray(boutique.sideBanners) ? boutique.sideBanners : [];
-  const modesPaiement = boutique.modesPaiement || { especes: true, mvola: true, holam: true, carte: false, orange: true, wave: true };
+  const modesPaiement = boutique.modesPaiement || { especes: true, mvola: true, holam: true, carte: false };
 
   function togglePaymentMode(key) {
     set("modesPaiement", {
@@ -219,7 +219,7 @@ export default function AdminSettings({ defaultTab = "general" }) {
             marginBottom: -2, display: "flex", alignItems: "center", gap: 8
           }}
         >
-          <CreditCard size={17} /> Paiement & Stripe
+          <CreditCard size={17} /> Paiement, Stripe & PayTech
         </button>
 
         <button

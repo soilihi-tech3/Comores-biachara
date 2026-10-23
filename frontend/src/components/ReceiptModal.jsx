@@ -1,5 +1,7 @@
-import React from "react";
-import { Printer, X, CheckCircle, Smartphone, CreditCard, ShoppingBag, Clock, Package, Truck } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { Printer, Download, Share2, X, CheckCircle, Smartphone, CreditCard, ShoppingBag, Clock, Package, Truck } from "lucide-react";
+import html2canvas from "html2canvas";
+import { toast } from "react-hot-toast";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const fcfa = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €";
@@ -28,6 +30,9 @@ const MOYEN_LABELS = {
 
 export default function ReceiptModal({ order, boutique, onClose }) {
   const { user } = useAuth();
+  const ticketRef = useRef(null);
+  const [downloading, setDownloading] = useState(false);
+
   if (!order) return null;
 
   const storeName = boutique?.nom || "Marché Vert";
@@ -60,6 +65,61 @@ export default function ReceiptModal({ order, boutique, onClose }) {
     window.print();
   };
 
+  const handleDownload = async () => {
+    if (!ticketRef.current) return;
+    setDownloading(true);
+    try {
+      const canvas = await html2canvas(ticketRef.current, {
+        scale: 3,
+        useCORS: true,
+        backgroundColor: "#FFFFFF",
+        logging: false,
+      });
+
+      const cmdId = "recu-COM-B" + String(order.id).padStart(3, "0");
+
+      // Sur mobile (iPhone/Android) : si le partage natif est supporté, proposer l'enregistrement direct ou le partage
+      if (navigator.share && navigator.canShare) {
+        try {
+          const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+          if (blob) {
+            const file = new File([blob], `${cmdId}.png`, { type: "image/png" });
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                title: `Reçu ${cmdId}`,
+                text: `Reçu officiel #${cmdId} - ${storeName}`,
+                files: [file],
+              });
+              toast.success("Reçu partagé / enregistré avec succès !");
+              setDownloading(false);
+              return;
+            }
+          }
+        } catch (shareErr) {
+          if (shareErr.name === "AbortError") {
+            setDownloading(false);
+            return;
+          }
+        }
+      }
+
+      // Téléchargement standard direct (PC et mobile)
+      const dataUrl = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.download = `${cmdId}.png`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Reçu officiel téléchargé avec succès !");
+    } catch (err) {
+      console.error("Erreur téléchargement reçu:", err);
+      toast.error("Erreur lors du téléchargement du reçu.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div
       onClick={onClose}
@@ -70,6 +130,8 @@ export default function ReceiptModal({ order, boutique, onClose }) {
       }}
     >
       <div
+        id="official-receipt-printable"
+        ref={ticketRef}
         className="bs-receipt-paper"
         onClick={(e) => e.stopPropagation()}
         style={{
@@ -82,6 +144,7 @@ export default function ReceiptModal({ order, boutique, onClose }) {
         {/* CLOSE BUTTON */}
         <button
           type="button"
+          className="no-print"
           onClick={onClose}
           style={{
             position: "absolute", top: 12, right: 12, background: "#F1F5F9",
@@ -193,18 +256,35 @@ export default function ReceiptModal({ order, boutique, onClose }) {
           À bientôt chez {storeName}.
         </div>
 
-        {/* PRINT BUTTON */}
-        <button
-          type="button"
-          onClick={handlePrint}
-          style={{
-            width: "100%", padding: "12px", borderRadius: 10, background: "#0F172A",
-            color: "#FFFFFF", border: "none", fontWeight: 700, fontSize: 13,
-            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8
-          }}
-        >
-          <Printer size={16} /> Imprimer le reçu / Sauvegarder PDF
-        </button>
+        {/* ACTION BUTTONS */}
+        <div className="no-print" style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={downloading}
+            style={{
+              width: "100%", padding: "13px", borderRadius: 10, background: "#0284C7",
+              color: "#FFFFFF", border: "none", fontWeight: 800, fontSize: 13.5,
+              cursor: downloading ? "wait" : "pointer", display: "flex", alignItems: "center",
+              justifyContent: "center", gap: 8, boxShadow: "0 2px 8px rgba(2, 132, 199, 0.3)"
+            }}
+          >
+            <Download size={18} />
+            {downloading ? "Génération du reçu..." : "Télécharger le reçu (Téléphone & PC)"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handlePrint}
+            style={{
+              width: "100%", padding: "11px", borderRadius: 10, background: "#0F172A",
+              color: "#FFFFFF", border: "none", fontWeight: 700, fontSize: 13,
+              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8
+            }}
+          >
+            <Printer size={16} /> Imprimer / Enregistrer en PDF
+          </button>
+        </div>
       </div>
     </div>
   );
