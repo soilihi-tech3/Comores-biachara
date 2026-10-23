@@ -109,8 +109,8 @@ router.get("/:slug/categories", loadBoutique, cacheMiddleware(600), async (req, 
   } catch (err) { next(err); }
 });
 
-// GET /api/store/:slug/products?categoryId=&famille=&search=&promo=true (cached 2 min)
-router.get("/:slug/products", loadBoutique, cacheMiddleware(120), async (req, res, next) => {
+// GET /api/store/:slug/products?categoryId=&famille=&search=&promo=true&page=1&limit=20&paginate=true (cached 5 min dans Redis)
+router.get("/:slug/products", loadBoutique, cacheMiddleware(300), async (req, res, next) => {
   try {
     const where = { boutiqueId: req.boutique.id };
     if (req.query.categoryId) where.categoryId = req.query.categoryId;
@@ -159,11 +159,47 @@ router.get("/:slug/products", loadBoutique, cacheMiddleware(120), async (req, re
 
     if (req.query.promo === "true") where.prixPromo = { [Op.ne]: null };
 
-    const products = await Product.findAll({
+    const page = req.query.page ? Math.max(1, parseInt(req.query.page, 10) || 1) : null;
+    const limit = req.query.limit ? Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20)) : null;
+    const offset = page && limit ? (page - 1) * limit : null;
+
+    const queryOptions = {
       where,
-      include: [{ model: Category }, { model: Review, as: "avis", where: { statut: "publie" }, required: false }],
+      include: [
+        { model: Category },
+        { model: Review, as: "avis", where: { statut: "publie" }, required: false }
+      ],
       order: [["createdAt", "DESC"]],
-    });
+      distinct: true
+    };
+
+    if (limit) {
+      queryOptions.limit = limit;
+      if (offset !== null) queryOptions.offset = offset;
+    }
+
+    // Si pagination demandée explicitement
+    if (req.query.paginate === "true" || (req.query.page && req.query.limit)) {
+      const { rows: products, count: total } = await Product.findAndCountAll(queryOptions);
+      const effectiveLimit = limit || 20;
+      const currentPage = page || 1;
+      const totalPages = Math.ceil(total / effectiveLimit);
+      const hasMore = currentPage < totalPages;
+
+      res.setHeader("X-Total-Count", total);
+      res.setHeader("X-Has-More", String(hasMore));
+      return res.json({
+        products,
+        total,
+        page: currentPage,
+        limit: effectiveLimit,
+        totalPages,
+        hasMore
+      });
+    }
+
+    // Mode standard : tableau simple de produits
+    const products = await Product.findAll(queryOptions);
     res.json(products);
   } catch (err) { next(err); }
 });

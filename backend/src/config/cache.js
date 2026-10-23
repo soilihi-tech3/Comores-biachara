@@ -6,36 +6,64 @@ let isRedisAvailable = false;
 // Fallback in-memory cache: Map<key, { value, expiresAt }>
 const memoryCache = new Map();
 
-try {
-  const redisUrl = process.env.REDIS_URL || "redis://127.0.0.1:6379";
-  redis = new Redis(redisUrl, {
-    maxRetriesPerRequest: 1,
-    retryStrategy: (times) => {
-      if (times > 3) {
-        return null; // Stop retrying, switch to memory fallback
-      }
-      return Math.min(times * 200, 1000);
-    },
-    enableOfflineQueue: false
-  });
-
-  redis.on("connect", () => {
-    isRedisAvailable = true;
-    console.log("⚡ [CACHE] Connecté au serveur Redis avec succès.");
-  });
-
-  redis.on("error", (err) => {
-    if (isRedisAvailable) {
-      console.warn("⚠️ [CACHE] Redis indisponible. Basculement sur le cache mémoire local.");
-    }
+function initRedis() {
+  const redisUrl = process.env.REDIS_URL;
+  if (!redisUrl) {
     isRedisAvailable = false;
-  });
-} catch (e) {
-  isRedisAvailable = false;
-  console.warn("⚠️ [CACHE] Redis non configuré. Utilisation du cache mémoire local.");
+    console.warn("ℹ️ [CACHE] Variable REDIS_URL non configurée. Utilisation du cache mémoire local.");
+    return;
+  }
+
+  try {
+    const isTls = redisUrl.startsWith("rediss://");
+    const options = {
+      maxRetriesPerRequest: 2,
+      retryStrategy: (times) => {
+        if (times > 10) return 5000;
+        return Math.min(times * 250, 2000);
+      },
+      enableOfflineQueue: true,
+      connectTimeout: 10000
+    };
+
+    if (isTls) {
+      options.tls = { rejectUnauthorized: false };
+    }
+
+    redis = new Redis(redisUrl, options);
+
+    redis.on("connect", () => {
+      isRedisAvailable = true;
+      console.log("⚡ [CACHE] Connecté au serveur Redis (Upstash) avec succès.");
+    });
+
+    redis.on("ready", () => {
+      isRedisAvailable = true;
+    });
+
+    redis.on("error", (err) => {
+      if (isRedisAvailable) {
+        console.warn("⚠️ [CACHE] Redis déconnecté ou erreur temporaire :", err.message);
+      }
+      isRedisAvailable = false;
+    });
+
+    redis.on("close", () => {
+      isRedisAvailable = false;
+    });
+
+    redis.on("reconnecting", () => {
+      // Reconnexion automatique gérée par ioredis
+    });
+  } catch (e) {
+    isRedisAvailable = false;
+    console.warn("⚠️ [CACHE] Erreur lors de l'initialisation Redis :", e.message);
+  }
 }
 
-// Memory cache cleaner interval (every 60 seconds)
+initRedis();
+
+// Nettoyage régulier du cache mémoire (toutes les 60 secondes)
 setInterval(() => {
   const now = Date.now();
   for (const [key, item] of memoryCache.entries()) {
@@ -51,7 +79,7 @@ async function getCache(key) {
       const data = await redis.get(key);
       if (data) return JSON.parse(data);
     } catch (err) {
-      isRedisAvailable = false;
+      // En cas d'erreur de lecture Redis, basculer vers memoryCache
     }
   }
   const item = memoryCache.get(key);
@@ -66,7 +94,7 @@ async function setCache(key, value, ttlSeconds = 300) {
     try {
       await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
     } catch (err) {
-      isRedisAvailable = false;
+      // Ignorer l'erreur et enregistrer dans memoryCache
     }
   }
   memoryCache.set(key, {
@@ -86,10 +114,10 @@ async function clearCachePattern(patternKey) {
         stream.on("error", reject);
       });
       if (keys.length > 0) {
-        await redis.del(keys);
+        await redis.del(...keys);
       }
     } catch (err) {
-      isRedisAvailable = false;
+      // Ne pas bloquer si erreur de scan
     }
   }
   for (const key of memoryCache.keys()) {
@@ -139,9 +167,7 @@ async function delCache(key) {
   if (isRedisAvailable && redis) {
     try {
       await redis.del(key);
-    } catch (err) {
-      isRedisAvailable = false;
-    }
+    } catch (err) {}
   }
   memoryCache.delete(key);
 }
@@ -154,4 +180,3 @@ module.exports = {
   cacheMiddleware,
   remember
 };
-

@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Heart, Trash2 } from "lucide-react";
+import { Heart, Trash2, Loader2, ArrowDown } from "lucide-react";
 import api, { SLUG } from "../../api";
 import ProductCard from "../../components/ProductCard.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -8,6 +8,8 @@ import { useCart } from "../../context/CartContext.jsx";
 import { useData } from "../../context/DataContext.jsx";
 import { subscribeRealtime } from "../../utils/realtime.js";
 import { Skel } from "../../components/Skeleton.jsx";
+
+const PAGE_SIZE = 20;
 
 export default function Catalogue() {
   const [params, setParams] = useSearchParams();
@@ -20,7 +22,7 @@ export default function Catalogue() {
   const search = params.get("search") || "";
   const onlyFavoris = params.get("favoris") === "1";
 
-  const cacheKey = `products:${SLUG}:${categoryId}:${famille}:${search}`;
+  const cacheKeyBase = `products:${SLUG}:${categoryId}:${famille}:${search}`;
 
   const [categories, setCategories] = useState(() => {
     const cached = getData(`categories:${SLUG}`);
@@ -32,21 +34,25 @@ export default function Catalogue() {
   });
 
   const [products, setProducts] = useState(() => {
-    const cached = getData(cacheKey) || getData(`products:${SLUG}:::`);
+    const cached = getData(`${cacheKeyBase}:p1`);
     if (cached && Array.isArray(cached) && cached.length > 0) return cached;
     try {
-      const ls = localStorage.getItem(`cached_products_${SLUG}`);
+      const ls = localStorage.getItem(`cached_products_${SLUG}_p1`);
       return ls ? JSON.parse(ls) : [];
     } catch (e) { return []; }
   });
 
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(() => {
-    const hasCat = categories && categories.length > 0;
     const hasProd = products && products.length > 0;
-    return !hasCat && !hasProd;
+    return !hasProd;
   });
-
+  const [loadingMore, setLoadingMore] = useState(false);
   const [favIds, setFavIds] = useState([]);
+
+  const sentinelRef = useRef(null);
 
   // Scroll to top on filter change
   useEffect(() => {
@@ -81,57 +87,160 @@ export default function Catalogue() {
     }).catch(() => {});
   }
 
-  function loadProducts(force = false) {
-    const ck = `products:${SLUG}:${categoryId}:${famille}:${search}`;
-    if (!force && !isStale(ck)) {
-      const cached = getData(ck);
+  // Load first page (20 products)
+  const loadFirstPage = useCallback((force = false) => {
+    const cacheKey = `${cacheKeyBase}:p1`;
+    if (!force && !isStale(cacheKey)) {
+      const cached = getData(cacheKey);
       if (cached && Array.isArray(cached) && cached.length > 0) {
         setProducts(cached);
+        setPage(1);
         setLoading(false);
         return;
       }
     }
-    // Only show skeleton if we truly have nothing to show
+
     if (products.length === 0) {
       setLoading(true);
     }
-    const query = {};
+
+    const query = {
+      page: 1,
+      limit: PAGE_SIZE,
+      paginate: "true"
+    };
     if (categoryId) query.categoryId = categoryId;
     if (famille) query.famille = famille;
     if (search) query.search = search;
+
     api.get(`/store/${SLUG}/products`, { params: query })
       .then((res) => {
-        setData(ck, res.data, 120000);
-        setProducts(res.data);
-        // Persist base catalogue to localStorage for instant load next time
+        let items = [];
+        let more = false;
+        let total = 0;
+
+        if (res.data && Array.isArray(res.data.products)) {
+          items = res.data.products;
+          more = !!res.data.hasMore;
+          total = res.data.total || items.length;
+        } else if (Array.isArray(res.data)) {
+          items = res.data;
+          more = items.length >= PAGE_SIZE;
+          total = items.length;
+        }
+
+        setData(cacheKey, items, 180000);
+        setProducts(items);
+        setPage(1);
+        setHasMore(more);
+        setTotalCount(total);
+
         if (!categoryId && !famille && !search) {
-          try { localStorage.setItem(`cached_products_${SLUG}`, JSON.stringify(res.data)); } catch(e) {}
+          try { localStorage.setItem(`cached_products_${SLUG}_p1`, JSON.stringify(items)); } catch(e) {}
         }
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-  }
+      .catch(() => {
+        setLoading(false);
+      });
+  }, [cacheKeyBase, categoryId, famille, search, getData, isStale, setData, products.length]);
+
+  // Load next page of 20 products on scroll
+  const loadNextPage = useCallback(() => {
+    if (loading || loadingMore || !hasMore) return;
+
+    const nextPage = page + 1;
+    setLoadingMore(true);
+
+    const query = {
+      page: nextPage,
+      limit: PAGE_SIZE,
+      paginate: "true"
+    };
+    if (categoryId) query.categoryId = categoryId;
+    if (famille) query.famille = famille;
+    if (search) query.search = search;
+
+    api.get(`/store/${SLUG}/products`, { params: query })
+      .then((res) => {
+        let newItems = [];
+        let more = false;
+
+        if (res.data && Array.isArray(res.data.products)) {
+          newItems = res.data.products;
+          more = !!res.data.hasMore;
+        } else if (Array.isArray(res.data)) {
+          newItems = res.data;
+          more = newItems.length >= PAGE_SIZE;
+        }
+
+        setProducts((prev) => {
+          // Filtrer les doublons éventuels par ID
+          const existingIds = new Set(prev.map((p) => p.id));
+          const filteredNew = newItems.filter((p) => !existingIds.has(p.id));
+          return [...prev, ...filteredNew];
+        });
+
+        setPage(nextPage);
+        setHasMore(more);
+        setLoadingMore(false);
+      })
+      .catch(() => {
+        setLoadingMore(false);
+      });
+  }, [loading, loadingMore, hasMore, page, categoryId, famille, search]);
 
   useEffect(() => {
     loadCategories(false);
   }, []);
 
+  // Reload page 1 when filters change
   useEffect(() => {
-    loadProducts(false);
+    setPage(1);
+    setHasMore(true);
+    loadFirstPage(false);
   }, [categoryId, famille, search]);
 
+  // Infinite Scroll IntersectionObserver
+  useEffect(() => {
+    if (onlyFavoris || !hasMore || loading) return;
+
+    const currentSentinel = sentinelRef.current;
+    if (!currentSentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first.isIntersecting && hasMore && !loading && !loadingMore) {
+          loadNextPage();
+        }
+      },
+      {
+        root: null,
+        rootMargin: "300px", // Précharge 300px avant le bas de l'écran pour une fluidité absolue
+        threshold: 0.1
+      }
+    );
+
+    observer.observe(currentSentinel);
+    return () => {
+      if (currentSentinel) observer.unobserve(currentSentinel);
+    };
+  }, [onlyFavoris, hasMore, loading, loadingMore, loadNextPage]);
+
+  // Realtime updates
   useEffect(() => {
     const unsub = subscribeRealtime((detail) => {
       if (detail.type === "product_updated") {
         invalidate("products");
-        loadProducts(true);
+        loadFirstPage(true);
       } else if (detail.type === "category_updated") {
         invalidate("categories");
         loadCategories(true);
       }
     });
     return unsub;
-  }, [categoryId, famille, search, invalidate]);
+  }, [categoryId, famille, search, invalidate, loadFirstPage]);
 
   const stripAccents = (str) =>
     (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -160,10 +269,10 @@ export default function Catalogue() {
     const key = user && user.id ? `favorites_user_${user.id}` : "favorites_guest";
     localStorage.setItem(key, JSON.stringify([]));
     window.dispatchEvent(new Event("favorites_updated"));
-    showToast("Tous vos favoris ont \u00e9t\u00e9 supprim\u00e9s.", "info", "Favoris");
+    showToast("Tous vos favoris ont été supprimés.", "info", "Favoris");
   }
 
-  // ── SKELETON CARD ──
+  // Skeleton Card
   const SkeletonCard = ({ delay = 0 }) => (
     <div className="bs-skeleton-card" style={{ animationDelay: `${delay}ms` }}>
       <div className="bs-skeleton-img" />
@@ -248,8 +357,8 @@ export default function Catalogue() {
             {onlyFavoris
               ? `Mes produits favoris (${displayedProducts.length})`
               : famille
-              ? `Produits de la section "${famille}" (${displayedProducts.length})`
-              : `${displayedProducts.length} produit(s) trouv\u00e9(s)`}
+              ? `Produits de la section "${famille}" (${displayedProducts.length}${totalCount > displayedProducts.length ? ` sur ${totalCount}` : ""})`
+              : `${displayedProducts.length}${totalCount > displayedProducts.length ? ` sur ${totalCount}` : ""} produit(s) affiché(s)`}
           </h2>
         )}
 
@@ -278,7 +387,7 @@ export default function Catalogue() {
       </div>
 
       {loading ? (
-        /* ── PREMIUM SHIMMER SKELETON LOADER ── */
+        /* SKELETON LOADER PREMIER CHARGEMENT (20 CARTES) */
         <div
           style={{
             display: "grid",
@@ -287,13 +396,13 @@ export default function Catalogue() {
             padding: "4px 0 20px",
           }}
         >
-          {[0, 80, 160, 240, 320, 400, 480, 560].map((delay, i) => (
+          {[0, 60, 120, 180, 240, 300, 360, 420].map((delay, i) => (
             <SkeletonCard key={i} delay={delay} />
           ))}
         </div>
       ) : (
-        /* ── PRODUCTS GRID with fade-in ── */
-        <div style={{ animation: "catalogueReveal 0.4s ease" }}>
+        /* GRILLE DE PRODUITS */
+        <div style={{ animation: "catalogueReveal 0.3s ease" }}>
           {onlyFavoris && displayedProducts.length === 0 && (
             <div
               style={{
@@ -309,8 +418,8 @@ export default function Catalogue() {
                 Aucun produit dans vos favoris
               </h3>
               <p style={{ margin: 0, fontSize: 14 }}>
-                Parcourez le catalogue et cliquez sur l&apos;ic\u00f4ne c\u0153ur d&apos;un produit pour
-                l&apos;ajouter \u00e0 vos favoris personnels !
+                Parcourez le catalogue et cliquez sur l'icône cœur d'un produit pour
+                l'ajouter à vos favoris personnels !
               </p>
             </div>
           )}
@@ -325,7 +434,7 @@ export default function Catalogue() {
                 borderRadius: 16,
               }}
             >
-              Aucun produit ne correspond \u00e0 vos crit\u00e8res de recherche.
+              Aucun produit ne correspond à vos critères de recherche.
             </div>
           )}
 
@@ -334,6 +443,72 @@ export default function Catalogue() {
               <ProductCard key={p.id} product={p} isFavorisPage={onlyFavoris} />
             ))}
           </div>
+
+          {/* Sentinel pour détection automatique du scroll infini */}
+          {!onlyFavoris && hasMore && (
+            <div ref={sentinelRef} style={{ height: 20, margin: "20px 0" }} />
+          )}
+
+          {/* Indicateur de chargement au scroll ou bouton manuel */}
+          {!onlyFavoris && hasMore && (
+            <div style={{ textAlign: "center", padding: "24px 0 40px" }}>
+              {loadingMore ? (
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 10,
+                    background: "rgba(18, 53, 36, 0.06)",
+                    color: "var(--forest-dark)",
+                    padding: "10px 22px",
+                    borderRadius: 30,
+                    fontWeight: 600,
+                    fontSize: 14,
+                  }}
+                >
+                  <Loader2 size={18} className="bs-spin" /> Chargement des 20 prochains produits...
+                </div>
+              ) : (
+                <button
+                  onClick={loadNextPage}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    background: "var(--forest-dark)",
+                    color: "#fff",
+                    border: "none",
+                    padding: "12px 28px",
+                    borderRadius: 30,
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    boxShadow: "0 4px 15px rgba(18, 53, 36, 0.15)",
+                    transition: "transform 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-2px)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
+                >
+                  <ArrowDown size={16} /> Charger plus de produits (20 de plus)
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Fin du catalogue */}
+          {!onlyFavoris && !hasMore && displayedProducts.length > 0 && (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "30px 0 20px",
+                color: "var(--muted)",
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
+              ✓ Vous avez vu tous les {displayedProducts.length} produits du catalogue.
+            </div>
+          )}
         </div>
       )}
     </div>

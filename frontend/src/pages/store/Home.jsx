@@ -199,11 +199,12 @@ export default function Home() {
       }
     }).catch(() => {});
 
-    api.get(`/store/${SLUG}/products`).then((res) => {
-      if (Array.isArray(res.data)) {
-        setData(`products:${SLUG}:::`, res.data, 120000);
-        setProducts(res.data);
-        try { localStorage.setItem(`cached_products_${SLUG}`, JSON.stringify(res.data)); } catch (e) {}
+    api.get(`/store/${SLUG}/products?limit=50`).then((res) => {
+      const prods = Array.isArray(res.data) ? res.data : (res.data?.products || []);
+      if (Array.isArray(prods) && prods.length > 0) {
+        setData(`products:${SLUG}:::`, prods, 300000);
+        setProducts(prods);
+        try { localStorage.setItem(`cached_products_${SLUG}`, JSON.stringify(prods)); } catch (e) {}
       }
     }).catch(() => {});
   }
