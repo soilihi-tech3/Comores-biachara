@@ -329,23 +329,27 @@ export default function Footer() {
         </div>
       </footer>
 
-      {/* ── BOUTON FLOTTANT WHATSAPP STYLE ASSISTANT IA (GLISSANT & FLUIDE) ── */}
+      {/* ── BOUTON FLOTTANT WHATSAPP (EXACTE REPRODUCTION IMAGE PILULE GLISSANTE) ── */}
       <a
         href={whatsappUrl}
         target="_blank"
         rel="noreferrer"
-        className="bs-wa-floating"
-        title="Discuter sur WhatsApp"
-        aria-label="Contacter le service client sur WhatsApp"
+        className="bs-wa-pill-widget"
+        title="Besoin d'aide ? Écrivez-nous sur WhatsApp"
+        aria-label="Besoin d'aide ? Écrivez-nous sur WhatsApp"
       >
-        <span className="bs-wa-bubble">
-          <MessageCircle size={15} color="#25D366" />
-          <span>Discutez avec nous</span>
-        </span>
-        <div className="bs-wa-button">
-          <MessageCircle size={26} fill="#ffffff" color="#25D366" />
-          <span className="bs-wa-dot" />
-          <span className="bs-wa-pulse" />
+        <div className="bs-wa-pill-dot-wrapper">
+          <span className="bs-wa-pill-dot" />
+          <span className="bs-wa-pill-dot-pulse" />
+        </div>
+        <div className="bs-wa-pill-text">
+          <span className="bs-wa-pill-title">Besoin d'aide ?</span>
+          <span className="bs-wa-pill-sub">Écrivez-nous</span>
+        </div>
+        <div className="bs-wa-pill-icon-circle">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="#ffffff">
+            <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2Z" />
+          </svg>
         </div>
       </a>
     </>
