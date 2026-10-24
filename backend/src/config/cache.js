@@ -93,10 +93,19 @@ async function setCache(key, value, ttlSeconds = 300) {
   if (isRedisAvailable && redis) {
     try {
       await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
+      // Donnée enregistrée dans Redis cloud : ne pas encombrer la RAM locale Node.js
+      return;
     } catch (err) {
-      // Ignorer l'erreur et enregistrer dans memoryCache
+      // Si Redis échoue, on continue vers le fallback mémoire ci-dessous
     }
   }
+
+  // Fallback mémoire local : plafonné strictement à 30 entrées (LRU) pour ne jamais saturer la RAM (max 5-10 Mo)
+  if (memoryCache.size >= 30) {
+    const oldestKey = memoryCache.keys().next().value;
+    if (oldestKey) memoryCache.delete(oldestKey);
+  }
+
   memoryCache.set(key, {
     value,
     expiresAt: Date.now() + ttlSeconds * 1000

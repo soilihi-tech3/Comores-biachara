@@ -4,7 +4,7 @@
   "description": "API backend de la plateforme e-commerce SaaS multi-boutiques",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "node --max-old-space-size=384 src/server.js",
     "dev": "nodemon src/server.js",
     "seed": "node src/seed.js"
   },

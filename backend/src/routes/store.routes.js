@@ -24,16 +24,29 @@ router.get("/:slug/realtime/events", (req, res) => {
   res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders();
 
+  let cleaned = false;
+  function cleanup() {
+    if (cleaned) return;
+    cleaned = true;
+    clearInterval(keepAlive);
+    removeClient(res);
+  }
+
   const keepAlive = setInterval(() => {
-    res.write(":\n\n");
-  }, 15000);
+    try {
+      res.write(":\n\n");
+    } catch (e) {
+      cleanup();
+    }
+  }, 25000);
 
   addClient(res);
 
-  req.on("close", () => {
-    clearInterval(keepAlive);
-    removeClient(res);
-  });
+  req.on("close", cleanup);
+  req.on("end", cleanup);
+  res.on("close", cleanup);
+  res.on("finish", cleanup);
+  res.on("error", cleanup);
 });
 
 // GET /api/store/:slug/manifest.json -> Dynamic PWA Manifest with custom store name and logo

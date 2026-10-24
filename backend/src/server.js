@@ -65,8 +65,8 @@ app.use((req, res, next) => {
   }
   next();
 });
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(express.json({ limit: "15mb" }));
+app.use(express.urlencoded({ limit: "15mb", extended: true }));
 app.use(morgan("dev"));
 app.use(resolveBoutique);
 app.use(iconsRoutes);
