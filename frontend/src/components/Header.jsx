@@ -135,127 +135,128 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
   return (
     <>
       <header style={{ background: "var(--card)", borderBottom: "1px solid var(--line)", position: "sticky", top: 0, zIndex: 1000, boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
-        {/* ROW 1: MAIN HEADER ROW */}
-        <div style={{ maxWidth: 1440, margin: "0 auto", padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
+        {/* ROW 1: MAIN HEADER ROW (3 ZONES : LOGO GAUCHE, RECHERCHE EXACTEMENT AU MILIEU, ACTIONS DROITE) */}
+        <div style={{ maxWidth: 1440, margin: "0 auto", padding: "10px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
 
-          {/* LOGO (FAR LEFT) */}
-          <Link to="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", flexShrink: 0 }}>
-            {boutique?.logoUrl ? (
-              <img src={boutique.logoUrl} alt={boutique.nom} style={{ height: 38, borderRadius: 10, objectFit: "contain" }} />
-            ) : (
-              <Store size={26} color="var(--forest)" />
-            )}
-            <span style={{ fontSize: 19, fontWeight: 900, color: "var(--forest-dark)", letterSpacing: "-0.5px" }}>
-              {boutique?.nom || ""}
-            </span>
-          </Link>
+          {/* 1. LOGO (GAUCHE - FLEX ÉQUILIBRÉ) */}
+          <div style={{ flex: "1 1 0", minWidth: 180, display: "flex", alignItems: "center" }}>
+            <Link to="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+              {boutique?.logoUrl ? (
+                <img src={boutique.logoUrl} alt={boutique.nom} style={{ height: 38, borderRadius: 10, objectFit: "contain" }} />
+              ) : (
+                <Store size={26} color="var(--forest)" />
+              )}
+              <span style={{ fontSize: 19, fontWeight: 900, color: "var(--forest-dark)", letterSpacing: "-0.5px" }}>
+                {boutique?.nom || ""}
+              </span>
+            </Link>
+          </div>
 
-          {/* MAIN NAV LINKS (MOVED TO ROW 2) */}
-
-          {/* RIGHT SIDE: SEARCH + ACTIONS */}
-          <div style={{ display: "flex", alignItems: "center", gap: 16, flex: 1, justifyContent: "flex-end", paddingLeft: 32 }}>
-            
-            {/* VISIBLE & PROMINENT SEARCH INPUT (DESKTOP) */}
+          {/* 2. RECHERCHE EXACTEMENT AU MILIEU AVEC LARGEUR PARFAITE ET DROPDOWN 100% */}
+          <div style={{ flex: "0 1 560px", width: "100%", maxWidth: 560, display: "flex", justifyContent: "center", alignItems: "center", padding: "0 10px" }}>
             <div ref={searchRef} className="bs-header-search" style={{ 
-                flex: 1, maxWidth: 680, minWidth: 200, margin: "0 auto", height: 42, position: "relative", zIndex: 100,
+                width: "100%", height: 42, position: "relative", zIndex: 100,
                 transition: "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2)"
             }}>
-            {/* Overlay background when search is focused */}
-            <div style={{
-              position: "fixed", inset: 0, background: "rgba(255,255,255,0.7)", backdropFilter: "blur(4px)",
-              opacity: isSearchFocused ? 1 : 0, pointerEvents: isSearchFocused ? "auto" : "none",
-              transition: "opacity 0.3s ease", zIndex: -1
-            }} onClick={() => setIsSearchFocused(false)}></div>
-
-            <form onSubmit={onSearch} style={{
-              display: "flex", alignItems: "center", background: "var(--paper)",
-              border: isSearchFocused ? "2px solid var(--forest)" : "1.5px solid var(--line)", 
-              borderRadius: 24, padding: isSearchFocused ? "8px 16px" : "8px 12px",
-              position: "absolute", left: 0, top: 0, bottom: 0, right: 0,
-              boxShadow: isSearchFocused ? "0 12px 40px rgba(0,0,0,0.12)" : "none",
-              transition: "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2)",
-              zIndex: 20
-            }}>
-              <Search size={16} color={isSearchFocused ? "var(--forest)" : "var(--muted)"} style={{ marginRight: isSearchFocused ? 6 : 4, flexShrink: 0, transition: "color 0.2s" }} />
-              <input
-                placeholder={isSearchFocused ? "Rechercher un produit..." : "Recherche"}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onFocus={() => { 
-                  setIsSearchFocused(true);
-                  if (results.length > 0) setShowDropdown(true); 
-                }}
-                onBlur={() => {
-                  setTimeout(() => setIsSearchFocused(false), 400);
-                }}
-                autoComplete="off"
-                style={{
-                  border: "none", background: "transparent", outline: "none",
-                  width: "100%", fontSize: isSearchFocused ? 14 : 12.5, color: "var(--ink)", fontWeight: 500
-                }}
-              />
-              {query && (
-                <button type="button" onClick={clearSearch} style={{
-                  background: "none", border: "none", cursor: "pointer", color: "var(--muted)",
-                  display: "flex", alignItems: "center", padding: 0, marginLeft: 4
-                }}>
-                  <X size={15} />
-                </button>
-              )}
-            </form>
-
-            {/* LIVE SEARCH DROPDOWN */}
-            {showDropdown && isSearchFocused && (
+              {/* Overlay background when search is focused */}
               <div style={{
-                position: "absolute", top: "calc(100% + 12px)", right: 0, width: 480,
-                background: "#fff", borderRadius: 16, border: "1px solid var(--line)",
-                boxShadow: "0 16px 50px rgba(0,0,0,0.15)", zIndex: 3000, overflow: "hidden",
-                animation: "popIn 0.2s ease-out"
-              }}>
-                {results.length === 0 ? (
-                  <div style={{ padding: "16px 18px", fontSize: 13, color: "var(--muted)", textAlign: "center" }}>
-                    Aucun produit trouvé pour « {query} »
-                  </div>
-                ) : (
-                  <>
-                    {results.map(p => (
-                      <div key={p.id} onMouseDown={() => goToProduct(p.id)} style={{
-                        display: "flex", alignItems: "center", gap: 12, padding: "10px 14px",
-                        cursor: "pointer", borderBottom: "1px solid var(--line)", transition: "background 0.15s"
-                      }}
-                        onMouseEnter={e => e.currentTarget.style.background = "var(--paper)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "#fff"}
-                      >
-                        <img
-                          src={p.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=60&q=80"}
-                          alt={p.nom}
-                          style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover", flexShrink: 0, border: "1px solid var(--line)" }}
-                        />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, fontSize: 13, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {p.nom}
-                          </div>
-                          <div style={{ fontSize: 12, color: "var(--muted)" }}>{p.Category?.nom}</div>
-                        </div>
-                        <div style={{ fontWeight: 700, fontSize: 13, color: "var(--forest-dark)", flexShrink: 0 }}>
-                          {fcfa(p.prixPromo || p.prix)}
-                        </div>
-                      </div>
-                    ))}
-                    <div
-                      onMouseDown={() => { setShowDropdown(false); navigate(`/catalogue?search=${encodeURIComponent(query.trim())}`); }}
-                      style={{ padding: "10px 14px", textAlign: "center", fontSize: 13, color: "var(--forest)", fontWeight: 700, cursor: "pointer", background: "var(--forest-light)" }}
-                    >
-                      Voir tous les résultats pour « {query} »
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-            </div>
+                position: "fixed", inset: 0, background: "rgba(0,0,0,0.25)", backdropFilter: "blur(4px)",
+                opacity: isSearchFocused ? 1 : 0, pointerEvents: isSearchFocused ? "auto" : "none",
+                transition: "opacity 0.3s ease", zIndex: -1
+              }} onClick={() => setIsSearchFocused(false)}></div>
 
-            {/* ACTIONS (CONNEXION & PANIER PINNED FAR RIGHT) */}
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+              <form onSubmit={onSearch} style={{
+                display: "flex", alignItems: "center", background: "var(--paper)",
+                border: isSearchFocused ? "2px solid var(--forest)" : "1.5px solid var(--line)", 
+                borderRadius: 24, padding: isSearchFocused ? "8px 18px" : "8px 14px",
+                position: "absolute", left: 0, top: 0, bottom: 0, right: 0,
+                boxShadow: isSearchFocused ? "0 12px 36px rgba(0,0,0,0.12)" : "0 2px 6px rgba(0,0,0,0.02)",
+                transition: "all 0.25s ease",
+                zIndex: 20
+              }}>
+                <Search size={16} color={isSearchFocused ? "var(--forest)" : "var(--muted)"} style={{ marginRight: 8, flexShrink: 0, transition: "color 0.2s" }} />
+                <input
+                  placeholder={isSearchFocused ? "Rechercher un produit, fruit, légume..." : "Recherche..."}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onFocus={() => { 
+                    setIsSearchFocused(true);
+                    if (results.length > 0) setShowDropdown(true); 
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => setIsSearchFocused(false), 400);
+                  }}
+                  autoComplete="off"
+                  style={{
+                    border: "none", background: "transparent", outline: "none",
+                    width: "100%", fontSize: 13.5, color: "var(--ink)", fontWeight: 500
+                  }}
+                />
+                {query && (
+                  <button type="button" onClick={clearSearch} style={{
+                    background: "none", border: "none", cursor: "pointer", color: "var(--muted)",
+                    display: "flex", alignItems: "center", padding: 0, marginLeft: 4
+                  }}>
+                    <X size={15} />
+                  </button>
+                )}
+              </form>
+
+              {/* LIVE SEARCH DROPDOWN ALIGNÉ SUR TOUTE LA LARGEUR DE LA RECHERCHE (100%) */}
+              {showDropdown && isSearchFocused && (
+                <div style={{
+                  position: "absolute", top: "calc(100% + 8px)", left: 0, right: 0, width: "100%",
+                  background: "var(--card)", borderRadius: 16, border: "1px solid var(--line)",
+                  boxShadow: "0 16px 48px rgba(0,0,0,0.15)", zIndex: 3000, overflow: "hidden",
+                  animation: "popIn 0.2s ease-out"
+                }}>
+                  {results.length === 0 ? (
+                    <div style={{ padding: "16px 18px", fontSize: 13, color: "var(--muted)", textAlign: "center" }}>
+                      Aucun produit trouvé pour « {query} »
+                    </div>
+                  ) : (
+                    <>
+                      {results.map(p => (
+                        <div key={p.id} onMouseDown={() => goToProduct(p.id)} style={{
+                          display: "flex", alignItems: "center", gap: 12, padding: "10px 14px",
+                          cursor: "pointer", borderBottom: "1px solid var(--line)", transition: "background 0.15s"
+                        }}
+                          onMouseEnter={e => e.currentTarget.style.background = "var(--paper)"}
+                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                        >
+                          <img
+                            src={p.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=60&q=80"}
+                            alt={p.nom}
+                            style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover", flexShrink: 0, border: "1px solid var(--line)" }}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, fontSize: 13, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {p.nom}
+                            </div>
+                            <div style={{ fontSize: 11.5, color: "var(--muted)" }}>{p.Category?.nom}</div>
+                          </div>
+                          <div style={{ fontWeight: 700, fontSize: 13, color: "var(--forest-dark)", flexShrink: 0 }}>
+                            {fcfa(p.prixPromo || p.prix)}
+                          </div>
+                        </div>
+                      ))}
+                      <div
+                        onMouseDown={() => { setShowDropdown(false); navigate(`/catalogue?search=${encodeURIComponent(query.trim())}`); }}
+                        style={{ padding: "11px 14px", textAlign: "center", fontSize: 13, color: "var(--forest)", fontWeight: 700, cursor: "pointer", background: "var(--forest-light)", transition: "background 0.15s" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "#D1E7DD"}
+                        onMouseLeave={e => e.currentTarget.style.background = "var(--forest-light)"}
+                      >
+                        Voir tous les résultats pour « {query} » →
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 3. ACTIONS (DROITE - FLEX ÉQUILIBRÉ : CONNEXION, THÈME, PANIER) */}
+          <div style={{ flex: "1 1 0", minWidth: 180, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}>
             {user ? (
               <>
                 <NotificationMenu />
@@ -402,7 +403,6 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
             </button>
           </div>
         </div>
-      </div>
 
         {/* ROW 1.5: MOBILE SEARCH BAR (VISIBLE ONLY ON MOBILE/TABLET) */}
         <div className="bs-mobile-search-bar">
@@ -501,29 +501,74 @@ export default function Header({ setCartOpen: setCartOpenProp }) {
           </div>
         </div>
 
-        {/* ROW 2: DESKTOP NAVIGATION BAR */}
-        <div className="bs-desktop-nav" style={{ background: "var(--card)", borderBottom: "1px solid var(--line)", padding: "10px 24px" }}>
-          <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", gap: 32, alignItems: "center" }}>
-            <Link to="/" style={{ fontSize: 14.5, fontWeight: 700, color: location.pathname === "/" ? "var(--forest)" : "var(--ink)", textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease", whiteSpace: "nowrap" }}>
-              <Home size={16} /> Accueil
+        {/* ROW 2: DESKTOP NAVIGATION BAR (PROPRE, CLEAN, EN VALEUR) */}
+        <div className="bs-desktop-nav-wrapper">
+          <div className="bs-desktop-nav">
+            <Link
+              to="/"
+              className={`bs-nav-pill ${location.pathname === "/" ? "active" : ""}`}
+            >
+              <Home size={15} />
+              <span>Accueil</span>
             </Link>
-            <Link to="/a-propos" style={{ fontSize: 14.5, fontWeight: 700, color: location.pathname === "/a-propos" ? "var(--forest)" : "var(--ink)", textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease", whiteSpace: "nowrap" }}>
-              <Info size={16} /> À propos
+
+            <Link
+              to="/catalogue"
+              className={`bs-nav-pill ${location.pathname === "/catalogue" && !location.search.includes("favoris=1") ? "active" : ""}`}
+            >
+              <Grid size={15} />
+              <span>Catalogue</span>
             </Link>
-            <Link to="/recharge-mobile" style={{ fontSize: 14.5, fontWeight: 700, color: location.pathname === "/recharge-mobile" ? "var(--forest)" : "var(--ink)", textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease", whiteSpace: "nowrap" }}>
-              <Smartphone size={16} /> Recharge Crédit
+
+            <Link
+              to="/recharge-mobile"
+              className={`bs-nav-pill ${location.pathname === "/recharge-mobile" ? "active" : ""}`}
+            >
+              <Smartphone size={15} />
+              <span>Recharge Crédit</span>
+              <span style={{
+                fontSize: 10,
+                fontWeight: 800,
+                background: "var(--forest)",
+                color: "#ffffff",
+                padding: "2px 7px",
+                borderRadius: 12,
+                letterSpacing: "0.02em",
+                lineHeight: 1
+              }}>
+                Direct
+              </span>
             </Link>
-            <Link to="/catalogue" style={{ fontSize: 14.5, fontWeight: 700, color: location.pathname === "/catalogue" && !location.search.includes("favoris=1") ? "var(--forest)" : "var(--ink)", textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease", whiteSpace: "nowrap" }}>
-              <Grid size={16} /> Catalogue
+
+            <Link
+              to="/catalogue?favoris=1"
+              className={`bs-nav-pill bs-nav-pill-favoris ${location.search.includes("favoris=1") ? "active" : ""}`}
+            >
+              <Heart
+                size={15}
+                color={location.search.includes("favoris=1") ? "#BE123C" : "#E11D48"}
+                fill={location.search.includes("favoris=1") ? "#BE123C" : "none"}
+              />
+              <span>Favoris</span>
             </Link>
-            <Link to="/catalogue?favoris=1" style={{ fontSize: 14.5, fontWeight: 700, color: location.search.includes("favoris=1") ? "#B4483A" : "var(--ink)", textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease", whiteSpace: "nowrap" }}>
-              <Heart size={16} color="#B4483A" fill={location.search.includes("favoris=1") ? "#B4483A" : "none"} /> Favoris
-            </Link>
+
             {user?.role === "client" && (
-              <Link to="/mes-commandes" style={{ fontSize: 14.5, fontWeight: 700, color: location.pathname === "/mes-commandes" ? "var(--forest)" : "var(--ink)", textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.2s ease", whiteSpace: "nowrap" }}>
-                <Package size={16} /> Mes commandes
+              <Link
+                to="/mes-commandes"
+                className={`bs-nav-pill ${location.pathname === "/mes-commandes" ? "active" : ""}`}
+              >
+                <Package size={15} />
+                <span>Mes commandes</span>
               </Link>
             )}
+
+            <Link
+              to="/a-propos"
+              className={`bs-nav-pill ${location.pathname === "/a-propos" ? "active" : ""}`}
+            >
+              <Info size={15} />
+              <span>À propos</span>
+            </Link>
           </div>
         </div>
 
